@@ -111,6 +111,47 @@ async fn debe_resolver_precios_en_lote() {
 }
 
 #[tokio::test]
+async fn debe_devolver_la_promocion_vigente_en_el_lote_de_precios() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, "SKU-PROMO", 100_000).await;
+    let promo = ctx
+        .promociones
+        .crear(
+            EMPRESA,
+            &json!({
+                "nombre": "25% de descuento",
+                "tipo": "descuento_porcentaje",
+                "item_id": ITEM,
+                "descuento_porcentaje": 25,
+                "fecha_desde": "2020-01-01",
+                "fecha_hasta": "2030-12-31"
+            }),
+        )
+        .await
+        .expect("promocion");
+    assert_eq!(promo["tipo"], "descuento_porcentaje");
+
+    let lote = ctx
+        .precios
+        .precios_lote(&json!({
+            "empresa_id": EMPRESA,
+            "lineas": [{
+                "clave": "l1",
+                "item_id": ITEM,
+                "sku": "SKU-PROMO",
+                "cantidad": 2
+            }]
+        }))
+        .await
+        .expect("lote");
+    assert_eq!(
+        lote["precios"][0]["promocion"]["tipo"],
+        "descuento_porcentaje"
+    );
+    assert_eq!(lote["precios"][0]["promocion"]["descuento_porcentaje"], 25);
+}
+
+#[tokio::test]
 async fn debe_cotizar_tarifas_por_rango() {
     let ctx = preparar().await;
     crear_item(&ctx.db, "SKU-TARIFA", 100_000).await;

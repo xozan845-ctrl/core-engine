@@ -147,8 +147,10 @@ Respuesta:
 - Referencia el item por `item_id` y/o `sku`; debe pertenecer a la empresa.
 - Vigencia obligatoria y coherente (`VIGENCIA_INVALIDA`).
 - Estado `activo`/`inactivo`; la baja es lógica.
-- La promoción **no** modifica el precio base ni posee stock: solo describe la
-  regla comercial que consumen `orders`/`stores`.
+- La promoción **no** modifica el precio base ni posee stock: describe la regla
+  comercial y `POST /internal/items/precios` la devuelve como descriptor
+  (`promocion`) en cada línea. `orders-service` la aplica sobre el precio final
+  de la oferta (base + margen) y persiste el descuento (ADR-0025).
 
 ---
 

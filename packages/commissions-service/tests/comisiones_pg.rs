@@ -57,6 +57,7 @@ fn item(empresa: Uuid, tienda: Uuid, vendedor: Uuid, oferta: Uuid) -> ItemOrden 
         comision: true,
         precio_unitario_cents: 115_000,
         cantidad: 1,
+        descuento_cents: 0,
     }
 }
 

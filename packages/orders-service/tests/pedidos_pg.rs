@@ -7,7 +7,8 @@ use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
     Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
-    CreditoEstado, ItemStock, OfertaExterna, PreciosExternos, StockUbicacion,
+    CreditoEstado, ItemStock, OfertaExterna, PrecioLinea, PreciosExternos, PromocionLinea,
+    StockUbicacion,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -46,6 +47,7 @@ struct ClientesFake {
     capacidades: Vec<Capacidad>,
     tasa: Option<f64>,
     directo: bool,
+    promocion: Option<PromocionLinea>,
 }
 
 #[async_trait]
@@ -116,7 +118,16 @@ impl ClientesPort for ClientesFake {
         _lista_codigo: Option<&str>,
         _segmento_codigo: Option<&str>,
     ) -> PreciosExternos {
-        PreciosExternos::Ok(Vec::new())
+        match &self.promocion {
+            Some(promocion) => PreciosExternos::Ok(vec![PrecioLinea {
+                clave: OFERTA.to_string(),
+                origen: "base".to_string(),
+                precio_unitario_cents: 10_000,
+                precio_total_cents: 10_000,
+                promocion: Some(promocion.clone()),
+            }]),
+            None => PreciosExternos::Ok(Vec::new()),
+        }
     }
 
     async fn cotizacion(
@@ -513,7 +524,15 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
 }
 
 fn infra_directo(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, true)
+    infra_con_directo(db, stock, None, true, None)
+}
+
+fn infra_promocion(
+    db: Arc<Db>,
+    stock: i64,
+    promocion: PromocionLinea,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, false, Some(promocion))
 }
 
 fn infra_con(
@@ -521,7 +540,7 @@ fn infra_con(
     stock: i64,
     tasa: Option<f64>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, tasa, false)
+    infra_con_directo(db, stock, tasa, false, None)
 }
 
 fn infra_con_directo(
@@ -529,11 +548,13 @@ fn infra_con_directo(
     stock: i64,
     tasa: Option<f64>,
     directo: bool,
+    promocion: Option<PromocionLinea>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa,
         directo,
+        promocion,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -628,6 +649,39 @@ async fn debe_crear_una_orden_de_venta_directa_sin_vendedor_ni_comision() {
         .expect("existe");
     assert!(vista.vendedor_id.is_none());
     assert_eq!(vista.comision_cents, 0);
+}
+
+#[tokio::test]
+async fn debe_aplicar_la_promocion_al_total_de_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_promocion(
+        Arc::clone(&db),
+        10,
+        PromocionLinea {
+            id: "promo-1".into(),
+            nombre: "25%".into(),
+            tipo: "descuento_porcentaje".into(),
+            cantidad_requerida: None,
+            cantidad_gratis: None,
+            descuento_porcentaje: Some(25),
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden con promocion");
+    assert_eq!(orden.items[0].descuento_cents, 5_000);
+    assert_eq!(orden.items[0].promocion_id.as_deref(), Some("promo-1"));
+    assert_eq!(orden.total_cents, 15_000);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.total_cents, 15_000);
+    assert_eq!(vista.items[0].descuento_cents, 5_000);
 }
 
 fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
@@ -986,6 +1040,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         stock,
         tasa: None,
         directo: false,
+        promocion: None,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),

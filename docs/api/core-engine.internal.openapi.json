@@ -1298,7 +1298,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+                "$ref": "#/components/schemas/PricingResolverPreciosInternoRequestDto"
               }
             }
           }
@@ -1309,7 +1309,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                  "$ref": "#/components/schemas/PricingPreciosInternosResponseDto"
                 }
               }
             }
@@ -3415,6 +3415,17 @@
             "description": "Precio unitario de venta en centavos",
             "example": 115000
           },
+          "descuento_cents": {
+            "type": "number",
+            "description": "Descuento aplicado por promoción en centavos",
+            "example": 0
+          },
+          "promocion_id": {
+            "type": "string",
+            "description": "Promoción aplicada a la línea",
+            "format": "uuid",
+            "nullable": true
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor; null en venta directa",
@@ -3773,6 +3784,33 @@
           "actualizado_en"
         ]
       },
+      "PricingLineaPrecioInternaRequestDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave opaca para correlacionar la respuesta",
+            "example": "oferta-1"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU opcional para resolver promociones"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clave",
+          "item_id",
+          "cantidad"
+        ]
+      },
       "LoteItemResponseDto": {
         "type": "object",
         "properties": {
@@ -3807,6 +3845,114 @@
           "track_serial",
           "seriales_disponibles",
           "estado"
+        ]
+      },
+      "PricingPrecioLineaInternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          },
+          "promocion": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "tipo": {
+                "type": "string",
+                "enum": [
+                  "2x1",
+                  "descuento_cantidad",
+                  "descuento_porcentaje",
+                  "regalo"
+                ]
+              },
+              "cantidad_requerida": {
+                "type": "number",
+                "nullable": true
+              },
+              "cantidad_gratis": {
+                "type": "number",
+                "nullable": true
+              },
+              "descuento_porcentaje": {
+                "type": "number",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "tipo"
+            ]
+          }
+        },
+        "required": [
+          "clave",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PricingPreciosInternosResponseDto": {
+        "type": "object",
+        "properties": {
+          "precios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PricingPrecioLineaInternaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "precios"
+        ]
+      },
+      "PricingResolverPreciosInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lista_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PricingLineaPrecioInternaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "lineas"
         ]
       },
       "DisponibilidadResponseDto": {
