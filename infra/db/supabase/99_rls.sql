@@ -1575,3 +1575,36 @@ CREATE POLICY reporte_ejecuciones_empresa ON analytics.reporte_ejecuciones FOR S
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY reporte_ejecuciones_app ON analytics.reporte_ejecuciones FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── finance.configuracion_fiscal y orders.pagos_eventos (ADR-0026/0027) ─────
+ALTER TABLE finance.configuracion_fiscal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS configuracion_fiscal_admin ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_admin ON finance.configuracion_fiscal
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS configuracion_fiscal_empresa ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_empresa ON finance.configuracion_fiscal
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS configuracion_fiscal_app ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_app ON finance.configuracion_fiscal
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.pagos_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pagos_eventos_admin ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_admin ON orders.pagos_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS pagos_eventos_empresa ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_empresa ON orders.pagos_eventos
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM orders.pagos p
+     WHERE p.id = pago_id AND p.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  ));
+DROP POLICY IF EXISTS pagos_eventos_app ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_app ON orders.pagos_eventos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
