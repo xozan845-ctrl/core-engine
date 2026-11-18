@@ -408,3 +408,6 @@ marketplace que ya funciona.
   líneas, restock idempotente en inventory y compensación proporcional de
   comisión con `devolucion.recibida`. Decisión en
   [ADR-0029](../adr/0029-rma-devolucion-parcial.md).
+- **P3.3 — Reseñas y wishlist: implementado.** `stores.resenas` (moderación
+  pendiente→publicada) y `stores.favoritos` con RLS por comprador. Decisión en
+  [ADR-0030](../adr/0030-resenas-wishlist.md).

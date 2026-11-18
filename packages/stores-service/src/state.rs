@@ -20,6 +20,7 @@ pub struct AppState {
     pub temas: Arc<dyn TemasIdentity>,
     pub storage: Arc<dyn ObjetosStorage>,
     pub catalogo: Arc<dyn Catalogo>,
+    pub db: Option<Arc<crate::db::Db>>,
     /// `None` solo en el estado de pruebas de infraestructura; las rutas de
     /// negocio fallan con 500 si no hay base de datos.
     pub tiendas: Option<Arc<Tiendas>>,
@@ -37,6 +38,7 @@ impl AppState {
             temas: Arc::new(TemasSinHerencia),
             storage: Arc::new(StorageSinConexion),
             catalogo: Arc::new(CatalogoSinConexion),
+            db: None,
             tiendas: None,
             ofertas: None,
             inicio: Instant::now(),
@@ -51,6 +53,7 @@ impl AppState {
         temas: Arc<dyn TemasIdentity>,
         storage: Arc<dyn ObjetosStorage>,
         catalogo: Arc<dyn Catalogo>,
+        db: Arc<crate::db::Db>,
         tiendas: Arc<Tiendas>,
         ofertas: Arc<Ofertas>,
     ) -> Self {
@@ -61,6 +64,7 @@ impl AppState {
             temas,
             storage,
             catalogo,
+            db: Some(db),
             tiendas: Some(tiendas),
             ofertas: Some(ofertas),
             inicio: Instant::now(),
@@ -77,5 +81,25 @@ impl AppState {
         self.ofertas
             .as_ref()
             .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn db(&self) -> Result<&Arc<crate::db::Db>, crate::errors::ApiError> {
+        self.db
+            .as_ref()
+            .ok_or_else(crate::errors::ApiError::interno)
+    }
+
+    pub fn resenas(&self) -> Result<crate::resenas::Resenas, crate::errors::ApiError> {
+        Ok(crate::resenas::Resenas::nueva(
+            Arc::clone(self.db()?),
+            Arc::clone(&self.catalogo),
+        ))
+    }
+
+    pub fn favoritos(&self) -> Result<crate::favoritos::Favoritos, crate::errors::ApiError> {
+        Ok(crate::favoritos::Favoritos::nueva(
+            Arc::clone(self.db()?),
+            Arc::clone(&self.catalogo),
+        ))
     }
 }

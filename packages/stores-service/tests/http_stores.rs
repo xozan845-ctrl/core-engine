@@ -41,6 +41,7 @@ fn estado_completo(db: Arc<stores_service::db::Db>) -> AppState {
         temas,
         storage,
         catalogo,
+        Arc::clone(&db),
         tiendas,
         ofertas,
     )
@@ -250,4 +251,152 @@ async fn debe_recorrer_el_flujo_de_tienda_y_oferta_por_http() {
     .await;
     assert_eq!(status, StatusCode::CREATED);
     assert_eq!(valor["ok"], true);
+}
+
+fn headers_comprador() -> [(&'static str, &'static str); 3] {
+    [
+        ("x-user-id", "99999999-9999-4999-8999-999999999999"),
+        ("x-user-rol", "comprador"),
+        ("x-user-email", "comprador@test.dev"),
+    ]
+}
+
+#[tokio::test]
+async fn debe_crear_moderar_resenas_y_gestionar_favoritos() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo(db().await));
+
+    let (status, resena, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "titulo": "Excelente",
+            "comentario": "Muy buen producto"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(resena["data"]["estado"], "pendiente");
+    let resena_id = resena["data"]["id"].as_str().expect("id");
+
+    let (status, propias, _) = enviar(
+        &app,
+        "GET",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(propias["data"].as_array().expect("propias").len(), 1);
+
+    let (status, actualizada, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/comprador/resenas/{resena_id}"),
+        &headers_comprador(),
+        Some(json!({ "titulo": "Excelente v2" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizada["data"]["titulo"], "Excelente v2");
+
+    let (status, _, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM, "calificacion": 4 })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    let (status, publicas, _) = enviar(
+        &app,
+        "GET",
+        &format!("/api/v2/tienda/items/{ITEM}/resenas"),
+        &[],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(publicas["data"]["total"], 0);
+
+    let (status, _, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/admin/resenas/{resena_id}"),
+        &headers_comprador(),
+        Some(json!({ "estado": "publicada" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, moderada, _) = enviar(
+        &app,
+        "PATCH",
+        &format!("/api/v2/admin/resenas/{resena_id}"),
+        &[("x-user-id", USUARIO), ("x-user-rol", "admin")],
+        Some(json!({ "estado": "publicada" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(moderada["data"]["estado"], "publicada");
+
+    let (status, publicas, _) = enviar(
+        &app,
+        "GET",
+        &format!("/api/v2/tienda/items/{ITEM}/resenas"),
+        &[],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(publicas["data"]["total"], 1);
+    assert_eq!(publicas["data"]["promedio"], 5.0);
+
+    let (status, _, _) = enviar(
+        &app,
+        "DELETE",
+        &format!("/api/v2/comprador/resenas/{resena_id}"),
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let (status, _, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/favoritos",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (status, favoritos, _) = enviar(
+        &app,
+        "GET",
+        "/api/v2/comprador/favoritos",
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(favoritos["data"].as_array().expect("favoritos").len(), 1);
+    let (status, _, _) = enviar(
+        &app,
+        "DELETE",
+        &format!("/api/v2/comprador/favoritos/{ITEM}"),
+        &headers_comprador(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
 }

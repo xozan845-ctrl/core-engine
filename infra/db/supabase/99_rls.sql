@@ -1671,3 +1671,37 @@ ALTER TABLE inventory.devoluciones_procesadas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS devoluciones_procesadas_app ON inventory.devoluciones_procesadas;
 CREATE POLICY devoluciones_procesadas_app ON inventory.devoluciones_procesadas
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── stores.resenas y stores.favoritos (reseñas/wishlist) ───────────────────
+ALTER TABLE stores.resenas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS resenas_publicas ON stores.resenas;
+CREATE POLICY resenas_publicas ON stores.resenas
+  FOR SELECT TO authenticated USING (estado = 'publicada');
+DROP POLICY IF EXISTS resenas_comprador ON stores.resenas;
+CREATE POLICY resenas_comprador ON stores.resenas
+  FOR ALL TO authenticated
+  USING (comprador_id::text = (auth.jwt() ->> 'sub'))
+  WITH CHECK (comprador_id::text = (auth.jwt() ->> 'sub'));
+DROP POLICY IF EXISTS resenas_admin ON stores.resenas;
+CREATE POLICY resenas_admin ON stores.resenas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS resenas_app ON stores.resenas;
+CREATE POLICY resenas_app ON stores.resenas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE stores.favoritos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS favoritos_comprador ON stores.favoritos;
+CREATE POLICY favoritos_comprador ON stores.favoritos
+  FOR ALL TO authenticated
+  USING (comprador_id::text = (auth.jwt() ->> 'sub'))
+  WITH CHECK (comprador_id::text = (auth.jwt() ->> 'sub'));
+DROP POLICY IF EXISTS favoritos_admin ON stores.favoritos;
+CREATE POLICY favoritos_admin ON stores.favoritos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS favoritos_app ON stores.favoritos;
+CREATE POLICY favoritos_app ON stores.favoritos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
