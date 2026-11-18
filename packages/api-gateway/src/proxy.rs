@@ -141,6 +141,11 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             url: config.intelligence_url.clone(),
             patrones: vec![patron(r"^/api/v2/inteligencia(/|$)", &["*"])],
         },
+        Destino {
+            nombre: "analytics",
+            url: config.analytics_url.clone(),
+            patrones: vec![patron(r"^/api/v2/analytics(/|$)", &["*"])],
+        },
     ]
 }
 
@@ -347,6 +352,14 @@ mod tests {
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/catalog/items", "GET").map(|d| d.nombre),
             Some("item")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/analytics/empresa", "GET").map(|d| d.nombre),
+            Some("analytics")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/analytics/reportes", "POST").map(|d| d.nombre),
+            Some("analytics")
         );
         assert!(encontrar_destino(&destinos, "/api/v2/no-existe", "GET").is_none());
     }
