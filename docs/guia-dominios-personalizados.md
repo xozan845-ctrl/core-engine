@@ -5,7 +5,7 @@
 > dominio propio para su empresa o su tienda, con TLS automático, sobre la
 > infraestructura actual (Docker + Dokploy + Traefik + PostgreSQL).
 >
-> Documentos relacionados: `docs/decisiones.md` (ADR-26 slugs, ADR-44 propuesto
+> Documentos relacionados: `docs/decisiones.md` (ADR-26 slugs, ADR-45 propuesto
 > al final de esta guía), `docs/dockploy-setup.md`, `docs/adr/0021-negocios-por-empresa.md`.
 
 ---
@@ -99,7 +99,7 @@ Componentes nuevos:
 ## 2. Fase 0 — Decisiones y ADR
 
 Antes de tocar código, cerrar estas decisiones y registrarlas en un ADR nuevo
-(el siguiente libre es **ADR-44**, ver `docs/decisiones.md`):
+(el siguiente libre es **ADR-45**, ver `docs/decisiones.md`):
 
 | Decisión | Recomendación |
 |---|---|
@@ -121,12 +121,12 @@ consecuencias, alternativas descartadas.
 
 ### 3.1 Migración
 
-El siguiente número libre es **93** (`infra/db/init/` termina en `92_analytics.sql`).
-Crea `infra/db/init/93_dominios_tienda.sql` y actualiza el manifiesto con
+El siguiente número libre es **96** (`infra/db/init/` termina en `95_precio_stock_columnas.sql`).
+Crea `infra/db/init/96_dominios_tienda.sql` y actualiza el manifiesto con
 `npm run db:migrations -- --update` (R-DB-6).
 
 ```sql
--- 93_dominios_tienda.sql — dominios personalizados de tienda (ADR-44)
+-- 96_dominios_tienda.sql — dominios personalizados de tienda (ADR-45)
 -- Aditiva e idempotente (R-DB-6). RLS por empresa (R-DB-2/R-SB-2).
 
 CREATE TABLE IF NOT EXISTS stores.tienda_dominios (
@@ -710,8 +710,8 @@ Permite desplegar el código sin exponer la función.
 
 | Sprint | Entregable | Estimación |
 |---|---|---|
-| 0 | ADR-44, decisiones de producto, lista de reservados | 2–3 días |
-| 1 | Migración 93 + RLS + modelo + pruebas PG | 3–4 días |
+| 0 | ADR-45, decisiones de producto, lista de reservados | 2–3 días |
+| 1 | Migración 96 + RLS + modelo + pruebas PG | 3–4 días |
 | 2 | API CRUD + autorización + validación + cuotas | 4–5 días |
 | 3 | Verificador DNS + estados + worker | 3–5 días |
 | 4 | `edge-manager` + Traefik file provider + TLS | 5–7 días |
