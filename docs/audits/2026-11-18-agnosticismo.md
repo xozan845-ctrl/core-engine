@@ -379,6 +379,10 @@ marketplace que ya funciona.
   reserva/descuenta/reintegra solo allí. Sin ubicación se conserva el
   comportamiento anterior. Decisión en
   [ADR-0024](../adr/0024-ubicacion-despacho-por-linea.md).
-- **P1.3 — Promociones aplicadas:** pendiente.
+- **P1.3 — Promociones aplicadas: implementado.** Pricing devuelve el
+  descriptor de promoción vigente y orders aplica el descuento sobre el precio
+  final; `descuento_cents`/`promocion_id` quedan en la línea y la comisión se
+  calcula sobre el neto. Decisión en
+  [ADR-0025](../adr/0025-promociones-en-checkout.md).
 - **P2 — Fiscal multi-jurisdicción y pagos reales:** pendiente.
 

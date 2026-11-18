@@ -162,7 +162,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+                "$ref": "#/components/schemas/PricingResolverPreciosInternoRequestDto"
               }
             }
           }
@@ -173,7 +173,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                  "$ref": "#/components/schemas/PricingPreciosInternosResponseDto"
                 }
               }
             }
@@ -603,7 +603,7 @@
           "valor_total_cents"
         ]
       },
-      "LineaPrecioInternaRequestDto": {
+      "PricingLineaPrecioInternaRequestDto": {
         "type": "object",
         "properties": {
           "clave": {
@@ -614,6 +614,10 @@
           "item_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU opcional para resolver promociones"
           },
           "cantidad": {
             "type": "number",
@@ -695,7 +699,7 @@
           "precio_total_cents"
         ]
       },
-      "PrecioLineaInternaResponseDto": {
+      "PricingPrecioLineaInternaResponseDto": {
         "type": "object",
         "properties": {
           "clave": {
@@ -714,6 +718,22 @@
           },
           "precio_total_cents": {
             "type": "number"
+          },
+          "promocion": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {"type": "string", "format": "uuid"},
+              "nombre": {"type": "string"},
+              "tipo": {
+                "type": "string",
+                "enum": ["2x1", "descuento_cantidad", "descuento_porcentaje", "regalo"]
+              },
+              "cantidad_requerida": {"type": "number", "nullable": true},
+              "cantidad_gratis": {"type": "number", "nullable": true},
+              "descuento_porcentaje": {"type": "number", "nullable": true}
+            },
+            "required": ["id", "nombre", "tipo"]
           }
         },
         "required": [
@@ -723,13 +743,13 @@
           "precio_total_cents"
         ]
       },
-      "PreciosInternosResponseDto": {
+      "PricingPreciosInternosResponseDto": {
         "type": "object",
         "properties": {
           "precios": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/PrecioLineaInternaResponseDto"
+              "$ref": "#/components/schemas/PricingPrecioLineaInternaResponseDto"
             }
           }
         },
@@ -737,7 +757,7 @@
           "precios"
         ]
       },
-      "ResolverPreciosInternoRequestDto": {
+      "PricingResolverPreciosInternoRequestDto": {
         "type": "object",
         "properties": {
           "empresa_id": {
@@ -755,7 +775,7 @@
           "lineas": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/LineaPrecioInternaRequestDto"
+              "$ref": "#/components/schemas/PricingLineaPrecioInternaRequestDto"
             }
           }
         },

@@ -16,6 +16,8 @@ pub struct ItemOrden {
     pub comision: bool,
     pub precio_unitario_cents: i64,
     pub cantidad: i64,
+    #[serde(default)]
+    pub descuento_cents: i64,
 }
 
 fn comision_por_defecto() -> bool {

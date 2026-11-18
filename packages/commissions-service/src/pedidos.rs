@@ -148,6 +148,7 @@ impl PedidosConsumer {
             let venta_cents = item
                 .precio_unitario_cents
                 .checked_mul(item.cantidad)
+                .and_then(|bruto| bruto.checked_sub(item.descuento_cents))
                 .ok_or_else(|| ApiError::interno_mensaje("La linea desborda el monto."))?;
             let comision = self
                 .comisiones

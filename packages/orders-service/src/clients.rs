@@ -98,12 +98,27 @@ pub struct OfertaExterna {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct PromocionLinea {
+    pub id: String,
+    pub nombre: String,
+    pub tipo: String,
+    #[serde(default)]
+    pub cantidad_requerida: Option<i64>,
+    #[serde(default)]
+    pub cantidad_gratis: Option<i64>,
+    #[serde(default)]
+    pub descuento_porcentaje: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct PrecioLinea {
     pub clave: String,
     pub origen: String,
     pub precio_unitario_cents: i64,
     #[serde(default)]
     pub precio_total_cents: i64,
+    #[serde(default)]
+    pub promocion: Option<PromocionLinea>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -5,7 +5,7 @@
 use crate::carrito::{Carrito, ItemCarrito};
 use crate::clients::{
     ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, OfertaExterna,
-    PreciosExternos,
+    PreciosExternos, PromocionLinea,
 };
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
@@ -75,6 +75,7 @@ struct LineaAgrupada {
 struct PrecioResuelto {
     origen: String,
     precio_unitario_cents: i64,
+    promocion: Option<PromocionLinea>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -239,13 +240,24 @@ impl Checkout {
                         money::aplicar_margen(resuelto.precio_unitario_cents, oferta.margen)?;
                 }
             }
-            total += money::multiplicar(precio_unitario, linea.cantidad);
+            let bruto = money::multiplicar(precio_unitario, linea.cantidad);
+            let promocion = precios
+                .get(&oferta.id)
+                .and_then(|resuelto| resuelto.promocion.as_ref());
+            let descuento = if tipo_orden == "reserva" {
+                0
+            } else {
+                descuento_de_promocion(promocion, precio_unitario, linea.cantidad)?
+            };
+            total += bruto.saturating_sub(descuento);
             items.push(ItemOrden {
                 oferta_id: oferta.id.clone(),
                 sku: oferta.sku.clone(),
                 producto_nombre: oferta.producto_nombre.clone(),
                 cantidad: linea.cantidad,
                 precio_unitario_cents: precio_unitario,
+                descuento_cents: descuento,
+                promocion_id: promocion.map(|promo| promo.id.clone()),
                 vendedor_id: oferta.vendedor_id.clone(),
                 tienda_id: oferta.tienda_id.clone(),
                 empresa_id: oferta.empresa_id.clone(),
@@ -336,6 +348,8 @@ impl Checkout {
                     Some(true) => {}
                 }
                 item.precio_unitario_cents = cotizacion.total_cents;
+                item.descuento_cents = 0;
+                item.promocion_id = None;
                 total += money::multiplicar(cotizacion.total_cents, item.cantidad);
             }
         }
@@ -446,7 +460,11 @@ impl Checkout {
             items
                 .iter()
                 .filter(|item| item.comision && item.vendedor_id.is_some())
-                .map(|item| item.precio_unitario_cents.saturating_mul(item.cantidad))
+                .map(|item| {
+                    item.precio_unitario_cents
+                        .saturating_mul(item.cantidad)
+                        .saturating_sub(item.descuento_cents)
+                })
                 .sum()
         };
         let comision = if base_comision == 0 {
@@ -837,6 +855,7 @@ impl Checkout {
                             PrecioResuelto {
                                 origen: precio.origen,
                                 precio_unitario_cents: precio.precio_unitario_cents,
+                                promocion: precio.promocion,
                             },
                         );
                     }
@@ -1039,6 +1058,37 @@ fn lineas_de_carrito(items: &[ItemCarrito]) -> Vec<LineaEntrada> {
             ubicacion_id: None,
         })
         .collect()
+}
+
+fn descuento_de_promocion(
+    promocion: Option<&PromocionLinea>,
+    precio_unitario: i64,
+    cantidad: i64,
+) -> Result<i64, ApiError> {
+    let Some(promocion) = promocion else {
+        return Ok(0);
+    };
+    let bruto = money::multiplicar(precio_unitario, cantidad);
+    let descuento = match promocion.tipo.as_str() {
+        "descuento_porcentaje" => {
+            let porcentaje = promocion.descuento_porcentaje.unwrap_or(0).clamp(0, 100);
+            ((bruto as f64 * porcentaje as f64) / 100.0).round() as i64
+        }
+        "2x1" => {
+            let gratis = cantidad / promocion.cantidad_requerida.unwrap_or(2).max(1);
+            gratis.saturating_mul(precio_unitario)
+        }
+        "descuento_cantidad" | "regalo" => {
+            let requerida = promocion.cantidad_requerida.unwrap_or(1).max(1);
+            let gratis = promocion.cantidad_gratis.unwrap_or(0).max(0);
+            (cantidad / requerida)
+                .saturating_mul(gratis)
+                .min(cantidad)
+                .saturating_mul(precio_unitario)
+        }
+        _ => 0,
+    };
+    Ok(descuento.clamp(0, bruto))
 }
 
 fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
@@ -1283,6 +1333,47 @@ fn fulfillment_permitido(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn promocion(tipo: &str) -> PromocionLinea {
+        PromocionLinea {
+            id: "p-1".into(),
+            nombre: "Promo".into(),
+            tipo: tipo.into(),
+            cantidad_requerida: None,
+            cantidad_gratis: None,
+            descuento_porcentaje: None,
+        }
+    }
+
+    #[test]
+    fn debe_calcular_el_descuento_porcentual_y_el_2x1() {
+        let mut porcentaje = promocion("descuento_porcentaje");
+        porcentaje.descuento_porcentaje = Some(25);
+        assert_eq!(
+            descuento_de_promocion(Some(&porcentaje), 10_000, 2).expect("porcentaje"),
+            5_000
+        );
+
+        let mut dos_por_uno = promocion("2x1");
+        dos_por_uno.cantidad_requerida = Some(2);
+        assert_eq!(
+            descuento_de_promocion(Some(&dos_por_uno), 10_000, 4).expect("2x1"),
+            20_000
+        );
+        assert_eq!(
+            descuento_de_promocion(Some(&dos_por_uno), 10_000, 1).expect("sin 2x1"),
+            0
+        );
+    }
+
+    #[test]
+    fn debe_tope_el_descuento_al_bruto() {
+        let mut regalo = promocion("regalo");
+        regalo.cantidad_requerida = Some(1);
+        regalo.cantidad_gratis = Some(5);
+        let descuento = descuento_de_promocion(Some(&regalo), 10_000, 2).expect("regalo");
+        assert_eq!(descuento, 20_000);
+    }
 
     #[test]
     fn debe_agrupar_lineas_de_la_misma_oferta() {

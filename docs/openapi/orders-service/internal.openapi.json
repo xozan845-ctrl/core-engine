@@ -454,6 +454,17 @@
             "description": "Precio unitario de venta en centavos",
             "example": 115000
           },
+          "descuento_cents": {
+            "type": "number",
+            "description": "Descuento aplicado por promoción en centavos",
+            "example": 0
+          },
+          "promocion_id": {
+            "type": "string",
+            "description": "Promoción aplicada a la línea",
+            "format": "uuid",
+            "nullable": true
+          },
           "vendedor_id": {
             "type": "string",
             "description": "Id del vendedor; null en venta directa",

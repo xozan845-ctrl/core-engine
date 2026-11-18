@@ -29,6 +29,10 @@ pub struct ItemOrden {
     pub producto_nombre: String,
     pub cantidad: i64,
     pub precio_unitario_cents: i64,
+    #[serde(default)]
+    pub descuento_cents: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub promocion_id: Option<String>,
     pub vendedor_id: Option<String>,
     pub tienda_id: String,
     pub empresa_id: String,

@@ -167,7 +167,11 @@ impl Pedidos {
     fn total_de(&self, items: &[ItemOrden]) -> i64 {
         items
             .iter()
-            .map(|item| item.precio_unitario_cents * item.cantidad)
+            .map(|item| {
+                item.precio_unitario_cents
+                    .saturating_mul(item.cantidad)
+                    .saturating_sub(item.descuento_cents)
+            })
             .sum()
     }
 
@@ -179,6 +183,10 @@ impl Pedidos {
                     .and_then(Value::as_i64)
                     .unwrap_or(0)
                     * item.get("cantidad").and_then(Value::as_i64).unwrap_or(0)
+                    - item
+                        .get("descuento_cents")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(0)
             })
             .sum()
     }
@@ -197,6 +205,8 @@ mod tests {
             producto_nombre: "Producto".into(),
             cantidad,
             precio_unitario_cents: precio,
+            descuento_cents: 0,
+            promocion_id: None,
             vendedor_id: Some(vendedor.into()),
             tienda_id: "t-1".into(),
             empresa_id: empresa.into(),
