@@ -282,6 +282,26 @@ mod tests {
     }
 
     #[test]
+    fn debe_repartir_el_cupon_al_recortar_la_orden() {
+        let pedidos = Pedidos {
+            tasa_comision: 0.12,
+        };
+        let mut con_cupon = orden();
+        con_cupon.descuento_cupon_cents = 30;
+        con_cupon.cupon_codigo = Some("VERANO".into());
+        con_cupon.total_cents = 270;
+        let usuario = UsuarioContexto {
+            user_id: "v-1".into(),
+            rol: "vendedor".into(),
+            ..Default::default()
+        };
+        let recortada = pedidos.detalle_para(con_cupon, &usuario).expect("acceso");
+        assert_eq!(recortada.descuento_cupon_cents, 10);
+        assert_eq!(recortada.total_cents, 90);
+        assert_eq!(recortada.cupon_codigo.as_deref(), Some("VERANO"));
+    }
+
+    #[test]
     fn debe_negar_una_orden_ajena_al_comprador() {
         let pedidos = Pedidos {
             tasa_comision: 0.12,
