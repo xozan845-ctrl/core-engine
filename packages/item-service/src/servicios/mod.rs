@@ -1,8 +1,9 @@
 //! Servicios de la empresa (R-PS-02).
 //!
 //! Réplica de `servicios.service.ts`: es un recurso propio del catálogo, no un
-//! producto sin stock. Tiene duración, precio/costo y baja lógica. Desde la
-//! Fase 3 vive en `item.items` con `tipo='servicio'`.
+//! producto sin stock. Tiene duración, costo y baja lógica. Desde la Fase 3 vive
+//! en `item.items` con `tipo='servicio'`; el precio base se delega a
+//! `pricing-service` (ADR-0020 fase 3b).
 
 use crate::db::{fila_a_json, interno, Db};
 use crate::errors::ApiError;
@@ -10,6 +11,7 @@ use crate::items::Items;
 use crate::money::Money;
 use crate::paginacion::{crear_pagina, parsear_paginacion};
 use crate::productos::Productos;
+use crate::proyecciones::Proyecciones;
 use serde_json::{json, Map, Value};
 use sqlx::Row;
 use std::collections::HashSet;
@@ -18,7 +20,7 @@ use std::sync::Arc;
 const MAX_DURACION: i64 = 1440;
 
 const COLUMNAS_SERVICIO: &str = "i.id, i.empresa_id, i.codigo, i.nombre, i.descripcion,
-  i.categoria, i.marca, i.codigo_barras, i.precio_cents, i.costo_cents, i.unidad,
+  i.categoria, i.marca, i.codigo_barras, i.costo_cents, i.unidad,
   i.duration_minutes AS duracion_minutos, i.atributos, i.estado, i.creado_en,
   i.actualizado_en";
 
@@ -26,6 +28,7 @@ pub struct Servicios {
     db: Arc<Db>,
     productos: Arc<Productos>,
     items: Option<Arc<Items>>,
+    proyecciones: Option<Arc<Proyecciones>>,
 }
 
 impl Servicios {
@@ -38,6 +41,7 @@ impl Servicios {
             db,
             productos,
             items,
+            proyecciones: None,
         }
     }
 
@@ -50,7 +54,15 @@ impl Servicios {
             db,
             productos,
             items,
+            proyecciones: None,
         }
+    }
+
+    /// El precio base vive en `pricing-service` (ADR-0020 fase 3b): el alta y
+    /// la edición de servicios lo delegan por API interna.
+    pub fn con_proyecciones(mut self, proyecciones: Option<Arc<Proyecciones>>) -> Self {
+        self.proyecciones = proyecciones;
+        self
     }
 
     pub async fn listar(&self, filtros: &Value) -> Result<Value, ApiError> {
@@ -210,12 +222,11 @@ impl Servicios {
         let fila = sqlx::query(
             "INSERT INTO item.items
                (empresa_id, tipo, codigo, nombre, descripcion, categoria, marca, codigo_barras,
-                precio_cents, costo_cents, unidad, duration_minutes, atributos, estado,
-                track_inventory)
-             VALUES ($1::uuid, 'servicio', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13,
+                costo_cents, unidad, duration_minutes, atributos, estado, track_inventory)
+             VALUES ($1::uuid, 'servicio', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12,
                      false)
              RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-                       codigo_barras, precio_cents, costo_cents, unidad,
+                       codigo_barras, costo_cents, unidad,
                        duration_minutes AS duracion_minutos, atributos, estado, creado_en,
                        actualizado_en",
         )
@@ -226,7 +237,6 @@ impl Servicios {
         .bind(texto(datos, "categoria").trim().to_string())
         .bind(texto(datos, "marca").trim().to_string())
         .bind(&codigo_barras)
-        .bind(precio.centavos)
         .bind(costo.centavos)
         .bind(defecto(texto(datos, "unidad"), "Hora (h)"))
         .bind(duracion)
@@ -242,7 +252,28 @@ impl Servicios {
                 "No se pudo crear el servicio.",
             ));
         };
-        serializar(fila_a_json(&fila).map_err(interno)?)
+        let servicio = serializar(fila_a_json(&fila).map_err(interno)?)?;
+        if let Some(proyecciones) = &self.proyecciones {
+            let id = servicio
+                .get("id")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            if let Err(error) = proyecciones
+                .fijar_precio(empresa_id, &id, precio.centavos)
+                .await
+            {
+                let mut tx = self.db.transaccion().await.map_err(interno)?;
+                sqlx::query("DELETE FROM item.items WHERE id = $1::uuid")
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(error);
+            }
+        }
+        Ok(servicio)
     }
 
     pub async fn actualizar(
@@ -255,9 +286,9 @@ impl Servicios {
             .encontrar_por_id(id, empresa_id)
             .await?
             .ok_or_else(|| ApiError::no_encontrado("Servicio", id))?;
-        let precio = match cambios.get("precio") {
-            None => Money::parsear(&texto(&actual, "precio"))?,
-            Some(valor) => validar_precio(Some(valor))?,
+        let nuevo_precio = match cambios.get("precio") {
+            Some(valor) => Some(validar_precio(Some(valor))?),
+            None => None,
         };
         let costo = match cambios.get("costo") {
             None => Money::parsear(&texto(&actual, "costo"))?,
@@ -339,13 +370,13 @@ impl Servicios {
         let fila = sqlx::query(
             "UPDATE item.items
                 SET nombre = $3, descripcion = $4, categoria = $5, marca = $6,
-                    codigo_barras = $7, precio_cents = $8, costo_cents = $9, unidad = $10,
-                    duration_minutes = $11, atributos = $12::jsonb, estado = $13,
+                    codigo_barras = $7, costo_cents = $8, unidad = $9,
+                    duration_minutes = $10, atributos = $11::jsonb, estado = $12,
                     actualizado_en = NOW()
               WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo = 'servicio'
                 AND eliminado_en IS NULL
               RETURNING id, empresa_id, codigo, nombre, descripcion, categoria, marca,
-                        codigo_barras, precio_cents, costo_cents, unidad,
+                        codigo_barras, costo_cents, unidad,
                         duration_minutes AS duracion_minutos, atributos, estado, creado_en,
                         actualizado_en",
         )
@@ -356,7 +387,6 @@ impl Servicios {
         .bind(&categoria)
         .bind(&marca)
         .bind(&codigo_barras)
-        .bind(precio.centavos)
         .bind(costo.centavos)
         .bind(&unidad)
         .bind(duracion)
@@ -369,7 +399,13 @@ impl Servicios {
         let Some(fila) = fila else {
             return Err(ApiError::no_encontrado("Servicio", id));
         };
-        serializar(fila_a_json(&fila).map_err(interno)?)
+        let servicio = serializar(fila_a_json(&fila).map_err(interno)?)?;
+        if let (Some(precio), Some(proyecciones)) = (nuevo_precio, &self.proyecciones) {
+            proyecciones
+                .fijar_precio(empresa_id, id, precio.centavos)
+                .await?;
+        }
+        Ok(servicio)
     }
 
     /// Baja lógica: conserva el registro y lo marca inactivo (R-DB-5).
@@ -676,7 +712,6 @@ mod tests {
             "categoria": "servicios",
             "marca": "Core",
             "codigo_barras": "7501234567890",
-            "precio_cents": 150000,
             "costo_cents": 50000,
             "unidad": "Hora (h)",
             "duracion_minutos": 60,
