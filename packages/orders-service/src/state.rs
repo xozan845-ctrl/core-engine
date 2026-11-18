@@ -160,4 +160,13 @@ impl AppState {
     pub fn fidelizacion(&self) -> Result<&Arc<Fidelizacion>, ApiError> {
         self.fidelizacion.as_ref().ok_or_else(ApiError::interno)
     }
+
+    pub fn devoluciones(&self) -> Result<crate::devoluciones::Devoluciones, ApiError> {
+        Ok(crate::devoluciones::Devoluciones::nueva(
+            Arc::clone(self.db()?),
+            Arc::clone(self.vistas()?),
+            Arc::clone(self.clientes()?),
+            crate::outbox::Outbox::nueva(&self.config.outbox_tabla),
+        ))
+    }
 }

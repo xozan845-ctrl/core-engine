@@ -3916,6 +3916,703 @@
           "Fidelización"
         ]
       }
+    },
+    "/api/v2/orders/{id}/devoluciones": {
+      "get": {
+        "operationId": "DevolucionesController_listar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devoluciones de la orden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "order_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "empresa_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "negocio_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "motivo": {
+                            "type": "string"
+                          },
+                          "estado": {
+                            "type": "string"
+                          },
+                          "total_cents": {
+                            "type": "integer"
+                          },
+                          "moneda": {
+                            "type": "string"
+                          },
+                          "creado_por": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "creado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "actualizado_en": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lineas": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "oferta_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "sku": {
+                                  "type": "string"
+                                },
+                                "cantidad": {
+                                  "type": "integer"
+                                },
+                                "precio_unitario_cents": {
+                                  "type": "integer"
+                                },
+                                "descuento_cents": {
+                                  "type": "integer"
+                                },
+                                "total_cents": {
+                                  "type": "integer"
+                                },
+                                "restock": {
+                                  "type": "boolean"
+                                },
+                                "ubicacion_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "nullable": true
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar devoluciones de una orden",
+        "tags": [
+          "Devoluciones"
+        ]
+      },
+      "post": {
+        "operationId": "DevolucionesController_crear",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivo": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "oferta_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "cantidad": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "restock": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "oferta_id",
+                        "cantidad"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Devolución creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear devolución parcial",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/aprobar": {
+      "post": {
+        "operationId": "DevolucionesController_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución aprobar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "aprobar devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/recibir": {
+      "post": {
+        "operationId": "DevolucionesController_recibir",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución recibir",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "recibir devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
+    },
+    "/api/v2/admin/devoluciones/{id}/rechazar": {
+      "post": {
+        "operationId": "DevolucionesController_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devolución rechazar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "negocio_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "motivo": {
+                          "type": "string"
+                        },
+                        "estado": {
+                          "type": "string"
+                        },
+                        "total_cents": {
+                          "type": "integer"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "creado_por": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "creado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "actualizado_en": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "lineas": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "oferta_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "sku": {
+                                "type": "string"
+                              },
+                              "cantidad": {
+                                "type": "integer"
+                              },
+                              "precio_unitario_cents": {
+                                "type": "integer"
+                              },
+                              "descuento_cents": {
+                                "type": "integer"
+                              },
+                              "total_cents": {
+                                "type": "integer"
+                              },
+                              "restock": {
+                                "type": "boolean"
+                              },
+                              "ubicacion_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "rechazar devolución",
+        "tags": [
+          "Devoluciones"
+        ]
+      }
     }
   },
   "components": {

@@ -246,3 +246,10 @@ cargo test
 - [Contrato público](../../docs/openapi/commissions-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/commissions-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+### Devoluciones parciales
+
+- `devolucion.recibida` compensa proporcionalmente la comisión de cada línea
+  (`linea_clave` + `cantidad`), usando `commissions.comisiones.cantidad`.
+- Si la cantidad devuelta cubre la línea completa, la comisión pasa a
+  `compensada`; si es parcial, sigue `acreditada` y acumula compensaciones.

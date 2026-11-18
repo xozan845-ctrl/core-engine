@@ -23,6 +23,7 @@ use std::sync::Arc;
 pub const EVENTO_PAYMENT_PROCESADO: &str = "payment.procesado";
 pub const EVENTO_ORDER_COMPLETADO: &str = "order.completado";
 pub const EVENTO_DEVOLUCION_SOLICITADA: &str = "devolucion.solicitada";
+pub const EVENTO_DEVOLUCION_RECIBIDA: &str = "devolucion.recibida";
 pub const USUARIO_SISTEMA: &str = "00000000-0000-0000-0000-000000000000";
 
 pub struct PedidosConsumer {
@@ -71,7 +72,10 @@ impl PedidosConsumer {
         };
         if !matches!(
             tipo.as_str(),
-            EVENTO_PAYMENT_PROCESADO | EVENTO_ORDER_COMPLETADO | EVENTO_DEVOLUCION_SOLICITADA
+            EVENTO_PAYMENT_PROCESADO
+                | EVENTO_ORDER_COMPLETADO
+                | EVENTO_DEVOLUCION_SOLICITADA
+                | EVENTO_DEVOLUCION_RECIBIDA
         ) {
             return Ok(());
         }
@@ -89,6 +93,7 @@ impl PedidosConsumer {
                 EVENTO_PAYMENT_PROCESADO => self.pago(&evento, &event_id).await,
                 EVENTO_ORDER_COMPLETADO => self.orden_completada(&evento, &event_id).await,
                 EVENTO_DEVOLUCION_SOLICITADA => self.devolucion(&evento, &event_id).await,
+                EVENTO_DEVOLUCION_RECIBIDA => self.devolucion_recibida(&evento, &event_id).await,
                 _ => Ok(()),
             }
         })
@@ -163,6 +168,7 @@ impl PedidosConsumer {
                         vendedor_id: vendedor_id.clone(),
                         venta_cents,
                         participacion,
+                        cantidad: item.cantidad,
                     },
                 )
                 .await?;
@@ -205,6 +211,38 @@ impl PedidosConsumer {
                 "lineas": acreditadas,
             },
         );
+        Ok(())
+    }
+
+    async fn devolucion_recibida(&self, evento: &Value, event_id: &str) -> Result<(), ApiError> {
+        if self.ya_procesado(event_id).await? {
+            return Ok(());
+        }
+        let data = datos(evento)?;
+        let order_id = campo(data, "order_id")?;
+        let items = data
+            .get("items")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        if self.ya_procesado_tx(&mut tx, event_id).await? {
+            tx.commit().await.map_err(error_db)?;
+            return Ok(());
+        }
+        for item in &items {
+            let linea = item
+                .get("linea_clave")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let cantidad = item.get("cantidad").and_then(Value::as_i64).unwrap_or(0);
+            self.comisiones
+                .compensar_linea(&mut tx, order_id, linea, cantidad, "devolucion parcial")
+                .await?;
+        }
+        self.marcar_procesado(&mut tx, event_id, EVENTO_DEVOLUCION_RECIBIDA)
+            .await?;
+        tx.commit().await.map_err(error_db)?;
         Ok(())
     }
 

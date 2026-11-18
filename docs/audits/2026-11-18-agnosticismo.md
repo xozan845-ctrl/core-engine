@@ -404,3 +404,7 @@ marketplace que ya funciona.
   Decisión en [ADR-0028](../adr/0028-cupones.md).
 - **P3.2 — RMA/devolución parcial:** pendiente.
 - **P3.3 — Reseñas y wishlist:** pendiente.
+- **P3.2 — RMA/devolución parcial: implementado.** `orders.devoluciones` +
+  líneas, restock idempotente en inventory y compensación proporcional de
+  comisión con `devolucion.recibida`. Decisión en
+  [ADR-0029](../adr/0029-rma-devolucion-parcial.md).

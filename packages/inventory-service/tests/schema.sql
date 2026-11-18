@@ -160,3 +160,9 @@ CREATE TABLE inventory.outbox (
   creado_en    timestamptz NOT NULL DEFAULT NOW(),
   publicado_en timestamptz
 );
+
+CREATE TABLE IF NOT EXISTS inventory.devoluciones_procesadas (
+  devolucion_id uuid PRIMARY KEY,
+  order_id uuid NOT NULL,
+  procesado_en timestamptz NOT NULL DEFAULT NOW()
+);
