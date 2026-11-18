@@ -20,6 +20,7 @@ pub struct AppState {
     pub temas: Arc<dyn TemasIdentity>,
     pub storage: Arc<dyn ObjetosStorage>,
     pub catalogo: Arc<dyn Catalogo>,
+    pub ordenes: Arc<dyn crate::clients::Ordenes>,
     pub db: Option<Arc<crate::db::Db>>,
     /// `None` solo en el estado de pruebas de infraestructura; las rutas de
     /// negocio fallan con 500 si no hay base de datos.
@@ -38,6 +39,7 @@ impl AppState {
             temas: Arc::new(TemasSinHerencia),
             storage: Arc::new(StorageSinConexion),
             catalogo: Arc::new(CatalogoSinConexion),
+            ordenes: Arc::new(crate::clients::OrdenesSinConexion),
             db: None,
             tiendas: None,
             ofertas: None,
@@ -53,6 +55,7 @@ impl AppState {
         temas: Arc<dyn TemasIdentity>,
         storage: Arc<dyn ObjetosStorage>,
         catalogo: Arc<dyn Catalogo>,
+        ordenes: Arc<dyn crate::clients::Ordenes>,
         db: Arc<crate::db::Db>,
         tiendas: Arc<Tiendas>,
         ofertas: Arc<Ofertas>,
@@ -64,6 +67,7 @@ impl AppState {
             temas,
             storage,
             catalogo,
+            ordenes,
             db: Some(db),
             tiendas: Some(tiendas),
             ofertas: Some(ofertas),
@@ -93,6 +97,8 @@ impl AppState {
         Ok(crate::resenas::Resenas::nueva(
             Arc::clone(self.db()?),
             Arc::clone(&self.catalogo),
+            Arc::clone(&self.capacidades),
+            Arc::clone(&self.ordenes),
         ))
     }
 

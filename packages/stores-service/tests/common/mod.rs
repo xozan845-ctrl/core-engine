@@ -163,6 +163,8 @@ pub async fn provisionar(url: &str) {
           titulo text NOT NULL DEFAULT '',
           comentario text NOT NULL DEFAULT '',
           estado text NOT NULL DEFAULT 'pendiente',
+          compra_verificada boolean NOT NULL DEFAULT false,
+          order_id uuid,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW(),
           UNIQUE (item_id, comprador_id)

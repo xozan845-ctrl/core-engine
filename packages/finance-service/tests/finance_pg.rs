@@ -40,6 +40,7 @@ impl Ordenes for OrdenesFijas {
     async fn consultar(&self, order_id: &str) -> Option<OrdenResumen> {
         (order_id == "22222222-2222-4222-8222-222222222222").then_some(OrdenResumen {
             total_cents: 100_000,
+            empresa_id: Some("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".to_string()),
             negocio_id: None,
             items: vec![
                 OrdenItemFiscal {
@@ -229,6 +230,10 @@ async fn provisionar(url: &str) {
           empresa_id uuid NOT NULL,
           negocio_id uuid,
           jurisdiccion text NOT NULL,
+          facturacion_electronica boolean NOT NULL DEFAULT false,
+          formato_pdf boolean NOT NULL DEFAULT false,
+          proveedor_electronico text NOT NULL DEFAULT 'simulado',
+          ambiente_electronico text NOT NULL DEFAULT 'pruebas',
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW()
         );
@@ -284,6 +289,7 @@ async fn provisionar(url: &str) {
           numero text NOT NULL,
           tipo text NOT NULL,
           orden_id uuid,
+          empresa_id uuid,
           negocio_id uuid,
           parte_id uuid,
           base_gravada_cents integer NOT NULL,
@@ -294,9 +300,16 @@ async fn provisionar(url: &str) {
           estado text NOT NULL DEFAULT 'BORRADOR',
           datos_cliente jsonb,
           emitido_en timestamptz,
+          electronica_estado text,
+          electronica_referencia text,
+          electronica_enviada_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW()
         );
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS negocio_id uuid;
+        ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS empresa_id uuid;
+        ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_estado text;
+        ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_referencia text;
+        ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_enviada_en timestamptz;
         CREATE TABLE finance.series_comprobantes (
           serie text PRIMARY KEY,
           negocio_id uuid,
@@ -795,6 +808,68 @@ async fn debe_emitir_comprobantes_con_secuencial_consecutivo() {
         .await
         .expect_err("orden inexistente");
     assert_eq!(inexistente.codigo, "NO_ENCONTRADO");
+}
+
+#[tokio::test]
+async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let tributacion = Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    );
+    tributacion
+        .guardar_configuracion_facturacion(
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+            "NI",
+            true,
+            true,
+            "simulado",
+            "pruebas",
+        )
+        .await
+        .expect("configuracion");
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    );
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            tipo: "FACTURA".into(),
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            parte_id: None,
+            razon_social: Some("Cliente".into()),
+            ruc: None,
+        })
+        .await
+        .expect("comprobante");
+    assert_eq!(comprobante.electronica_estado.as_deref(), Some("aceptada"));
+    assert!(comprobante
+        .electronica_referencia
+        .as_deref()
+        .is_some_and(|valor| valor.starts_with("sim-")));
+
+    let pdf = facturacion
+        .pdf_de(
+            &comprobante.id,
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+        )
+        .await
+        .expect("pdf")
+        .expect("pdf bytes");
+    assert!(pdf.starts_with(b"%PDF-1.4"));
 }
 
 #[tokio::test]

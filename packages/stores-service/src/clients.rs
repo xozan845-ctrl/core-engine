@@ -6,6 +6,8 @@
 //!   pósteres e imagen SEO.
 //! - `item-service`: item unificado antes de publicar una oferta.
 
+#![allow(clippy::items_after_test_module)]
+
 use crate::ofertas::Money;
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -426,5 +428,87 @@ mod tests {
             temas.obtener_plataforma().await,
             TemaHerenciaCruda::default()
         );
+    }
+}
+
+/// Consulta de órdenes para la compra verificada de reseñas.
+#[async_trait]
+pub trait Ordenes: Send + Sync {
+    async fn compra_verificada(&self, order_id: &str, comprador_id: &str, item_id: &str) -> bool;
+}
+
+pub struct OrdenesSinConexion;
+
+#[async_trait]
+impl Ordenes for OrdenesSinConexion {
+    async fn compra_verificada(
+        &self,
+        _order_id: &str,
+        _comprador_id: &str,
+        _item_id: &str,
+    ) -> bool {
+        false
+    }
+}
+
+pub struct OrdenesHttp {
+    url: String,
+    clave: String,
+    timeout: Duration,
+}
+
+impl OrdenesHttp {
+    pub fn nueva(url: String, clave: Option<String>, timeout_ms: u64) -> Self {
+        Self {
+            url: url.trim_end_matches('/').to_string(),
+            clave: clave.unwrap_or_default(),
+            timeout: Duration::from_millis(timeout_ms.max(1)),
+        }
+    }
+}
+
+#[async_trait]
+impl Ordenes for OrdenesHttp {
+    async fn compra_verificada(&self, order_id: &str, comprador_id: &str, item_id: &str) -> bool {
+        let cliente = match reqwest::Client::builder().timeout(self.timeout).build() {
+            Ok(cliente) => cliente,
+            Err(_) => return false,
+        };
+        let respuesta = match cliente
+            .get(format!(
+                "{}/internal/orders/{}",
+                self.url,
+                urlencoding::encode(order_id)
+            ))
+            .header("x-internal-key", &self.clave)
+            .send()
+            .await
+        {
+            Ok(respuesta) => respuesta,
+            Err(_) => return false,
+        };
+        if !respuesta.status().is_success() {
+            return false;
+        }
+        let orden: Value = match respuesta.json().await {
+            Ok(valor) => valor,
+            Err(_) => return false,
+        };
+        let comprador = orden
+            .get("comprador_id")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let estado = orden.get("estado").and_then(Value::as_str).unwrap_or("");
+        if comprador != comprador_id || !matches!(estado, "pagada" | "enviada" | "entregada") {
+            return false;
+        }
+        orden
+            .get("items")
+            .and_then(Value::as_array)
+            .is_some_and(|items| {
+                items
+                    .iter()
+                    .any(|item| item.get("item_id").and_then(Value::as_str) == Some(item_id))
+            })
     }
 }

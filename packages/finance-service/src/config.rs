@@ -23,6 +23,8 @@ pub struct Config {
     pub internal_request_timeout_ms: u64,
     pub commission_rate: f64,
     pub emitir_comprobantes_fiscales: bool,
+    pub facturacion_proveedor_url: Option<String>,
+    pub facturacion_proveedor_key: Option<String>,
     pub outbox_tabla: String,
 }
 
@@ -95,6 +97,8 @@ impl Config {
             emitir_comprobantes_fiscales: leer("EMITIR_COMPROBANTES_FISCALES")
                 .map(|valor| valor.eq_ignore_ascii_case("true"))
                 .unwrap_or(false),
+            facturacion_proveedor_url: leer("FACTURACION_PROVEEDOR_URL"),
+            facturacion_proveedor_key: leer("FACTURACION_PROVEEDOR_KEY"),
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "outbox".to_string()),
         })
     }

@@ -4795,6 +4795,18 @@
                         },
                         "jurisdiccion": {
                           "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                        },
+                        "facturacion_electronica": {
+                          "type": "boolean"
+                        },
+                        "formato_pdf": {
+                          "type": "boolean"
+                        },
+                        "proveedor_electronico": {
+                          "type": "string"
+                        },
+                        "ambiente_electronico": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -4843,6 +4855,26 @@
                     "type": "string",
                     "format": "uuid",
                     "nullable": true
+                  },
+                  "facturacion_electronica": {
+                    "type": "boolean"
+                  },
+                  "formato_pdf": {
+                    "type": "boolean"
+                  },
+                  "proveedor_electronico": {
+                    "type": "string",
+                    "enum": [
+                      "simulado",
+                      "http"
+                    ]
+                  },
+                  "ambiente_electronico": {
+                    "type": "string",
+                    "enum": [
+                      "pruebas",
+                      "produccion"
+                    ]
                   }
                 },
                 "required": [
@@ -8653,6 +8685,44 @@
         "summary": "Eliminar una etiqueta de código de barras",
         "tags": [
           "Comercio · Operación de tienda"
+        ]
+      }
+    },
+    "/api/v2/finanzas/comprobantes/{id}/pdf": {
+      "get": {
+        "operationId": "FacturacionController_comprobantePdf",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF del comprobante",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Descargar comprobante en PDF",
+        "tags": [
+          "Finanzas · Facturación"
         ]
       }
     },
@@ -28872,6 +28942,24 @@
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "electronica_estado": {
+            "type": "string",
+            "nullable": true
+          },
+          "electronica_referencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "electronica_enviada_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [

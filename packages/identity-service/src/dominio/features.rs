@@ -80,6 +80,10 @@ pub const FEATURES_POR_CAPACIDAD: &[(&str, &[&str])] = &[
     ("contratos", &["ordenes.contratos", "ordenes.depositos"]),
     ("suscripciones", &["ordenes.suscripciones"]),
     ("mesas", &["ordenes.mesas", "ordenes.comandas"]),
+    (
+        "resenas_verificadas",
+        &["tienda.resenas", "tienda.resenas_verificadas"],
+    ),
     ("ventas_credito", &["finanzas.credito"]),
     (
         "facturacion",
@@ -92,6 +96,13 @@ pub const FEATURES_POR_CAPACIDAD: &[(&str, &[&str])] = &[
             "finanzas.gastos",
             "finanzas.bancos",
             "finanzas.proyecciones",
+        ],
+    ),
+    (
+        "facturacion_electronica",
+        &[
+            "finanzas.facturacion_electronica",
+            "finanzas.facturacion_pdf",
         ],
     ),
     (

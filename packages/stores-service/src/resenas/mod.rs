@@ -1,6 +1,7 @@
 //! Reseñas de comprador por item, con moderación.
 
-use crate::clients::Catalogo;
+use crate::auth::Capacidades;
+use crate::clients::{Catalogo, Ordenes};
 use crate::db::Db;
 use crate::errors::ApiError;
 use crate::ofertas::{crear_pagina, parsear_paginacion};
@@ -9,16 +10,28 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 const COLUMNAS: &str = "id, empresa_id, item_id, comprador_id, calificacion,
-  titulo, comentario, estado, creado_en, actualizado_en";
+  titulo, comentario, estado, compra_verificada, order_id, creado_en, actualizado_en";
 
 pub struct Resenas {
     db: Arc<Db>,
     catalogo: Arc<dyn Catalogo>,
+    capacidades: Arc<dyn Capacidades>,
+    ordenes: Arc<dyn Ordenes>,
 }
 
 impl Resenas {
-    pub fn nueva(db: Arc<Db>, catalogo: Arc<dyn Catalogo>) -> Self {
-        Self { db, catalogo }
+    pub fn nueva(
+        db: Arc<Db>,
+        catalogo: Arc<dyn Catalogo>,
+        capacidades: Arc<dyn Capacidades>,
+        ordenes: Arc<dyn Ordenes>,
+    ) -> Self {
+        Self {
+            db,
+            catalogo,
+            capacidades,
+            ordenes,
+        }
     }
 
     pub async fn listar_publicas(
@@ -93,11 +106,43 @@ impl Resenas {
             .item(&item_id)
             .await
             .ok_or_else(|| ApiError::no_encontrado("Item", &item_id))?;
+        let verificadas = self
+            .capacidades
+            .activas(&item.empresa_id, &["resenas_verificadas"])
+            .await
+            .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?
+            .iter()
+            .any(|capacidad| {
+                capacidad.activo && capacidad.capacidad_codigo == "resenas_verificadas"
+            });
+        let (compra_verificada, order_id) = if verificadas {
+            let order_id = texto(datos, "order_id");
+            if Uuid::parse_str(&order_id).is_err() {
+                return Err(ApiError::dominio(
+                    "ORDER_ID_REQUERIDO",
+                    "Esta empresa exige una compra verificada para reseñar.",
+                ));
+            }
+            if !self
+                .ordenes
+                .compra_verificada(&order_id, comprador_id, &item_id)
+                .await
+            {
+                return Err(ApiError::dominio(
+                    "COMPRA_NO_VERIFICADA",
+                    "No existe una compra pagada de este comprador para el item.",
+                ));
+            }
+            (true, Some(order_id))
+        } else {
+            (false, None)
+        };
         let (calificacion, titulo, comentario) = validar(datos)?;
         let fila = sqlx::query(&format!(
             "INSERT INTO stores.resenas
-               (empresa_id, item_id, comprador_id, calificacion, titulo, comentario)
-             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6)
+               (empresa_id, item_id, comprador_id, calificacion, titulo, comentario,
+                compra_verificada, order_id)
+             VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8::uuid)
              RETURNING {COLUMNAS}"
         ))
         .bind(&item.empresa_id)
@@ -106,6 +151,8 @@ impl Resenas {
         .bind(calificacion)
         .bind(&titulo)
         .bind(&comentario)
+        .bind(compra_verificada)
+        .bind(order_id)
         .fetch_optional(self.db.pool())
         .await
         .map_err(conflicto_o_interno)?
