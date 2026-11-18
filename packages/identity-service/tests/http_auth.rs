@@ -821,6 +821,111 @@ async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
 }
 
 #[tokio::test]
+async fn debe_exponer_el_manifiesto_de_capacidades_y_features_por_negocio() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let admin_usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin manifiesto negocio".into(),
+            correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
+            contrasena: "secreto123".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin_id = admin_usuario.id;
+    let empresa = Uuid::new_v4().to_string();
+    let negocio = Uuid::new_v4().to_string();
+    let heredado = Uuid::new_v4().to_string();
+    let admin = autorizacion(&admin_id, "super_admin");
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
+         VALUES ($1::uuid, 'Empresa por negocio', $2, 'retail', 'pack_retail', 1, $3::uuid)",
+    )
+    .bind(&empresa)
+    .bind(format!("negocio-{}", &empresa[..8]))
+    .bind(&admin_id)
+    .execute(&mut *tx)
+    .await
+    .expect("empresa");
+    for capacidad in ["catalogo_items", "inventario_stock"] {
+        sqlx::query(
+            "INSERT INTO identity.empresa_capacidades
+               (empresa_id, capacidad_codigo, activo, config, actualizado_en)
+             VALUES ($1::uuid, $2, true, '{}'::jsonb, NOW())",
+        )
+        .bind(&empresa)
+        .bind(capacidad)
+        .execute(&mut *tx)
+        .await
+        .expect("capacidad de empresa");
+    }
+    for (id, codigo) in [(&negocio, "principal"), (&heredado, "heredado")] {
+        sqlx::query(
+            "INSERT INTO identity.negocios
+               (id, empresa_id, codigo, nombre, vertical_id, pack_codigo,
+                pack_version, creado_por)
+             VALUES ($1::uuid, $2::uuid, $3, $4, 'retail', 'pack_retail', 1, $5::uuid)",
+        )
+        .bind(id)
+        .bind(&empresa)
+        .bind(codigo)
+        .bind(format!("Negocio {codigo}"))
+        .bind(&admin_id)
+        .execute(&mut *tx)
+        .await
+        .expect("negocio");
+    }
+    sqlx::query(
+        "INSERT INTO identity.negocio_capacidades
+           (negocio_id, capacidad_codigo, activo, config, actualizado_en)
+         VALUES ($1::uuid, 'agenda_recursos', true, '{}'::jsonb, NOW())",
+    )
+    .bind(&negocio)
+    .execute(&mut *tx)
+    .await
+    .expect("capacidad de negocio");
+    tx.commit().await.expect("commit");
+
+    let (status, manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/negocios/{negocio}/features"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let data = &manifiesto["data"];
+    assert_eq!(data["empresa_id"], empresa);
+    assert_eq!(data["negocio_id"], negocio);
+    assert_eq!(data["pack"]["codigo"], "pack_retail");
+    let features = data["features"].as_array().expect("features");
+    assert!(features.iter().any(|feature| feature == "agenda.citas"));
+    assert!(!features.iter().any(|feature| feature == "inventario.stock"));
+
+    let (status, heredado_manifiesto) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa}/negocios/{heredado}/features"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let features = heredado_manifiesto["data"]["features"]
+        .as_array()
+        .expect("features heredadas");
+    assert!(features.iter().any(|feature| feature == "inventario.stock"));
+}
+
+#[tokio::test]
 async fn debe_listar_usuarios_y_limitar_el_avatar() {
     let Some(ctx) = preparar().await else {
         return;

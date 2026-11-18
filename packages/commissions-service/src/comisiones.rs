@@ -57,6 +57,7 @@ pub struct DatosLinea {
     pub vendedor_id: String,
     pub venta_cents: i64,
     pub participacion: i64,
+    pub cantidad: i64,
 }
 
 impl Comision {
@@ -172,8 +173,8 @@ impl Comisiones {
             "INSERT INTO commissions.comisiones
                 (id, order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id, venta_cents,
                  comision_cents, monto_vendedor_cents, monto_empresario_cents,
-                 participacion_porcentaje, estado)
-             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'acreditada')
+                 participacion_porcentaje, cantidad, estado)
+             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'acreditada')
              RETURNING *",
         )
         .bind(order_id)
@@ -193,6 +194,7 @@ impl Comisiones {
         .bind(centavos_i32(calculo.monto_vendedor_cents)?)
         .bind(centavos_i32(calculo.monto_empresario_cents)?)
         .bind(centavos_i32(datos.participacion)?)
+        .bind(datos.cantidad as i32)
         .fetch_optional(&mut **tx)
         .await
         .map_err(error_db)?;
@@ -203,6 +205,79 @@ impl Comisiones {
             ));
         };
         Comision::desde_fila(&fila).map(Some).map_err(error_db)
+    }
+
+    /// RN-06 parcial: compensa una cantidad devuelta de una línea.
+    pub async fn compensar_linea(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        order_id: &str,
+        linea_clave: &str,
+        cantidad: i64,
+        motivo: &str,
+    ) -> Result<(), ApiError> {
+        if cantidad <= 0 {
+            return Ok(());
+        }
+        let order_uuid = parsear_uuid(order_id)?;
+        let fila = sqlx::query(
+            "SELECT * FROM commissions.comisiones
+              WHERE order_id = $1 AND linea_clave = $2 FOR UPDATE",
+        )
+        .bind(order_uuid)
+        .bind(linea_clave)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(error_db)?;
+        let Some(fila) = fila else {
+            return Ok(());
+        };
+        let comision = Comision::desde_fila(&fila).map_err(error_db)?;
+        if comision.estado == "compensada" {
+            return Ok(());
+        }
+        let cantidad_original: i32 = fila.try_get("cantidad").unwrap_or(1);
+        let factor = (cantidad as f64 / f64::from(cantidad_original.max(1))).min(1.0);
+        let monto_vendedor = -((comision.monto_vendedor_cents as f64 * factor).round() as i64);
+        let monto_empresario =
+            -((comision.monto_empresario_cents.unwrap_or(0) as f64 * factor).round() as i64);
+        sqlx::query(
+            "INSERT INTO commissions.compensaciones_devoluciones
+                (id, comision_id, order_id, vendedor_id, empresa_id, negocio_id, monto_cents,
+                 monto_empresario_cents, motivo, creado_en)
+             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,NOW())",
+        )
+        .bind(parsear_uuid(&comision.id)?)
+        .bind(order_uuid)
+        .bind(parsear_uuid(&comision.vendedor_id)?)
+        .bind(
+            comision
+                .empresa_id
+                .as_deref()
+                .map(parsear_uuid)
+                .transpose()?,
+        )
+        .bind(
+            comision
+                .negocio_id
+                .as_deref()
+                .map(parsear_uuid)
+                .transpose()?,
+        )
+        .bind(centavos_i32(monto_vendedor)?)
+        .bind(centavos_i32(monto_empresario)?)
+        .bind(motivo)
+        .execute(&mut **tx)
+        .await
+        .map_err(error_db)?;
+        if cantidad >= i64::from(cantidad_original) {
+            sqlx::query("UPDATE commissions.comisiones SET estado = 'compensada' WHERE id = $1")
+                .bind(parsear_uuid(&comision.id)?)
+                .execute(&mut **tx)
+                .await
+                .map_err(error_db)?;
+        }
+        Ok(())
     }
 
     /// RN-06: la devolución compensa la comisión en la siguiente liquidación.

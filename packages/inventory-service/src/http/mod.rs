@@ -101,6 +101,10 @@ pub fn build_router(state: AppState) -> Router {
         // superficie interna
         .route("/internal/inventario/stock", post(internal::stock_lote))
         .route(
+            "/internal/inventario/devolucion",
+            post(internal::devolucion),
+        )
+        .route(
             "/internal/inventario/stock/inicial",
             post(internal::stock_inicial),
         )

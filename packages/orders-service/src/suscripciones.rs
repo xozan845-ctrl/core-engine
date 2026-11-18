@@ -260,6 +260,7 @@ impl Suscripciones {
                 cantidad: reclamada.cantidad,
                 fulfillment: Some(reclamada.fulfillment.clone()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             }]),
             metodo_pago: Some(reclamada.metodo_pago.clone()),
             cliente_parte_id: reclamada.cliente_parte_id.clone(),

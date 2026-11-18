@@ -1575,3 +1575,133 @@ CREATE POLICY reporte_ejecuciones_empresa ON analytics.reporte_ejecuciones FOR S
          AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
 CREATE POLICY reporte_ejecuciones_app ON analytics.reporte_ejecuciones FOR ALL TO core_engine_app
   USING (true) WITH CHECK (true);
+
+-- ── finance.configuracion_fiscal y orders.pagos_eventos (ADR-0026/0027) ─────
+ALTER TABLE finance.configuracion_fiscal ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS configuracion_fiscal_admin ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_admin ON finance.configuracion_fiscal
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS configuracion_fiscal_empresa ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_empresa ON finance.configuracion_fiscal
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS configuracion_fiscal_app ON finance.configuracion_fiscal;
+CREATE POLICY configuracion_fiscal_app ON finance.configuracion_fiscal
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.pagos_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pagos_eventos_admin ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_admin ON orders.pagos_eventos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS pagos_eventos_empresa ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_empresa ON orders.pagos_eventos
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM orders.pagos p
+     WHERE p.id = pago_id AND p.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  ));
+DROP POLICY IF EXISTS pagos_eventos_app ON orders.pagos_eventos;
+CREATE POLICY pagos_eventos_app ON orders.pagos_eventos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── pricing.cupones y pricing.cupon_usos (fase retail) ─────────────────────
+ALTER TABLE pricing.cupones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS cupones_admin ON pricing.cupones;
+CREATE POLICY cupones_admin ON pricing.cupones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS cupones_empresa ON pricing.cupones;
+CREATE POLICY cupones_empresa ON pricing.cupones
+  FOR ALL TO authenticated
+  USING (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'))
+  WITH CHECK (auth.rol() = 'empresario' AND empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS cupones_app ON pricing.cupones;
+CREATE POLICY cupones_app ON pricing.cupones
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE pricing.cupon_usos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS cupon_usos_admin ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_admin ON pricing.cupon_usos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS cupon_usos_empresa ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_empresa ON pricing.cupon_usos
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+DROP POLICY IF EXISTS cupon_usos_app ON pricing.cupon_usos;
+CREATE POLICY cupon_usos_app ON pricing.cupon_usos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders.devoluciones y orders.devolucion_lineas (RMA) ───────────────────
+ALTER TABLE orders.devoluciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_admin ON orders.devoluciones;
+CREATE POLICY devoluciones_admin ON orders.devoluciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS devoluciones_comprador ON orders.devoluciones;
+CREATE POLICY devoluciones_comprador ON orders.devoluciones
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM orders.orden_vista o
+     WHERE o.id = order_id AND o.comprador_id::text = (auth.jwt() ->> 'sub')
+  ));
+DROP POLICY IF EXISTS devoluciones_app ON orders.devoluciones;
+CREATE POLICY devoluciones_app ON orders.devoluciones
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.devolucion_lineas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devolucion_lineas_admin ON orders.devolucion_lineas;
+CREATE POLICY devolucion_lineas_admin ON orders.devolucion_lineas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS devolucion_lineas_app ON orders.devolucion_lineas;
+CREATE POLICY devolucion_lineas_app ON orders.devolucion_lineas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE inventory.devoluciones_procesadas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_procesadas_app ON inventory.devoluciones_procesadas;
+CREATE POLICY devoluciones_procesadas_app ON inventory.devoluciones_procesadas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── stores.resenas y stores.favoritos (reseñas/wishlist) ───────────────────
+ALTER TABLE stores.resenas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS resenas_publicas ON stores.resenas;
+CREATE POLICY resenas_publicas ON stores.resenas
+  FOR SELECT TO authenticated USING (estado = 'publicada');
+DROP POLICY IF EXISTS resenas_comprador ON stores.resenas;
+CREATE POLICY resenas_comprador ON stores.resenas
+  FOR ALL TO authenticated
+  USING (comprador_id::text = (auth.jwt() ->> 'sub'))
+  WITH CHECK (comprador_id::text = (auth.jwt() ->> 'sub'));
+DROP POLICY IF EXISTS resenas_admin ON stores.resenas;
+CREATE POLICY resenas_admin ON stores.resenas
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS resenas_app ON stores.resenas;
+CREATE POLICY resenas_app ON stores.resenas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE stores.favoritos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS favoritos_comprador ON stores.favoritos;
+CREATE POLICY favoritos_comprador ON stores.favoritos
+  FOR ALL TO authenticated
+  USING (comprador_id::text = (auth.jwt() ->> 'sub'))
+  WITH CHECK (comprador_id::text = (auth.jwt() ->> 'sub'));
+DROP POLICY IF EXISTS favoritos_admin ON stores.favoritos;
+CREATE POLICY favoritos_admin ON stores.favoritos
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+DROP POLICY IF EXISTS favoritos_app ON stores.favoritos;
+CREATE POLICY favoritos_app ON stores.favoritos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);

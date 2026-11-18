@@ -80,7 +80,8 @@ stage antes de habilitarlo
 
 ### Invariantes
 
-- `0 < COMMISSION_RATE < 1`; fuera de rango → `TASA_INVALIDA` al calcular.
+- `0 <= COMMISSION_RATE < 1`; fuera de rango → `TASA_INVALIDA` al calcular.
+  La tasa `0` es válida y desactiva la comisión de plataforma (venta directa).
 - Participación entre 0 y 100 (`PARTICIPACION_INVALIDA`).
 - Una comisión por `(order_id, linea_clave)`: reintentos no duplican.
 - Una comisión `compensada` no vuelve a acreditarse.
@@ -218,7 +219,7 @@ Idempotencia por `event_id` en `commissions.eventos_procesados` y por
 | Comisión no aparece | `order.completado` no consumido o línea sin participación |
 | Comisión duplicada | Se ignoró `(order_id, linea_clave)` (no debería ocurrir) |
 | Corte no ejecutado | Fecha/hora fuera de 00:05 o ya ejecutado hoy |
-| `TASA_INVALIDA` | `COMMISSION_RATE` fuera de `(0,1)` |
+| `TASA_INVALIDA` | `COMMISSION_RATE` fuera de `[0,1)` |
 | Liquidación no cuadra | Compensación pendiente aplicada al periodo |
 
 ---
@@ -245,3 +246,10 @@ cargo test
 - [Contrato público](../../docs/openapi/commissions-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/commissions-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+### Devoluciones parciales
+
+- `devolucion.recibida` compensa proporcionalmente la comisión de cada línea
+  (`linea_clave` + `cantidad`), usando `commissions.comisiones.cantidad`.
+- Si la cantidad devuelta cubre la línea completa, la comisión pasa a
+  `compensada`; si es parcial, sigue `acreditada` y acumula compensaciones.

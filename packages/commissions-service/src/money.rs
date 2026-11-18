@@ -22,9 +22,10 @@ pub fn restar(minuendo: i64, sustraendo: i64) -> Result<i64, ApiError> {
     validar_centavos(minuendo - sustraendo)
 }
 
-/// `Money.comision`: exige `0 < tasa < 1` y redondea como `Math.round`.
+/// `Money.comision`: exige `0 <= tasa < 1` y redondea como `Math.round`.
+/// La tasa 0 es válida (venta directa sin comisión de plataforma).
 pub fn comision(centavos: i64, tasa: f64) -> Result<i64, ApiError> {
-    if !tasa.is_finite() || tasa <= 0.0 || tasa >= 1.0 {
+    if !tasa.is_finite() || tasa < 0.0 || tasa >= 1.0 {
         return Err(ApiError::dominio(
             "TASA_INVALIDA",
             format!("La tasa debe estar entre 0 y 1 (recibida: {tasa})."),
@@ -50,10 +51,15 @@ mod tests {
 
     #[test]
     fn debe_rechazar_una_tasa_fuera_de_rango() {
-        for tasa in [0.0, 1.0, -0.1, 1.1, f64::NAN] {
+        for tasa in [1.0, -0.1, 1.1, f64::NAN] {
             let error = comision(100, tasa).expect_err("tasa invalida");
             assert_eq!(error.codigo, "TASA_INVALIDA");
         }
+    }
+
+    #[test]
+    fn debe_permitir_una_tasa_cero_sin_comision() {
+        assert_eq!(comision(10_000, 0.0).expect("sin comision"), 0);
     }
 
     #[test]

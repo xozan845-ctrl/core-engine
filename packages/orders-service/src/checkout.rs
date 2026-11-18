@@ -4,7 +4,8 @@
 
 use crate::carrito::{Carrito, ItemCarrito};
 use crate::clients::{
-    ClientesPort, ConfiguracionExterna, CreditoEstado, OfertaExterna, PreciosExternos,
+    ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, CuponExterno,
+    OfertaExterna, PreciosExternos, PromocionLinea,
 };
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
@@ -37,6 +38,8 @@ pub struct LineaEntrada {
     pub fulfillment: Option<String>,
     #[serde(default)]
     pub fulfillment_config: Option<Value>,
+    #[serde(default)]
+    pub ubicacion_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -57,6 +60,8 @@ pub struct ComandoCrear {
     pub lista_precio_codigo: Option<String>,
     #[serde(default)]
     pub segmento_codigo: Option<String>,
+    #[serde(default)]
+    pub cupon_codigo: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,12 +70,14 @@ struct LineaAgrupada {
     cantidad: i64,
     fulfillment: Option<String>,
     fulfillment_config: Option<Value>,
+    ubicacion_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 struct PrecioResuelto {
     origen: String,
     precio_unitario_cents: i64,
+    promocion: Option<PromocionLinea>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -235,18 +242,31 @@ impl Checkout {
                         money::aplicar_margen(resuelto.precio_unitario_cents, oferta.margen)?;
                 }
             }
-            total += money::multiplicar(precio_unitario, linea.cantidad);
+            let bruto = money::multiplicar(precio_unitario, linea.cantidad);
+            let promocion = precios
+                .get(&oferta.id)
+                .and_then(|resuelto| resuelto.promocion.as_ref());
+            let descuento = if tipo_orden == "reserva" {
+                0
+            } else {
+                descuento_de_promocion(promocion, precio_unitario, linea.cantidad)?
+            };
+            total += bruto.saturating_sub(descuento);
             items.push(ItemOrden {
                 oferta_id: oferta.id.clone(),
                 sku: oferta.sku.clone(),
                 producto_nombre: oferta.producto_nombre.clone(),
                 cantidad: linea.cantidad,
                 precio_unitario_cents: precio_unitario,
+                descuento_cents: descuento,
+                promocion_id: promocion.map(|promo| promo.id.clone()),
                 vendedor_id: oferta.vendedor_id.clone(),
                 tienda_id: oferta.tienda_id.clone(),
                 empresa_id: oferta.empresa_id.clone(),
                 negocio_id: oferta.negocio_id.clone(),
                 participacion_porcentaje: oferta.participacion_porcentaje,
+                comision: true,
+                ubicacion_id: linea.ubicacion_id.clone(),
                 item_type: oferta.item_type.clone(),
                 item_id: oferta.item_id.clone(),
                 fulfillment: Some(fulfillment.clone()),
@@ -264,8 +284,15 @@ impl Checkout {
             }
         }
 
-        self.validar_capacidades(&items, &tipo_orden, &metodo_pago)
+        let configuraciones = self
+            .validar_capacidades(&items, &tipo_orden, &metodo_pago)
             .await?;
+        for item in &mut items {
+            item.comision = configuraciones
+                .get(&item.empresa_id)
+                .map(|config| config.comision)
+                .unwrap_or(true);
+        }
 
         if es_reserva {
             total = 0;
@@ -323,6 +350,8 @@ impl Checkout {
                     Some(true) => {}
                 }
                 item.precio_unitario_cents = cotizacion.total_cents;
+                item.descuento_cents = 0;
+                item.promocion_id = None;
                 total += money::multiplicar(cotizacion.total_cents, item.cantidad);
             }
         }
@@ -331,8 +360,58 @@ impl Checkout {
             self.verificar_stock(&items).await?;
         }
 
+        let total_bruto = total;
+        let mut cupon_aplicado: Option<(String, String, i64)> = None;
+        let codigo_cupon = comando
+            .cupon_codigo
+            .as_deref()
+            .map(str::trim)
+            .filter(|codigo| !codigo.is_empty());
+        if let Some(codigo) = codigo_cupon {
+            let empresa = empresa_unica(&items).ok_or_else(|| {
+                ApiError::dominio(
+                    "CUPON_UNA_EMPRESA",
+                    "Un cupón solo puede aplicarse a una orden de una empresa.",
+                )
+            })?;
+            match self
+                .clientes
+                .cupon_validar(&empresa, codigo, total_bruto)
+                .await
+            {
+                CuponExterno::Ok(validado) => {
+                    let descuento = validado.descuento_cents.clamp(0, total_bruto);
+                    total -= descuento;
+                    cupon_aplicado = Some((empresa, validado.codigo, descuento));
+                }
+                CuponExterno::Invalido { codigo, mensaje } => {
+                    return Err(ApiError::dominio(codigo, mensaje));
+                }
+                CuponExterno::NoDisponible => {
+                    return Err(ApiError::servicio_no_disponible("pricing-service"));
+                }
+            }
+        }
+        let mut descuento_cupon = cupon_aplicado
+            .as_ref()
+            .map(|(_, _, descuento)| *descuento)
+            .unwrap_or(0);
+        let cupon_codigo = cupon_aplicado.as_ref().map(|(_, codigo, _)| codigo.clone());
+
         let order_id = Uuid::new_v4().to_string();
         let creado_en = iso_ms(Utc::now());
+
+        if let Some((empresa, codigo, _)) = &cupon_aplicado {
+            let Some(validado) = self
+                .clientes
+                .cupon_canjear(empresa, codigo, &order_id, total_bruto)
+                .await
+            else {
+                return Err(ApiError::servicio_no_disponible("pricing-service"));
+            };
+            descuento_cupon = validado.descuento_cents.clamp(0, total_bruto);
+            total = total_bruto - descuento_cupon;
+        }
 
         if metodo_pago == "credito" {
             let empresa_id = items
@@ -349,7 +428,7 @@ impl Checkout {
                     &order_id,
                     total,
                     &concepto,
-                    items.first().map(|i| i.vendedor_id.as_str()),
+                    items.first().and_then(|i| i.vendedor_id.as_deref()),
                 )
                 .await;
             match credito {
@@ -427,6 +506,31 @@ impl Checkout {
             }
             monto
         };
+        let base_comision_bruta: i64 = if es_cotizacion {
+            0
+        } else {
+            items
+                .iter()
+                .filter(|item| item.comision && item.vendedor_id.is_some())
+                .map(|item| {
+                    item.precio_unitario_cents
+                        .saturating_mul(item.cantidad)
+                        .saturating_sub(item.descuento_cents)
+                })
+                .sum()
+        };
+        let proporcion_comision = if total_bruto > 0 {
+            base_comision_bruta as f64 / total_bruto as f64
+        } else {
+            0.0
+        };
+        let cupon_comision = (descuento_cupon as f64 * proporcion_comision).round() as i64;
+        let base_comision = (base_comision_bruta - cupon_comision).max(0);
+        let comision = if base_comision == 0 {
+            0
+        } else {
+            money::comision(base_comision, self.tasa_comision)?
+        };
         let resumen = resumen_fulfillment(&items);
         let evento_payload = json!({
             "order_id": order_id,
@@ -434,6 +538,10 @@ impl Checkout {
             "cliente_parte_id": comando.cliente_parte_id,
             "items": items,
             "total_cents": total,
+            "comision_cents": comision,
+            "descuento_cupon_cents": descuento_cupon,
+            "cupon_codigo": cupon_codigo,
+            "moneda": moneda_orden,
             "estado": "creada",
             "tipo_orden": tipo_orden,
             "metodo_pago": metodo_pago,
@@ -442,12 +550,6 @@ impl Checkout {
             "fulfillment_config": resumen,
             "creado_en": creado_en,
         });
-
-        let comision = if es_cotizacion {
-            0
-        } else {
-            money::comision(total, self.tasa_comision)?
-        };
         let evento_outbox = json!({
             "event_id": Uuid::new_v4().to_string(),
             "tipo": ORDER_CREATED,
@@ -482,6 +584,11 @@ impl Checkout {
             if metodo_pago == "credito" {
                 let _ = self.clientes.anular_credito(&order_id).await;
             }
+            if let Some((empresa, codigo, _)) = &cupon_aplicado {
+                self.clientes
+                    .cupon_liberar(empresa, codigo, &order_id)
+                    .await;
+            }
             return Err(error);
         }
         let empresa_pago = empresa_unica(&items);
@@ -509,20 +616,16 @@ impl Checkout {
         };
         Ok(OrderView {
             id: order_id,
-            vendedor_id: primer_item
-                .map(|i| i.vendedor_id.clone())
-                .unwrap_or_default(),
+            vendedor_id: primer_item.and_then(|i| i.vendedor_id.clone()),
             comprador_id: cliente_id.to_string(),
             parte_id: comando.cliente_parte_id.clone(),
             tienda_id: primer_item.map(|i| i.tienda_id.clone()).unwrap_or_default(),
             negocio_id,
             estado: "creada".to_string(),
             total_cents: total,
-            comision_cents: if es_cotizacion {
-                0
-            } else {
-                money::comision(total, 0.12)?
-            },
+            comision_cents: comision,
+            descuento_cupon_cents: descuento_cupon,
+            cupon_codigo: cupon_codigo.clone(),
             moneda: moneda_orden,
             items,
             direccion_envio: Value::Null,
@@ -820,6 +923,7 @@ impl Checkout {
                             PrecioResuelto {
                                 origen: precio.origen,
                                 precio_unitario_cents: precio.precio_unitario_cents,
+                                promocion: precio.promocion,
                             },
                         );
                     }
@@ -834,7 +938,7 @@ impl Checkout {
         items: &[ItemOrden],
         tipo_orden: &str,
         metodo_pago: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<HashMap<String, ConfiguracionOperativa>, ApiError> {
         let mut grupos: HashMap<(String, Option<String>), Vec<&ItemOrden>> = HashMap::new();
         for item in items {
             grupos
@@ -900,6 +1004,7 @@ impl Checkout {
                 return Err(ApiError::capacidad_no_activa(&faltantes, &empresa));
             }
         }
+        let mut configuraciones = HashMap::new();
         for empresa in &empresas {
             let config = match self.clientes.configuracion(empresa).await {
                 ConfiguracionExterna::Ok(config) => config,
@@ -908,23 +1013,23 @@ impl Checkout {
                     return Err(ApiError::servicio_no_disponible("identity-service"))
                 }
             };
-            if config.fulfillment.is_empty() {
-                continue;
-            }
-            for item in items.iter().filter(|item| &item.empresa_id == empresa) {
-                let fulfillment = item.fulfillment.as_deref();
-                if !fulfillment_permitido(&config, fulfillment) {
-                    return Err(ApiError::dominio(
-                        "FULFILLMENT_NO_PERMITIDO",
-                        format!(
-                            "El modelo operativo de la empresa no permite fulfillment \"{}\".",
-                            fulfillment.unwrap_or("none")
-                        ),
-                    ));
+            if !config.fulfillment.is_empty() {
+                for item in items.iter().filter(|item| &item.empresa_id == empresa) {
+                    let fulfillment = item.fulfillment.as_deref();
+                    if !fulfillment_permitido(&config, fulfillment) {
+                        return Err(ApiError::dominio(
+                            "FULFILLMENT_NO_PERMITIDO",
+                            format!(
+                                "El modelo operativo de la empresa no permite fulfillment \"{}\".",
+                                fulfillment.unwrap_or("none")
+                            ),
+                        ));
+                    }
                 }
             }
+            configuraciones.insert(empresa.clone(), config);
         }
-        Ok(())
+        Ok(configuraciones)
     }
 
     async fn verificar_stock(&self, items: &[ItemOrden]) -> Result<(), ApiError> {
@@ -952,13 +1057,46 @@ impl Checkout {
             .iter()
             .map(|p| (format!("{}:{}", p.empresa_id, p.sku.to_lowercase()), p))
             .collect();
+        let mut stock_por_ubicacion: HashMap<
+            (String, String),
+            Vec<crate::clients::StockUbicacion>,
+        > = HashMap::new();
         for item in productos {
             let producto =
                 por_clave.get(&format!("{}:{}", item.empresa_id, item.sku.to_lowercase()));
-            let disponible = match producto {
-                Some(p) if p.track_serial => p.stock.min(p.seriales_disponibles),
-                Some(p) => p.stock,
-                None => 0,
+            let disponible = if let Some(ubicacion_id) = item.ubicacion_id.as_deref() {
+                let clave = (item.empresa_id.clone(), ubicacion_id.to_string());
+                if !stock_por_ubicacion.contains_key(&clave) {
+                    let Some(stocks) = self
+                        .clientes
+                        .stock_ubicacion(
+                            &item.empresa_id,
+                            ubicacion_id,
+                            std::slice::from_ref(&item.sku),
+                        )
+                        .await
+                    else {
+                        return Err(ApiError::servicio_no_disponible("inventory-service"));
+                    };
+                    stock_por_ubicacion.insert(clave.clone(), stocks);
+                }
+                let linea = stock_por_ubicacion.get(&clave).and_then(|lineas| {
+                    lineas
+                        .iter()
+                        .find(|linea| linea.sku.eq_ignore_ascii_case(&item.sku))
+                });
+                let stock = linea.map(|linea| linea.stock).unwrap_or(0);
+                let seriales = linea.map(|linea| linea.seriales_disponibles).unwrap_or(0);
+                match producto {
+                    Some(p) if p.track_serial => stock.min(seriales),
+                    _ => stock,
+                }
+            } else {
+                match producto {
+                    Some(p) if p.track_serial => p.stock.min(p.seriales_disponibles),
+                    Some(p) => p.stock,
+                    None => 0,
+                }
             };
             if producto.is_none() || disponible < item.cantidad {
                 return Err(ApiError::nueva(
@@ -969,6 +1107,7 @@ impl Checkout {
                 .con_detalles(json!({
                     "sku": item.sku,
                     "cantidad_solicitada": item.cantidad,
+                    "ubicacion_id": item.ubicacion_id,
                 })));
             }
         }
@@ -984,8 +1123,40 @@ fn lineas_de_carrito(items: &[ItemCarrito]) -> Vec<LineaEntrada> {
             cantidad: item.cantidad,
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
+            ubicacion_id: None,
         })
         .collect()
+}
+
+fn descuento_de_promocion(
+    promocion: Option<&PromocionLinea>,
+    precio_unitario: i64,
+    cantidad: i64,
+) -> Result<i64, ApiError> {
+    let Some(promocion) = promocion else {
+        return Ok(0);
+    };
+    let bruto = money::multiplicar(precio_unitario, cantidad);
+    let descuento = match promocion.tipo.as_str() {
+        "descuento_porcentaje" => {
+            let porcentaje = promocion.descuento_porcentaje.unwrap_or(0).clamp(0, 100);
+            ((bruto as f64 * porcentaje as f64) / 100.0).round() as i64
+        }
+        "2x1" => {
+            let gratis = cantidad / promocion.cantidad_requerida.unwrap_or(2).max(1);
+            gratis.saturating_mul(precio_unitario)
+        }
+        "descuento_cantidad" | "regalo" => {
+            let requerida = promocion.cantidad_requerida.unwrap_or(1).max(1);
+            let gratis = promocion.cantidad_gratis.unwrap_or(0).max(0);
+            (cantidad / requerida)
+                .saturating_mul(gratis)
+                .min(cantidad)
+                .saturating_mul(precio_unitario)
+        }
+        _ => 0,
+    };
+    Ok(descuento.clamp(0, bruto))
 }
 
 fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
@@ -993,12 +1164,24 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
     let mut orden: Vec<String> = Vec::new();
     for linea in lineas {
         let clave = linea.oferta_id.clone();
+        let ubicacion = linea
+            .ubicacion_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string);
         match mapa.get_mut(&clave) {
             Some(actual) => {
                 if actual.fulfillment != linea.fulfillment {
                     return Err(ApiError::dominio(
                         "FULFILLMENT_CONFLICTO",
                         "Una misma oferta no puede tener dos fulfillments distintos en una orden.",
+                    ));
+                }
+                if actual.ubicacion_id != ubicacion {
+                    return Err(ApiError::dominio(
+                        "UBICACION_CONFLICTO",
+                        "Una misma oferta no puede despacharse desde dos ubicaciones en una orden.",
                     ));
                 }
                 actual.cantidad += linea.cantidad;
@@ -1015,6 +1198,7 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
                         cantidad: linea.cantidad,
                         fulfillment: linea.fulfillment.clone(),
                         fulfillment_config: linea.fulfillment_config.clone(),
+                        ubicacion_id: ubicacion,
                     },
                 );
             }
@@ -1218,6 +1402,47 @@ fn fulfillment_permitido(
 mod tests {
     use super::*;
 
+    fn promocion(tipo: &str) -> PromocionLinea {
+        PromocionLinea {
+            id: "p-1".into(),
+            nombre: "Promo".into(),
+            tipo: tipo.into(),
+            cantidad_requerida: None,
+            cantidad_gratis: None,
+            descuento_porcentaje: None,
+        }
+    }
+
+    #[test]
+    fn debe_calcular_el_descuento_porcentual_y_el_2x1() {
+        let mut porcentaje = promocion("descuento_porcentaje");
+        porcentaje.descuento_porcentaje = Some(25);
+        assert_eq!(
+            descuento_de_promocion(Some(&porcentaje), 10_000, 2).expect("porcentaje"),
+            5_000
+        );
+
+        let mut dos_por_uno = promocion("2x1");
+        dos_por_uno.cantidad_requerida = Some(2);
+        assert_eq!(
+            descuento_de_promocion(Some(&dos_por_uno), 10_000, 4).expect("2x1"),
+            20_000
+        );
+        assert_eq!(
+            descuento_de_promocion(Some(&dos_por_uno), 10_000, 1).expect("sin 2x1"),
+            0
+        );
+    }
+
+    #[test]
+    fn debe_tope_el_descuento_al_bruto() {
+        let mut regalo = promocion("regalo");
+        regalo.cantidad_requerida = Some(1);
+        regalo.cantidad_gratis = Some(5);
+        let descuento = descuento_de_promocion(Some(&regalo), 10_000, 2).expect("regalo");
+        assert_eq!(descuento, 20_000);
+    }
+
     #[test]
     fn debe_agrupar_lineas_de_la_misma_oferta() {
         let lineas = vec![
@@ -1226,12 +1451,14 @@ mod tests {
                 cantidad: 1,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
                 cantidad: 2,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
         ];
         let agrupadas = agrupar(&lineas).expect("agrupar");
@@ -1247,12 +1474,14 @@ mod tests {
                 cantidad: 1,
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
                 cantidad: 1,
                 fulfillment: Some("digital".into()),
                 fulfillment_config: None,
+                ubicacion_id: None,
             },
         ];
         assert_eq!(

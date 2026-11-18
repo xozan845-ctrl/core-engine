@@ -31,7 +31,7 @@ pub struct Capacidad {
     pub activo: bool,
 }
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ConfiguracionOperativa {
     #[serde(default)]
     pub items: Vec<String>,
@@ -41,6 +41,27 @@ pub struct ConfiguracionOperativa {
     pub requiere_agenda: bool,
     #[serde(default)]
     pub trazabilidad: bool,
+    #[serde(default = "verdadero")]
+    pub requiere_vendedor: bool,
+    #[serde(default = "verdadero")]
+    pub comision: bool,
+}
+
+fn verdadero() -> bool {
+    true
+}
+
+impl Default for ConfiguracionOperativa {
+    fn default() -> Self {
+        Self {
+            items: Vec::new(),
+            fulfillment: Vec::new(),
+            requiere_agenda: false,
+            trazabilidad: false,
+            requiere_vendedor: true,
+            comision: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +75,7 @@ pub enum ConfiguracionExterna {
 pub struct OfertaExterna {
     pub id: String,
     pub tienda_id: String,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub empresa_id: String,
     #[serde(default)]
     pub negocio_id: Option<String>,
@@ -77,12 +98,41 @@ pub struct OfertaExterna {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct CuponValidado {
+    pub cupon_id: String,
+    pub codigo: String,
+    pub descuento_cents: i64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CuponExterno {
+    Ok(CuponValidado),
+    Invalido { codigo: String, mensaje: String },
+    NoDisponible,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct PromocionLinea {
+    pub id: String,
+    pub nombre: String,
+    pub tipo: String,
+    #[serde(default)]
+    pub cantidad_requerida: Option<i64>,
+    #[serde(default)]
+    pub cantidad_gratis: Option<i64>,
+    #[serde(default)]
+    pub descuento_porcentaje: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct PrecioLinea {
     pub clave: String,
     pub origen: String,
     pub precio_unitario_cents: i64,
     #[serde(default)]
     pub precio_total_cents: i64,
+    #[serde(default)]
+    pub promocion: Option<PromocionLinea>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -115,6 +165,16 @@ struct StockV2 {
     stock: i64,
     #[serde(default)]
     seriales_disponibles: i64,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct StockUbicacion {
+    #[serde(default)]
+    pub sku: String,
+    #[serde(default)]
+    pub stock: i64,
+    #[serde(default)]
+    pub seriales_disponibles: i64,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -193,6 +253,43 @@ pub trait ClientesPort: Send + Sync {
     ) -> CreditoEstado;
     async fn anular_credito(&self, order_id: &str) -> bool;
     async fn items_lote(&self, skus: &[String]) -> Option<Vec<ItemStock>>;
+    async fn stock_ubicacion(
+        &self,
+        _empresa_id: &str,
+        _ubicacion_id: &str,
+        _skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        None
+    }
+
+    async fn cupon_validar(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _monto_cents: i64,
+    ) -> CuponExterno {
+        CuponExterno::NoDisponible
+    }
+
+    async fn cupon_canjear(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _order_id: &str,
+        _monto_cents: i64,
+    ) -> Option<CuponValidado> {
+        None
+    }
+
+    async fn cupon_liberar(&self, _empresa_id: &str, _codigo: &str, _order_id: &str) {}
+    async fn devolver_stock(
+        &self,
+        _order_id: &str,
+        _devolucion_id: &str,
+        _items: &[Value],
+    ) -> bool {
+        false
+    }
 }
 
 impl Clientes {
@@ -563,6 +660,141 @@ impl Clientes {
         }
         Some(salida)
     }
+
+    pub async fn stock_ubicacion(
+        &self,
+        empresa_id: &str,
+        ubicacion_id: &str,
+        skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        if skus.is_empty() {
+            return Some(Vec::new());
+        }
+        let respuesta = self
+            .http
+            .post(format!("{}/internal/inventario/stock", self.inventory_url))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "empresa_id": empresa_id,
+                "ubicacion_id": ubicacion_id,
+                "skus": skus,
+            }))
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        respuesta.json::<Vec<StockUbicacion>>().await.ok()
+    }
+
+    pub async fn cupon_validar(
+        &self,
+        empresa_id: &str,
+        codigo: &str,
+        monto_cents: i64,
+    ) -> CuponExterno {
+        let respuesta = match self
+            .http
+            .post(format!("{}/internal/cupones/validar", self.pricing_url))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "empresa_id": empresa_id,
+                "codigo": codigo,
+                "monto_cents": monto_cents,
+            }))
+            .send()
+            .await
+        {
+            Ok(respuesta) => respuesta,
+            Err(_) => return CuponExterno::NoDisponible,
+        };
+        match respuesta.status().as_u16() {
+            200..=299 => match respuesta.json::<CuponValidado>().await {
+                Ok(cupon) => CuponExterno::Ok(cupon),
+                Err(_) => CuponExterno::NoDisponible,
+            },
+            400..=499 => {
+                let cuerpo = respuesta.json::<Value>().await.unwrap_or(Value::Null);
+                CuponExterno::Invalido {
+                    codigo: cuerpo
+                        .get("codigo")
+                        .and_then(Value::as_str)
+                        .unwrap_or("CUPON_INVALIDO")
+                        .to_string(),
+                    mensaje: cuerpo
+                        .get("mensaje")
+                        .and_then(Value::as_str)
+                        .unwrap_or("El cupón no es válido.")
+                        .to_string(),
+                }
+            }
+            _ => CuponExterno::NoDisponible,
+        }
+    }
+
+    pub async fn cupon_canjear(
+        &self,
+        empresa_id: &str,
+        codigo: &str,
+        order_id: &str,
+        monto_cents: i64,
+    ) -> Option<CuponValidado> {
+        let respuesta = self
+            .http
+            .post(format!("{}/internal/cupones/canjear", self.pricing_url))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "empresa_id": empresa_id,
+                "codigo": codigo,
+                "order_id": order_id,
+                "monto_cents": monto_cents,
+            }))
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        respuesta.json::<CuponValidado>().await.ok()
+    }
+
+    pub async fn cupon_liberar(&self, empresa_id: &str, codigo: &str, order_id: &str) {
+        let _ = self
+            .http
+            .post(format!("{}/internal/cupones/liberar", self.pricing_url))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "empresa_id": empresa_id,
+                "codigo": codigo,
+                "order_id": order_id,
+            }))
+            .send()
+            .await;
+    }
+
+    pub async fn devolver_stock(
+        &self,
+        order_id: &str,
+        devolucion_id: &str,
+        items: &[Value],
+    ) -> bool {
+        self.http
+            .post(format!(
+                "{}/internal/inventario/devolucion",
+                self.inventory_url
+            ))
+            .header("x-internal-key", &self.clave)
+            .json(&json!({
+                "order_id": order_id,
+                "devolucion_id": devolucion_id,
+                "items": items,
+            }))
+            .send()
+            .await
+            .map(|respuesta| respuesta.status().is_success())
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Deserialize)]
@@ -657,6 +889,42 @@ impl ClientesPort for Clientes {
     async fn items_lote(&self, skus: &[String]) -> Option<Vec<ItemStock>> {
         Clientes::items_lote(self, skus).await
     }
+
+    async fn stock_ubicacion(
+        &self,
+        empresa_id: &str,
+        ubicacion_id: &str,
+        skus: &[String],
+    ) -> Option<Vec<StockUbicacion>> {
+        Clientes::stock_ubicacion(self, empresa_id, ubicacion_id, skus).await
+    }
+
+    async fn cupon_validar(
+        &self,
+        empresa_id: &str,
+        codigo: &str,
+        monto_cents: i64,
+    ) -> CuponExterno {
+        Clientes::cupon_validar(self, empresa_id, codigo, monto_cents).await
+    }
+
+    async fn cupon_canjear(
+        &self,
+        empresa_id: &str,
+        codigo: &str,
+        order_id: &str,
+        monto_cents: i64,
+    ) -> Option<CuponValidado> {
+        Clientes::cupon_canjear(self, empresa_id, codigo, order_id, monto_cents).await
+    }
+
+    async fn cupon_liberar(&self, empresa_id: &str, codigo: &str, order_id: &str) {
+        Clientes::cupon_liberar(self, empresa_id, codigo, order_id).await
+    }
+
+    async fn devolver_stock(&self, order_id: &str, devolucion_id: &str, items: &[Value]) -> bool {
+        Clientes::devolver_stock(self, order_id, devolucion_id, items).await
+    }
 }
 
 mod url {
@@ -687,5 +955,13 @@ mod tests {
             url::form_urlencoded_pair(&[("empresa_id", "e 1"), ("desde", "2026-01-01")]),
             "empresa_id=e%201&desde=2026-01-01"
         );
+    }
+
+    #[test]
+    fn debe_mantener_el_marketplace_por_defecto_en_la_configuracion() {
+        assert!(verdadero());
+        let config = ConfiguracionOperativa::default();
+        assert!(config.requiere_vendedor);
+        assert!(config.comision);
     }
 }

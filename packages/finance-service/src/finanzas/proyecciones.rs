@@ -66,7 +66,7 @@ impl SupuestosProyeccion {
                 ),
             ));
         }
-        if self.comision_tasa <= 0.0 || self.comision_tasa >= 1.0 {
+        if self.comision_tasa < 0.0 || self.comision_tasa >= 1.0 {
             return Err(ApiError::dominio(
                 "TASA_INVALIDA",
                 "La tasa de comision debe estar entre 0 y 1.",

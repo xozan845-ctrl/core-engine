@@ -110,7 +110,10 @@ async fn enviar_cotizacion(
     let empresa = cotizacion.items.first().map(|i| i.empresa_id.as_str());
     let es_empresario = usuario.rol == "empresario"
         && empresa.is_some_and(|e| usuario.tenant_id.as_deref() == Some(e));
-    if !usuario.es_admin_global() && cotizacion.vendedor_id != usuario.user_id && !es_empresario {
+    if !usuario.es_admin_global()
+        && cotizacion.vendedor_id.as_deref() != Some(usuario.user_id.as_str())
+        && !es_empresario
+    {
         return Err(ApiError::acceso_denegado(
             "Solo el vendedor o su empresa pueden enviar la cotizacion.",
         ));
@@ -160,6 +163,7 @@ async fn aceptar_cotizacion(
             cantidad: item.cantidad,
             fulfillment: None,
             fulfillment_config: None,
+            ubicacion_id: None,
         })
         .collect();
     let comando = ComandoCrear {

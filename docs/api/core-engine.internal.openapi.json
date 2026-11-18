@@ -717,6 +717,12 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "ubicacion_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Acota el stock y los seriales a una ubicación"
                   }
                 },
                 "required": [
@@ -817,6 +823,93 @@
             }
           }
         }
+      }
+    },
+    "/internal/inventario/devolucion": {
+      "post": {
+        "operationId": "InternalController_devolucion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "devolucion_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "empresa_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "sku": {
+                          "type": "string"
+                        },
+                        "cantidad": {
+                          "type": "integer"
+                        },
+                        "ubicacion_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "empresa_id",
+                        "sku",
+                        "cantidad"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "order_id",
+                  "devolucion_id",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock reintegrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Reintegrar stock de una devolución parcial",
+        "tags": [
+          "Inventario (interno)"
+        ]
       }
     },
     "/internal/v2/items/lote": {
@@ -1283,6 +1376,122 @@
         ]
       }
     },
+    "/internal/cupones/validar": {
+      "post": {
+        "operationId": "InternalController_cuponValidar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuponValidadoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Validar cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
+    "/internal/cupones/canjear": {
+      "post": {
+        "operationId": "InternalController_cuponCanjear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón canjeado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuponValidadoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Canjear cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
+    "/internal/cupones/liberar": {
+      "post": {
+        "operationId": "InternalController_cuponLiberar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canje liberado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Liberar cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
     "/internal/items/precios": {
       "post": {
         "operationId": "InternalController_preciosPorLote",
@@ -1292,7 +1501,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolverPreciosInternoRequestDto"
+                "$ref": "#/components/schemas/PricingResolverPreciosInternoRequestDto"
               }
             }
           }
@@ -1303,7 +1512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreciosInternosResponseDto"
+                  "$ref": "#/components/schemas/PricingPreciosInternosResponseDto"
                 }
               }
             }
@@ -2237,6 +2446,14 @@
           },
           "trazabilidad": {
             "type": "boolean"
+          },
+          "requiere_vendedor": {
+            "type": "boolean",
+            "description": "false en packs de venta directa"
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "false cuando el pack no cobra comisión de marketplace"
           }
         },
         "required": [
@@ -2247,7 +2464,9 @@
           "items",
           "fulfillment",
           "requiere_agenda",
-          "trazabilidad"
+          "trazabilidad",
+          "requiere_vendedor",
+          "comision"
         ]
       },
       "ValoresExtensionRequestDto": {
@@ -3399,15 +3618,37 @@
             "description": "Precio unitario de venta en centavos",
             "example": 115000
           },
+          "descuento_cents": {
+            "type": "number",
+            "description": "Descuento aplicado por promoción en centavos",
+            "example": 0
+          },
+          "promocion_id": {
+            "type": "string",
+            "description": "Promoción aplicada a la línea",
+            "format": "uuid",
+            "nullable": true
+          },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "tienda_id": {
             "type": "string",
             "description": "Id de la tienda",
             "format": "uuid"
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "Indica si la línea genera comisión"
+          },
+          "ubicacion_id": {
+            "type": "string",
+            "description": "Bodega o sucursal desde la que se despacha la línea",
+            "format": "uuid",
+            "nullable": true
           },
           "fulfillment": {
             "type": "string",
@@ -3432,7 +3673,6 @@
           "producto_nombre",
           "cantidad",
           "precio_unitario_cents",
-          "vendedor_id",
           "tienda_id"
         ]
       },
@@ -3446,8 +3686,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "comprador_id": {
             "type": "string",
@@ -3557,11 +3798,19 @@
             "description": "Fecha de devolución (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado",
+            "nullable": true
+          },
+          "descuento_cupon_cents": {
+            "type": "integer",
+            "description": "Descuento de cupón en centavos"
           }
         },
         "required": [
           "id",
-          "vendedor_id",
           "comprador_id",
           "tienda_id",
           "estado",
@@ -3747,6 +3996,33 @@
           "actualizado_en"
         ]
       },
+      "PricingLineaPrecioInternaRequestDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string",
+            "description": "Clave opaca para correlacionar la respuesta",
+            "example": "oferta-1"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU opcional para resolver promociones"
+          },
+          "cantidad": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "clave",
+          "item_id",
+          "cantidad"
+        ]
+      },
       "LoteItemResponseDto": {
         "type": "object",
         "properties": {
@@ -3781,6 +4057,159 @@
           "track_serial",
           "seriales_disponibles",
           "estado"
+        ]
+      },
+      "PricingPrecioLineaInternaResponseDto": {
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "lista",
+              "escala",
+              "base"
+            ]
+          },
+          "precio_unitario_cents": {
+            "type": "number"
+          },
+          "precio_total_cents": {
+            "type": "number"
+          },
+          "promocion": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "tipo": {
+                "type": "string",
+                "enum": [
+                  "2x1",
+                  "descuento_cantidad",
+                  "descuento_porcentaje",
+                  "regalo"
+                ]
+              },
+              "cantidad_requerida": {
+                "type": "number",
+                "nullable": true
+              },
+              "cantidad_gratis": {
+                "type": "number",
+                "nullable": true
+              },
+              "descuento_porcentaje": {
+                "type": "number",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "tipo"
+            ]
+          }
+        },
+        "required": [
+          "clave",
+          "origen",
+          "precio_unitario_cents",
+          "precio_total_cents"
+        ]
+      },
+      "PricingPreciosInternosResponseDto": {
+        "type": "object",
+        "properties": {
+          "precios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PricingPrecioLineaInternaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "precios"
+        ]
+      },
+      "PricingResolverPreciosInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lista_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "segmento_codigo": {
+            "type": "string",
+            "example": "mayorista"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PricingLineaPrecioInternaRequestDto"
+            }
+          }
+        },
+        "required": [
+          "empresa_id",
+          "lineas"
+        ]
+      },
+      "CuponInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "empresa_id",
+          "codigo",
+          "monto_cents"
+        ]
+      },
+      "CuponValidadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cupon_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "descuento_cents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cupon_id",
+          "codigo",
+          "descuento_cents"
         ]
       },
       "DisponibilidadResponseDto": {

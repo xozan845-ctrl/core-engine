@@ -160,3 +160,110 @@ pub async fn precio_base(
         .fijar_precio_base(empresa, &id, precio)
         .await?)
 }
+
+/// `POST /internal/cupones/validar`.
+pub async fn cupon_validar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let (empresa, codigo, monto) = datos_cupon(&cuerpo)?;
+    let validado = state.cupones()?.validar(&empresa, &codigo, monto).await?;
+    ok(json!({
+        "cupon_id": validado.cupon_id,
+        "codigo": validado.codigo,
+        "descuento_cents": validado.descuento_cents,
+    }))
+}
+
+/// `POST /internal/cupones/canjear`.
+pub async fn cupon_canjear(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let (empresa, codigo, monto) = datos_cupon(&cuerpo)?;
+    let order_id = cuerpo
+        .get("order_id")
+        .and_then(Value::as_str)
+        .filter(|valor| uuid::Uuid::parse_str(valor).is_ok())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "order_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    let validado = state
+        .cupones()?
+        .canjear(&empresa, &codigo, order_id, monto)
+        .await?;
+    ok(json!({
+        "cupon_id": validado.cupon_id,
+        "codigo": validado.codigo,
+        "descuento_cents": validado.descuento_cents,
+    }))
+}
+
+/// `POST /internal/cupones/liberar`.
+pub async fn cupon_liberar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let (empresa, codigo, _) = datos_cupon(&cuerpo)?;
+    let order_id = cuerpo
+        .get("order_id")
+        .and_then(Value::as_str)
+        .filter(|valor| uuid::Uuid::parse_str(valor).is_ok())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "order_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?;
+    state
+        .cupones()?
+        .liberar(&empresa, &codigo, order_id)
+        .await?;
+    ok(json!({ "ok": true }))
+}
+
+fn datos_cupon(cuerpo: &Value) -> Result<(String, String, i64), ApiError> {
+    let empresa = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .filter(|valor| uuid::Uuid::parse_str(valor).is_ok())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "empresa_id",
+                "restricciones": ["isUuid"],
+            }]))
+        })?
+        .to_string();
+    let codigo = cuerpo
+        .get("codigo")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "codigo",
+                "restricciones": ["isString"],
+            }]))
+        })?
+        .to_string();
+    let monto = cuerpo
+        .get("monto_cents")
+        .and_then(Value::as_i64)
+        .filter(|monto| *monto >= 0)
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{
+                "campo": "monto_cents",
+                "restricciones": ["isInt", "min:0"],
+            }]))
+        })?;
+    Ok((empresa, codigo, monto))
+}
