@@ -536,6 +536,7 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | comisiones | `/vendedores/me/{ventas,liquidaciones,fiscal,tienda,ofertas}`, `/empresarios/me/{ventas,liquidaciones,tiendas}`, `/admin/liquidaciones/**` |
 | administración | `/admin/**` (inventario, lotes, ubicaciones, reportes, envíos y storage por tenant) |
 | inteligencia | `/inteligencia/**` (mapa de calor, rendimiento, cobertura, demanda, tendencias, forecast, anomalías y score) |
+| analítica | `/analytics/**` (negocios, cohortes, empresa, plataforma y reportes programados) |
 | storage | `/storage/**` (buckets, subidas, objetos y media pública) |
 | operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 11 servicios en producción, 12 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
 
