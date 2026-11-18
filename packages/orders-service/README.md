@@ -45,6 +45,9 @@ capacidad de **fidelización**.
 | `INTERNAL_API_KEY` | Recomendada | — | Internos + clientes |
 | `COMMISSION_RATE` | No | `0.12` | Comisión RN-04 |
 | `PAGO_WEBHOOK_SECRET` | Recomendada | — | Webhook de pagos (`x-webhook-secret`) |
+| `PAGO_PROVEEDOR` | No | `simulado` | Adaptador de pagos (`simulado`/`http`) |
+| `PAGO_PROVEEDOR_URL` | Solo `http` | — | Base de la pasarela (`/cargos`, `/reembolsos`, `/contracargos`) |
+| `PAGO_PROVEEDOR_KEY` | No | — | Bearer de la pasarela |
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Ofertas |
 | `ITEM_SERVICE_URL` | No | `http://item-service:3015` | Items |
 | `PRICING_SERVICE_URL` | No | `http://pricing-service:3014` | Precios |
@@ -205,6 +208,19 @@ Campos: `codigo`, `nombre`, `requiere_confirmacion`, `activo`, `config`.
 `POST /api/v2/admin/pagos/{id}/confirmar`,
 `POST /api/v2/admin/pagos/{id}/rechazar`.
 
+### Proveedor, reembolsos y contracargos
+
+- `PAGO_PROVEEDOR=simulado|http` elige el adaptador (ACL `ProveedorPagos`).
+  `http` usa `PAGO_PROVEEDOR_URL` y `PAGO_PROVEEDOR_KEY` (Bearer).
+- Los métodos con `config.cargo_externo=true` (o `simulado`) crean un cargo y
+  guardan `referencia` + `proveedor`.
+- `POST /api/v2/admin/pagos/{id}/reembolsar` body `{monto_cents, motivo?}`:
+  reembolso total o parcial, acumula `monto_reembolsado_cents`.
+- `POST /api/v2/admin/pagos/{id}/contracargo` body `{monto_cents, motivo?}`:
+  marca `contracargo`; no mueve la orden por sí solo.
+- `POST /api/v2/admin/pagos/{id}/conciliar`: marca `conciliado_en`.
+- Cada operación deja un evento en `orders.pagos_eventos`.
+
 ### Webhook
 
 `POST /internal/pagos/webhook` con cabecera `x-webhook-secret` igual a
@@ -307,7 +323,7 @@ Aceptar una cotización genera la orden de compra y dispara el flujo normal.
 | Órdenes | `POST/GET /orders`; `GET /orders/{id}`, `/{id}/timeline`; `GET /orders/{admin/todas,vendedor/mis-ventas,tienda/{id},empresa,empresa/resumen}` |
 | Cotización | `POST /orders/{id}/cotizacion/{enviar,aceptar,rechazar}` |
 | Carrito | `GET/DELETE /carrito`; `POST /carrito/items`; `PATCH/DELETE /carrito/items/{ofertaId}` |
-| Pagos | `GET /orders/metodos-pago`; `POST/PATCH /admin/metodos-pago`; `GET /admin/pagos`; `POST /admin/pagos/{id}/{confirmar,rechazar}` |
+| Pagos | `GET /orders/metodos-pago`; `POST/PATCH /admin/metodos-pago`; `GET /admin/pagos`; `POST /admin/pagos/{id}/{confirmar,rechazar,reembolsar,contracargo,conciliar}` |
 | Tipos/fulfillment | `GET/POST/PATCH /admin/tipos-orden`; `POST/DELETE .../transiciones`; `GET /orders/fulfillments`; `POST/PATCH /admin/fulfillments` |
 | Entregas | `GET /pedidos/{id}/entregas-digitales`; `GET /entregas-digitales/{token}` |
 | Contratos | `GET/POST /contratos`; `GET/PATCH /contratos/{id}`; `POST /contratos/{id}/finalizar`; `GET /contratos/{id}/movimientos` |

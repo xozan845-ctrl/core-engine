@@ -35,6 +35,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0024](./0024-ubicacion-despacho-por-linea.md) | Aceptado (implementado) | Ubicación de despacho opcional por línea; inventory reserva y descuenta esa ubicación |
 | [0025](./0025-promociones-en-checkout.md) | Aceptado (implementado) | Pricing resuelve la promoción vigente y orders aplica el descuento sobre el precio final |
 | [0026](./0026-fiscalidad-por-tenant.md) | Aceptado (implementado; declaraciones globales) | Jurisdicción fiscal por tenant, moneda desde la jurisdicción e IVA por línea |
+| [0027](./0027-pagos-proveedor-reembolsos.md) | Aceptado (implementado) | ACL de pasarela, cargo externo, reembolsos parciales, contracargo y conciliación |
 
 ## Convención
 
