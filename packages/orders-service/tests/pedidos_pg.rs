@@ -349,11 +349,24 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          proveedor text NOT NULL DEFAULT 'simulado',
+          monto_reembolsado_cents integer NOT NULL DEFAULT 0,
           motivo_rechazo text NOT NULL DEFAULT '',
           confirmado_por uuid,
+          conciliado_en timestamptz,
           confirmado_en timestamptz,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE orders.pagos_eventos (
+          id bigserial PRIMARY KEY,
+          pago_id uuid NOT NULL,
+          tipo text NOT NULL,
+          monto_cents integer NOT NULL DEFAULT 0,
+          motivo text NOT NULL DEFAULT '',
+          actor_id uuid,
+          payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+          creado_en timestamptz NOT NULL DEFAULT NOW()
         );
 
         CREATE TABLE orders.eventos_procesados (
@@ -682,6 +695,86 @@ async fn debe_aplicar_la_promocion_al_total_de_la_orden() {
         .expect("existe");
     assert_eq!(vista.total_cents, 15_000);
     assert_eq!(vista.items[0].descuento_cents, 5_000);
+}
+
+#[tokio::test]
+async fn debe_reembolsar_conciliar_y_contracargar_un_pago() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let pagos = Pagos::nueva(Arc::clone(&db));
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let (pago_id, proveedor, referencia, estado): (Uuid, String, String, String) = sqlx::query_as(
+        "SELECT id, proveedor, referencia, estado FROM orders.pagos WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("pago");
+    assert_eq!(estado, "confirmado");
+    assert_eq!(proveedor, "simulado");
+    assert!(!referencia.is_empty());
+
+    let parcial = pagos
+        .reembolsar(&pago_id.to_string(), 5_000, "prueba", COMPRADOR)
+        .await
+        .expect("reembolso parcial");
+    assert_eq!(parcial.estado, "reembolsado_parcial");
+    assert_eq!(parcial.monto_reembolsado_cents, 5_000);
+
+    let total = pagos
+        .reembolsar(&pago_id.to_string(), 15_000, "resto", COMPRADOR)
+        .await
+        .expect("reembolso total");
+    assert_eq!(total.estado, "reembolsado");
+    assert_eq!(total.monto_reembolsado_cents, 20_000);
+
+    let conciliado = pagos
+        .conciliar(&pago_id.to_string(), COMPRADOR)
+        .await
+        .expect("conciliar");
+    assert!(conciliado.conciliado_en.is_some());
+
+    let eventos: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM orders.pagos_eventos WHERE pago_id = $1")
+            .bind(pago_id)
+            .fetch_one(db.pool())
+            .await
+            .expect("eventos");
+    assert_eq!(eventos, 3);
+}
+
+#[tokio::test]
+async fn debe_registrar_un_contracargo_sin_mover_la_orden() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let pagos = Pagos::nueva(Arc::clone(&db));
+    let orden = checkout
+        .ejecutar(&compra(1), COMPRADOR)
+        .await
+        .expect("orden");
+    let pago_id: Uuid = sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+        .fetch_one(db.pool())
+        .await
+        .expect("pago");
+    let pago = pagos
+        .contracargar(&pago_id.to_string(), 10_000, "fraude", COMPRADOR)
+        .await
+        .expect("contracargo");
+    assert_eq!(pago.estado, "contracargo");
+    assert_eq!(pago.monto_reembolsado_cents, 10_000);
+    let estado_orden: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden");
+    assert_eq!(estado_orden, "creada");
 }
 
 fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
