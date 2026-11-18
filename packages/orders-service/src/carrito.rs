@@ -25,7 +25,7 @@ pub struct ItemCarritoEnriquecido {
     pub oferta_id: String,
     pub cantidad: i64,
     pub tienda_id: String,
-    pub vendedor_id: String,
+    pub vendedor_id: Option<String>,
     pub sku: String,
     pub producto_nombre: String,
     pub precio_venta: String,

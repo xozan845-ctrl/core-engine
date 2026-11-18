@@ -6,7 +6,6 @@
 
 use crate::auth::UsuarioContexto;
 use crate::errors::ApiError;
-use crate::money;
 use crate::order_state::ItemOrden;
 use crate::views::{OrderView, TimelineEvento};
 use serde_json::Value;
@@ -31,7 +30,7 @@ impl Pedidos {
             let items: Vec<ItemOrden> = orden
                 .items
                 .iter()
-                .filter(|i| i.vendedor_id == usuario.user_id)
+                .filter(|i| i.vendedor_id.as_deref() == Some(usuario.user_id.as_str()))
                 .cloned()
                 .collect();
             if !items.is_empty() {
@@ -99,7 +98,7 @@ impl Pedidos {
         let items = orden
             .items
             .iter()
-            .filter(|i| i.vendedor_id == vendedor_id)
+            .filter(|i| i.vendedor_id.as_deref() == Some(vendedor_id))
             .cloned()
             .collect();
         self.recortar(orden, items)
@@ -150,7 +149,11 @@ impl Pedidos {
             return Err(ApiError::acceso_denegado("No tiene acceso a esta orden."));
         }
         let total = self.total_de(&items);
-        let comision = money::comision(total, self.tasa_comision)?;
+        let comision = if orden.total_cents <= 0 {
+            0
+        } else {
+            ((orden.comision_cents as f64 * total as f64) / orden.total_cents as f64).round() as i64
+        };
         Ok(OrderView {
             vendedor_id: items[0].vendedor_id.clone(),
             tienda_id: items[0].tienda_id.clone(),
@@ -194,11 +197,12 @@ mod tests {
             producto_nombre: "Producto".into(),
             cantidad,
             precio_unitario_cents: precio,
-            vendedor_id: vendedor.into(),
+            vendedor_id: Some(vendedor.into()),
             tienda_id: "t-1".into(),
             empresa_id: empresa.into(),
             negocio_id: None,
             participacion_porcentaje: Some(10),
+            comision: true,
             item_type: "producto".into(),
             item_id: "i-1".into(),
             fulfillment: None,
@@ -209,7 +213,7 @@ mod tests {
     fn orden() -> OrderView {
         OrderView {
             id: "o-1".into(),
-            vendedor_id: "v-1".into(),
+            vendedor_id: Some("v-1".into()),
             comprador_id: "c-1".into(),
             parte_id: None,
             tienda_id: "t-1".into(),

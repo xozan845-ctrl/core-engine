@@ -54,6 +54,7 @@ fn item(empresa: Uuid, tienda: Uuid, vendedor: Uuid, oferta: Uuid) -> ItemOrden 
         negocio_id: None,
         tienda_id: Some(tienda.to_string()),
         participacion_porcentaje: Some(60),
+        comision: true,
         precio_unitario_cents: 115_000,
         cantidad: 1,
     }
@@ -358,6 +359,63 @@ async fn debe_procesar_el_evento_de_orden_completada_una_sola_vez() {
     .await
     .expect("conteo outbox");
     assert_eq!(outbox.0, 1);
+
+    db.pool().close().await;
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn debe_omitir_lineas_de_venta_directa_sin_vendedor_ni_comision() {
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let order_id = Uuid::new_v4();
+    let mut linea = item(
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+    );
+    linea.vendedor_id = None;
+    linea.comision = false;
+    let orden = OrdenInterna {
+        total_cents: 115_000,
+        items: vec![linea],
+    };
+    let comisiones = Arc::new(Comisiones::nueva(Arc::clone(&db), 0.12));
+    let consumidor = PedidosConsumer::nuevo(
+        Arc::clone(&db),
+        comisiones,
+        Outbox::nueva("commissions.outbox"),
+        Arc::new(OrdenFija { orden }),
+    );
+    consumidor
+        .manejar(serde_json::json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": "order.completado",
+            "ocurrido_en": "2026-09-01T00:00:00.000Z",
+            "data": { "order_id": order_id.to_string(), "entregado_en": "2026-09-01T00:00:00.000Z" }
+        }))
+        .await
+        .expect("consumir venta directa");
+
+    let comisiones_filas: (i64,) =
+        sqlx::query_as("SELECT COUNT(*)::bigint FROM commissions.comisiones WHERE order_id = $1")
+            .bind(order_id)
+            .fetch_one(&pool)
+            .await
+            .expect("conteo comisiones");
+    assert_eq!(comisiones_filas.0, 0);
+    let outbox: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM commissions.outbox
+         WHERE tipo = 'comision.acreditada' AND payload->'data'->>'order_id' = $1",
+    )
+    .bind(order_id.to_string())
+    .fetch_one(&pool)
+    .await
+    .expect("conteo outbox");
+    assert_eq!(outbox.0, 0);
 
     db.pool().close().await;
     pool.close().await;

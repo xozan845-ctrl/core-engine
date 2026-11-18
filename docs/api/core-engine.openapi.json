@@ -38158,8 +38158,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "sku": {
             "type": "string",
@@ -38190,7 +38191,6 @@
           "oferta_id",
           "cantidad",
           "tienda_id",
-          "vendedor_id",
           "sku",
           "producto_nombre",
           "precio_venta",
@@ -38981,8 +38981,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "tienda_id": {
             "type": "string",
@@ -38994,6 +38995,10 @@
             "description": "Negocio de la tienda",
             "format": "uuid",
             "nullable": true
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "Indica si la línea genera comisión"
           },
           "fulfillment": {
             "type": "string",
@@ -39018,7 +39023,6 @@
           "producto_nombre",
           "cantidad",
           "precio_unitario_cents",
-          "vendedor_id",
           "tienda_id"
         ]
       },
@@ -39085,8 +39089,9 @@
           },
           "vendedor_id": {
             "type": "string",
-            "description": "Id del vendedor",
-            "format": "uuid"
+            "description": "Id del vendedor; null en venta directa",
+            "format": "uuid",
+            "nullable": true
           },
           "comprador_id": {
             "type": "string",
@@ -39202,7 +39207,6 @@
         },
         "required": [
           "id",
-          "vendedor_id",
           "comprador_id",
           "tienda_id",
           "estado",

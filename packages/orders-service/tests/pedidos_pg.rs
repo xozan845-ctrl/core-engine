@@ -6,7 +6,8 @@ use async_trait::async_trait;
 use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
-    Capacidad, ClientesPort, Cotizacion, CreditoEstado, ItemStock, OfertaExterna, PreciosExternos,
+    Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
+    CreditoEstado, ItemStock, OfertaExterna, PreciosExternos,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -44,6 +45,7 @@ struct ClientesFake {
     stock: i64,
     capacidades: Vec<Capacidad>,
     tasa: Option<f64>,
+    directo: bool,
 }
 
 #[async_trait]
@@ -61,6 +63,18 @@ impl ClientesPort for ClientesFake {
         self.tasa
     }
 
+    async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
+        if self.directo {
+            ConfiguracionExterna::Ok(ConfiguracionOperativa {
+                requiere_vendedor: false,
+                comision: false,
+                ..Default::default()
+            })
+        } else {
+            ConfiguracionExterna::SinConfiguracion
+        }
+    }
+
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna> {
         if ids.is_empty() {
             return Vec::new();
@@ -68,7 +82,11 @@ impl ClientesPort for ClientesFake {
         let oferta = OfertaExterna {
             id: OFERTA.to_string(),
             tienda_id: TIENDA.to_string(),
-            vendedor_id: VENDEDOR.to_string(),
+            vendedor_id: if self.directo {
+                None
+            } else {
+                Some(VENDEDOR.to_string())
+            },
             empresa_id: EMPRESA.to_string(),
             negocio_id: None,
             participacion_porcentaje: Some(10),
@@ -179,7 +197,7 @@ async fn provisionar(url: &str) {
 
         CREATE TABLE orders.orden_vista (
           id uuid PRIMARY KEY,
-          vendedor_id uuid NOT NULL,
+          vendedor_id uuid,
           comprador_id uuid NOT NULL,
           parte_id uuid,
           tienda_id uuid NOT NULL,
@@ -238,7 +256,7 @@ async fn provisionar(url: &str) {
               (NEW.payload->'items'->0->>'tienda_id')::uuid,
               'creada',
               (NEW.payload->>'total_cents')::int,
-              (NEW.payload->>'total_cents')::int * 12 / 100,
+              COALESCE((NEW.payload->>'comision_cents')::int, 0),
               'NIO',
               NEW.payload->'items',
               NEW.creado_en,
@@ -480,14 +498,28 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
     infra_con(db, stock, None)
 }
 
+fn infra_directo(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, true)
+}
+
 fn infra_con(
     db: Arc<Db>,
     stock: i64,
     tasa: Option<f64>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, tasa, false)
+}
+
+fn infra_con_directo(
+    db: Arc<Db>,
+    stock: i64,
+    tasa: Option<f64>,
+    directo: bool,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa,
+        directo,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -560,6 +592,28 @@ async fn debe_crear_orden_con_evento_y_outbox() {
         .await
         .expect("eventos");
     assert_eq!(eventos, 1);
+}
+
+#[tokio::test]
+async fn debe_crear_una_orden_de_venta_directa_sin_vendedor_ni_comision() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_directo(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden directa");
+    assert!(orden.vendedor_id.is_none());
+    assert_eq!(orden.comision_cents, 0);
+    assert!(!orden.items[0].comision);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert!(vista.vendedor_id.is_none());
+    assert_eq!(vista.comision_cents, 0);
 }
 
 fn compra_con_metodo(cantidad: i64, metodo: &str) -> ComandoCrear {
@@ -881,6 +935,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa: None,
+        directo: false,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),

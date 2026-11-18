@@ -4,7 +4,8 @@
 
 use crate::carrito::{Carrito, ItemCarrito};
 use crate::clients::{
-    ClientesPort, ConfiguracionExterna, CreditoEstado, OfertaExterna, PreciosExternos,
+    ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, OfertaExterna,
+    PreciosExternos,
 };
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
@@ -247,6 +248,7 @@ impl Checkout {
                 empresa_id: oferta.empresa_id.clone(),
                 negocio_id: oferta.negocio_id.clone(),
                 participacion_porcentaje: oferta.participacion_porcentaje,
+                comision: true,
                 item_type: oferta.item_type.clone(),
                 item_id: oferta.item_id.clone(),
                 fulfillment: Some(fulfillment.clone()),
@@ -264,8 +266,15 @@ impl Checkout {
             }
         }
 
-        self.validar_capacidades(&items, &tipo_orden, &metodo_pago)
+        let configuraciones = self
+            .validar_capacidades(&items, &tipo_orden, &metodo_pago)
             .await?;
+        for item in &mut items {
+            item.comision = configuraciones
+                .get(&item.empresa_id)
+                .map(|config| config.comision)
+                .unwrap_or(true);
+        }
 
         if es_reserva {
             total = 0;
@@ -349,7 +358,7 @@ impl Checkout {
                     &order_id,
                     total,
                     &concepto,
-                    items.first().map(|i| i.vendedor_id.as_str()),
+                    items.first().and_then(|i| i.vendedor_id.as_deref()),
                 )
                 .await;
             match credito {
@@ -427,6 +436,20 @@ impl Checkout {
             }
             monto
         };
+        let base_comision: i64 = if es_cotizacion {
+            0
+        } else {
+            items
+                .iter()
+                .filter(|item| item.comision && item.vendedor_id.is_some())
+                .map(|item| item.precio_unitario_cents.saturating_mul(item.cantidad))
+                .sum()
+        };
+        let comision = if base_comision == 0 {
+            0
+        } else {
+            money::comision(base_comision, self.tasa_comision)?
+        };
         let resumen = resumen_fulfillment(&items);
         let evento_payload = json!({
             "order_id": order_id,
@@ -434,6 +457,8 @@ impl Checkout {
             "cliente_parte_id": comando.cliente_parte_id,
             "items": items,
             "total_cents": total,
+            "comision_cents": comision,
+            "moneda": moneda_orden,
             "estado": "creada",
             "tipo_orden": tipo_orden,
             "metodo_pago": metodo_pago,
@@ -442,12 +467,6 @@ impl Checkout {
             "fulfillment_config": resumen,
             "creado_en": creado_en,
         });
-
-        let comision = if es_cotizacion {
-            0
-        } else {
-            money::comision(total, self.tasa_comision)?
-        };
         let evento_outbox = json!({
             "event_id": Uuid::new_v4().to_string(),
             "tipo": ORDER_CREATED,
@@ -509,20 +528,14 @@ impl Checkout {
         };
         Ok(OrderView {
             id: order_id,
-            vendedor_id: primer_item
-                .map(|i| i.vendedor_id.clone())
-                .unwrap_or_default(),
+            vendedor_id: primer_item.and_then(|i| i.vendedor_id.clone()),
             comprador_id: cliente_id.to_string(),
             parte_id: comando.cliente_parte_id.clone(),
             tienda_id: primer_item.map(|i| i.tienda_id.clone()).unwrap_or_default(),
             negocio_id,
             estado: "creada".to_string(),
             total_cents: total,
-            comision_cents: if es_cotizacion {
-                0
-            } else {
-                money::comision(total, self.tasa_comision)?
-            },
+            comision_cents: comision,
             moneda: moneda_orden,
             items,
             direccion_envio: Value::Null,
@@ -834,7 +847,7 @@ impl Checkout {
         items: &[ItemOrden],
         tipo_orden: &str,
         metodo_pago: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<HashMap<String, ConfiguracionOperativa>, ApiError> {
         let mut grupos: HashMap<(String, Option<String>), Vec<&ItemOrden>> = HashMap::new();
         for item in items {
             grupos
@@ -900,6 +913,7 @@ impl Checkout {
                 return Err(ApiError::capacidad_no_activa(&faltantes, &empresa));
             }
         }
+        let mut configuraciones = HashMap::new();
         for empresa in &empresas {
             let config = match self.clientes.configuracion(empresa).await {
                 ConfiguracionExterna::Ok(config) => config,
@@ -908,23 +922,23 @@ impl Checkout {
                     return Err(ApiError::servicio_no_disponible("identity-service"))
                 }
             };
-            if config.fulfillment.is_empty() {
-                continue;
-            }
-            for item in items.iter().filter(|item| &item.empresa_id == empresa) {
-                let fulfillment = item.fulfillment.as_deref();
-                if !fulfillment_permitido(&config, fulfillment) {
-                    return Err(ApiError::dominio(
-                        "FULFILLMENT_NO_PERMITIDO",
-                        format!(
-                            "El modelo operativo de la empresa no permite fulfillment \"{}\".",
-                            fulfillment.unwrap_or("none")
-                        ),
-                    ));
+            if !config.fulfillment.is_empty() {
+                for item in items.iter().filter(|item| &item.empresa_id == empresa) {
+                    let fulfillment = item.fulfillment.as_deref();
+                    if !fulfillment_permitido(&config, fulfillment) {
+                        return Err(ApiError::dominio(
+                            "FULFILLMENT_NO_PERMITIDO",
+                            format!(
+                                "El modelo operativo de la empresa no permite fulfillment \"{}\".",
+                                fulfillment.unwrap_or("none")
+                            ),
+                        ));
+                    }
                 }
             }
+            configuraciones.insert(empresa.clone(), config);
         }
-        Ok(())
+        Ok(configuraciones)
     }
 
     async fn verificar_stock(&self, items: &[ItemOrden]) -> Result<(), ApiError> {
