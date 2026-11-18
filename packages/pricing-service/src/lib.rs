@@ -8,6 +8,7 @@
 
 pub mod auth;
 pub mod config;
+pub mod cupones;
 pub mod db;
 pub mod errors;
 pub mod http;

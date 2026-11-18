@@ -153,6 +153,122 @@
         ]
       }
     },
+    "/internal/cupones/validar": {
+      "post": {
+        "operationId": "InternalController_cuponValidar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón válido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuponValidadoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Validar cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
+    "/internal/cupones/canjear": {
+      "post": {
+        "operationId": "InternalController_cuponCanjear",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cupón canjeado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuponValidadoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Canjear cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
+    "/internal/cupones/liberar": {
+      "post": {
+        "operationId": "InternalController_cuponLiberar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuponInternoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canje liberado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Liberar cupón (servicio a servicio)",
+        "tags": [
+          "Cupones (interno)"
+        ]
+      }
+    },
     "/internal/items/precios": {
       "post": {
         "operationId": "InternalController_preciosPorLote",
@@ -723,17 +839,40 @@
             "type": "object",
             "nullable": true,
             "properties": {
-              "id": {"type": "string", "format": "uuid"},
-              "nombre": {"type": "string"},
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
               "tipo": {
                 "type": "string",
-                "enum": ["2x1", "descuento_cantidad", "descuento_porcentaje", "regalo"]
+                "enum": [
+                  "2x1",
+                  "descuento_cantidad",
+                  "descuento_porcentaje",
+                  "regalo"
+                ]
               },
-              "cantidad_requerida": {"type": "number", "nullable": true},
-              "cantidad_gratis": {"type": "number", "nullable": true},
-              "descuento_porcentaje": {"type": "number", "nullable": true}
+              "cantidad_requerida": {
+                "type": "number",
+                "nullable": true
+              },
+              "cantidad_gratis": {
+                "type": "number",
+                "nullable": true
+              },
+              "descuento_porcentaje": {
+                "type": "number",
+                "nullable": true
+              }
             },
-            "required": ["id", "nombre", "tipo"]
+            "required": [
+              "id",
+              "nombre",
+              "tipo"
+            ]
           }
         },
         "required": [
@@ -813,6 +952,51 @@
           "agotados",
           "stock_total",
           "valor_inventario_cents"
+        ]
+      },
+      "CuponInternoRequestDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "monto_cents": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "empresa_id",
+          "codigo",
+          "monto_cents"
+        ]
+      },
+      "CuponValidadoResponseDto": {
+        "type": "object",
+        "properties": {
+          "cupon_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "descuento_cents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cupon_id",
+          "codigo",
+          "descuento_cents"
         ]
       }
     }

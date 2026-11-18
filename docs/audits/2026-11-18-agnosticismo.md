@@ -395,3 +395,12 @@ marketplace que ya funciona.
   [ADR-0027](../adr/0027-pagos-proveedor-reembolsos.md). La conciliación
   automática contra la pasarela queda como evolución.
 
+
+## 11. Continuación retail (P3)
+
+- **P3.1 — Cupones: implementado.** `pricing.cupones` + `cupon_usos`, API
+  pública y endpoints internos de validar/canjear/liberar; orders aplica el
+  descuento al total, lo persiste y lo refleja en comisión y comprobante.
+  Decisión en [ADR-0028](../adr/0028-cupones.md).
+- **P3.2 — RMA/devolución parcial:** pendiente.
+- **P3.3 — Reseñas y wishlist:** pendiente.

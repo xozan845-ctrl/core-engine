@@ -148,7 +148,18 @@ impl Pedidos {
         if items.is_empty() {
             return Err(ApiError::acceso_denegado("No tiene acceso a esta orden."));
         }
-        let total = self.total_de(&items);
+        let total_bruto = self.total_de(&items);
+        let bruto_orden = orden
+            .total_cents
+            .saturating_add(orden.descuento_cupon_cents)
+            .max(1);
+        let cupon_visible = if orden.descuento_cupon_cents > 0 {
+            ((orden.descuento_cupon_cents as f64 * total_bruto as f64) / bruto_orden as f64).round()
+                as i64
+        } else {
+            0
+        };
+        let total = total_bruto.saturating_sub(cupon_visible);
         let comision = if orden.total_cents <= 0 {
             0
         } else {
@@ -159,6 +170,7 @@ impl Pedidos {
             tienda_id: items[0].tienda_id.clone(),
             total_cents: total,
             comision_cents: comision,
+            descuento_cupon_cents: cupon_visible,
             items,
             ..orden
         })
@@ -232,6 +244,8 @@ mod tests {
             estado: "pagada".into(),
             total_cents: 300,
             comision_cents: 36,
+            descuento_cupon_cents: 0,
+            cupon_codigo: None,
             moneda: "NIO".into(),
             items: vec![
                 item("of-1", "v-1", "e-1", 100, 1),

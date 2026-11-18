@@ -774,22 +774,35 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"}
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersFulfillmentResponseDto"
+                      }
                     },
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar fulfillments",
-        "tags": ["Fulfillments"]
+        "tags": [
+          "Fulfillments"
+        ]
       }
     },
     "/api/v2/admin/fulfillments": {
@@ -799,7 +812,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/OrdersCrearFulfillmentRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/OrdersCrearFulfillmentRequestDto"
+              }
             }
           }
         },
@@ -810,32 +825,54 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersFulfillmentResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear fulfillment (admin)",
-        "tags": ["Fulfillments"]
+        "tags": [
+          "Fulfillments"
+        ]
       }
     },
     "/api/v2/admin/fulfillments/{codigo}": {
       "patch": {
         "operationId": "FulfillmentsController_actualizar",
         "parameters": [
-          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/OrdersActualizarFulfillmentRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/OrdersActualizarFulfillmentRequestDto"
+              }
             }
           }
         },
@@ -846,19 +883,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersFulfillmentResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersFulfillmentResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar fulfillment (admin)",
-        "tags": ["Fulfillments"]
+        "tags": [
+          "Fulfillments"
+        ]
       }
     },
     "/api/v2/admin/tipos-orden": {
@@ -871,22 +921,35 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"}
+                      "items": {
+                        "$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"
+                      }
                     },
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar tipos de orden (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       },
       "post": {
         "operationId": "TiposOrdenController_crear",
@@ -894,7 +957,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/OrdersCrearTipoOrdenRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/OrdersCrearTipoOrdenRequestDto"
+              }
             }
           }
         },
@@ -905,26 +970,46 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear tipo de orden (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       }
     },
     "/api/v2/admin/tipos-orden/{codigo}": {
       "get": {
         "operationId": "TiposOrdenController_detalle",
         "parameters": [
-          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -933,30 +1018,52 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenDetalleResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersTipoOrdenDetalleResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Detalle de tipo de orden (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       },
       "patch": {
         "operationId": "TiposOrdenController_actualizar",
         "parameters": [
-          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/OrdersActualizarTipoOrdenRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/OrdersActualizarTipoOrdenRequestDto"
+              }
             }
           }
         },
@@ -967,32 +1074,54 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar tipo de orden (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       }
     },
     "/api/v2/admin/tipos-orden/{codigo}/transiciones": {
       "post": {
         "operationId": "TiposOrdenController_agregarTransicion",
         "parameters": [
-          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}}
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/OrdersCrearTransicionRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/OrdersCrearTransicionRequestDto"
+              }
             }
           }
         },
@@ -1003,35 +1132,77 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersTransicionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Agregar transición (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       }
     },
     "/api/v2/admin/tipos-orden/{codigo}/transiciones/{desde}/{hasta}": {
       "delete": {
         "operationId": "TiposOrdenController_eliminarTransicion",
         "parameters": [
-          {"name": "codigo", "required": true, "in": "path", "schema": {"type": "string"}},
-          {"name": "desde", "required": true, "in": "path", "schema": {"type": "string"}},
-          {"name": "hasta", "required": true, "in": "path", "schema": {"type": "string"}}
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hasta",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "204": {"description": "Transición eliminada"}
+          "204": {
+            "description": "Transición eliminada"
+          }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar transición (admin)",
-        "tags": ["Tipos de orden"]
+        "tags": [
+          "Tipos de orden"
+        ]
       }
     },
     "/api/v2/admin/pagos": {
@@ -1202,7 +1373,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {"type": "string", "format": "uuid"}
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
@@ -1212,10 +1386,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "monto_cents": {"type": "integer", "minimum": 1},
-                  "motivo": {"type": "string"}
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
                 },
-                "required": ["monto_cents"]
+                "required": [
+                  "monto_cents"
+                ]
               }
             }
           }
@@ -1227,19 +1408,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersPagoResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Reembolsar un pago (admin)",
-        "tags": ["Pagos"]
+        "tags": [
+          "Pagos"
+        ]
       }
     },
     "/api/v2/admin/pagos/{id}/contracargo": {
@@ -1250,7 +1444,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {"type": "string", "format": "uuid"}
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
@@ -1260,10 +1457,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "monto_cents": {"type": "integer", "minimum": 1},
-                  "motivo": {"type": "string"}
+                  "monto_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "motivo": {
+                    "type": "string"
+                  }
                 },
-                "required": ["monto_cents"]
+                "required": [
+                  "monto_cents"
+                ]
               }
             }
           }
@@ -1275,19 +1479,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersPagoResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Registrar un contracargo (admin)",
-        "tags": ["Pagos"]
+        "tags": [
+          "Pagos"
+        ]
       }
     },
     "/api/v2/admin/pagos/{id}/conciliar": {
@@ -1298,7 +1515,10 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "schema": {"type": "string", "format": "uuid"}
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -1308,19 +1528,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/OrdersPagoResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/OrdersPagoResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Conciliar un pago (admin)",
-        "tags": ["Pagos"]
+        "tags": [
+          "Pagos"
+        ]
       }
     },
     "/api/v2/orders/{id}": {
@@ -3789,88 +4022,176 @@
       "OrdersFulfillmentResponseDto": {
         "type": "object",
         "properties": {
-          "codigo": {"type": "string"},
-          "nombre": {"type": "string"},
-          "requiere_direccion": {"type": "boolean"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_direccion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         },
-        "required": ["codigo", "nombre", "requiere_direccion", "activo", "config"]
+        "required": [
+          "codigo",
+          "nombre",
+          "requiere_direccion",
+          "activo",
+          "config"
+        ]
       },
       "OrdersCrearFulfillmentRequestDto": {
         "type": "object",
         "properties": {
-          "codigo": {"type": "string"},
-          "nombre": {"type": "string"},
-          "requiere_direccion": {"type": "boolean"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_direccion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         },
-        "required": ["codigo", "nombre"]
+        "required": [
+          "codigo",
+          "nombre"
+        ]
       },
       "OrdersActualizarFulfillmentRequestDto": {
         "type": "object",
         "properties": {
-          "nombre": {"type": "string"},
-          "requiere_direccion": {"type": "boolean"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "nombre": {
+            "type": "string"
+          },
+          "requiere_direccion": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         }
       },
       "OrdersTipoOrdenResponseDto": {
         "type": "object",
         "properties": {
-          "codigo": {"type": "string"},
-          "nombre": {"type": "string"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         },
-        "required": ["codigo", "nombre", "activo", "config"]
+        "required": [
+          "codigo",
+          "nombre",
+          "activo",
+          "config"
+        ]
       },
       "OrdersTransicionResponseDto": {
         "type": "object",
         "properties": {
-          "desde": {"type": "string"},
-          "hasta": {"type": "string"}
+          "desde": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": "string"
+          }
         },
-        "required": ["desde", "hasta"]
+        "required": [
+          "desde",
+          "hasta"
+        ]
       },
       "OrdersTipoOrdenDetalleResponseDto": {
         "type": "object",
         "properties": {
-          "tipo": {"$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"},
+          "tipo": {
+            "$ref": "#/components/schemas/OrdersTipoOrdenResponseDto"
+          },
           "transiciones": {
             "type": "array",
-            "items": {"$ref": "#/components/schemas/OrdersTransicionResponseDto"}
+            "items": {
+              "$ref": "#/components/schemas/OrdersTransicionResponseDto"
+            }
           }
         },
-        "required": ["tipo", "transiciones"]
+        "required": [
+          "tipo",
+          "transiciones"
+        ]
       },
       "OrdersCrearTipoOrdenRequestDto": {
         "type": "object",
         "properties": {
-          "codigo": {"type": "string"},
-          "nombre": {"type": "string"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         },
-        "required": ["codigo", "nombre"]
+        "required": [
+          "codigo",
+          "nombre"
+        ]
       },
       "OrdersActualizarTipoOrdenRequestDto": {
         "type": "object",
         "properties": {
-          "nombre": {"type": "string"},
-          "activo": {"type": "boolean"},
-          "config": {"type": "object"}
+          "nombre": {
+            "type": "string"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          }
         }
       },
       "OrdersCrearTransicionRequestDto": {
         "type": "object",
         "properties": {
-          "desde": {"type": "string"},
-          "hasta": {"type": "string"}
+          "desde": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": "string"
+          }
         },
-        "required": ["desde", "hasta"]
+        "required": [
+          "desde",
+          "hasta"
+        ]
       },
       "OrdersMetodoPagoResponseDto": {
         "type": "object",
@@ -4695,6 +5016,11 @@
             "type": "string",
             "description": "Segmento de precio; se resuelve a su lista activa",
             "example": "mayorista"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado al total",
+            "nullable": true
           }
         },
         "required": [
@@ -5203,6 +5529,15 @@
             "description": "Fecha de devolución (ISO 8601 UTC)",
             "nullable": true,
             "format": "date-time"
+          },
+          "cupon_codigo": {
+            "type": "string",
+            "description": "Código de cupón aplicado",
+            "nullable": true
+          },
+          "descuento_cupon_cents": {
+            "type": "integer",
+            "description": "Descuento de cupón en centavos"
           }
         },
         "required": [

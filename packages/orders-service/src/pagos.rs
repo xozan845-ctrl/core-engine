@@ -866,4 +866,23 @@ mod tests {
         assert_eq!(config_de(&json!({})).expect("config"), json!({}));
         assert!(config_de(&json!({"config": []})).is_err());
     }
+
+    #[tokio::test]
+    async fn debe_crear_y_revertir_cargos_con_el_proveedor_simulado() {
+        let proveedor = ProveedorSimulado;
+        assert_eq!(proveedor.nombre(), "simulado");
+        let cargo = proveedor
+            .crear_cargo("orden-1", 10_000, "NIO")
+            .await
+            .expect("cargo");
+        assert!(cargo.referencia.starts_with("sim-"));
+        proveedor
+            .reembolsar(&cargo.referencia, 5_000)
+            .await
+            .expect("reembolso");
+        proveedor
+            .contracargar(&cargo.referencia, 10_000, "fraude")
+            .await
+            .expect("contracargo");
+    }
 }

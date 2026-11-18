@@ -97,3 +97,37 @@ CREATE TABLE IF NOT EXISTS pricing.historico_precios_base (
   precio_nuevo_cents    integer NOT NULL,
   vigente_desde         timestamptz NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS pricing.cupones (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id uuid NOT NULL,
+  codigo text NOT NULL,
+  nombre text NOT NULL,
+  tipo text NOT NULL,
+  valor integer NOT NULL,
+  minimo_compra_cents integer NOT NULL DEFAULT 0,
+  maximo_descuento_cents integer,
+  usos_maximos integer,
+  usos_actuales integer NOT NULL DEFAULT 0,
+  fecha_desde date NOT NULL,
+  fecha_hasta date NOT NULL,
+  activo boolean NOT NULL DEFAULT true,
+  creado_en timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+  eliminado_en timestamptz
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cupones_empresa_codigo_test
+  ON pricing.cupones (empresa_id, upper(codigo)) WHERE eliminado_en IS NULL;
+
+CREATE TABLE IF NOT EXISTS pricing.cupon_usos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cupon_id uuid NOT NULL,
+  empresa_id uuid NOT NULL,
+  order_id uuid NOT NULL,
+  codigo text NOT NULL,
+  monto_descuento_cents integer NOT NULL DEFAULT 0,
+  estado text NOT NULL DEFAULT 'usado',
+  creado_en timestamptz NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_cupon_usos_cupon_orden_test
+  ON pricing.cupon_usos (cupon_id, order_id);

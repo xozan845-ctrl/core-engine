@@ -4,8 +4,8 @@
 
 use crate::carrito::{Carrito, ItemCarrito};
 use crate::clients::{
-    ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, OfertaExterna,
-    PreciosExternos, PromocionLinea,
+    ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, CuponExterno,
+    OfertaExterna, PreciosExternos, PromocionLinea,
 };
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
@@ -60,6 +60,8 @@ pub struct ComandoCrear {
     pub lista_precio_codigo: Option<String>,
     #[serde(default)]
     pub segmento_codigo: Option<String>,
+    #[serde(default)]
+    pub cupon_codigo: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -358,8 +360,58 @@ impl Checkout {
             self.verificar_stock(&items).await?;
         }
 
+        let total_bruto = total;
+        let mut cupon_aplicado: Option<(String, String, i64)> = None;
+        let codigo_cupon = comando
+            .cupon_codigo
+            .as_deref()
+            .map(str::trim)
+            .filter(|codigo| !codigo.is_empty());
+        if let Some(codigo) = codigo_cupon {
+            let empresa = empresa_unica(&items).ok_or_else(|| {
+                ApiError::dominio(
+                    "CUPON_UNA_EMPRESA",
+                    "Un cupón solo puede aplicarse a una orden de una empresa.",
+                )
+            })?;
+            match self
+                .clientes
+                .cupon_validar(&empresa, codigo, total_bruto)
+                .await
+            {
+                CuponExterno::Ok(validado) => {
+                    let descuento = validado.descuento_cents.clamp(0, total_bruto);
+                    total -= descuento;
+                    cupon_aplicado = Some((empresa, validado.codigo, descuento));
+                }
+                CuponExterno::Invalido { codigo, mensaje } => {
+                    return Err(ApiError::dominio(codigo, mensaje));
+                }
+                CuponExterno::NoDisponible => {
+                    return Err(ApiError::servicio_no_disponible("pricing-service"));
+                }
+            }
+        }
+        let mut descuento_cupon = cupon_aplicado
+            .as_ref()
+            .map(|(_, _, descuento)| *descuento)
+            .unwrap_or(0);
+        let cupon_codigo = cupon_aplicado.as_ref().map(|(_, codigo, _)| codigo.clone());
+
         let order_id = Uuid::new_v4().to_string();
         let creado_en = iso_ms(Utc::now());
+
+        if let Some((empresa, codigo, _)) = &cupon_aplicado {
+            let Some(validado) = self
+                .clientes
+                .cupon_canjear(empresa, codigo, &order_id, total_bruto)
+                .await
+            else {
+                return Err(ApiError::servicio_no_disponible("pricing-service"));
+            };
+            descuento_cupon = validado.descuento_cents.clamp(0, total_bruto);
+            total = total_bruto - descuento_cupon;
+        }
 
         if metodo_pago == "credito" {
             let empresa_id = items
@@ -454,7 +506,7 @@ impl Checkout {
             }
             monto
         };
-        let base_comision: i64 = if es_cotizacion {
+        let base_comision_bruta: i64 = if es_cotizacion {
             0
         } else {
             items
@@ -467,6 +519,13 @@ impl Checkout {
                 })
                 .sum()
         };
+        let proporcion_comision = if total_bruto > 0 {
+            base_comision_bruta as f64 / total_bruto as f64
+        } else {
+            0.0
+        };
+        let cupon_comision = (descuento_cupon as f64 * proporcion_comision).round() as i64;
+        let base_comision = (base_comision_bruta - cupon_comision).max(0);
         let comision = if base_comision == 0 {
             0
         } else {
@@ -480,6 +539,8 @@ impl Checkout {
             "items": items,
             "total_cents": total,
             "comision_cents": comision,
+            "descuento_cupon_cents": descuento_cupon,
+            "cupon_codigo": cupon_codigo,
             "moneda": moneda_orden,
             "estado": "creada",
             "tipo_orden": tipo_orden,
@@ -523,6 +584,11 @@ impl Checkout {
             if metodo_pago == "credito" {
                 let _ = self.clientes.anular_credito(&order_id).await;
             }
+            if let Some((empresa, codigo, _)) = &cupon_aplicado {
+                self.clientes
+                    .cupon_liberar(empresa, codigo, &order_id)
+                    .await;
+            }
             return Err(error);
         }
         let empresa_pago = empresa_unica(&items);
@@ -558,6 +624,8 @@ impl Checkout {
             estado: "creada".to_string(),
             total_cents: total,
             comision_cents: comision,
+            descuento_cupon_cents: descuento_cupon,
+            cupon_codigo: cupon_codigo.clone(),
             moneda: moneda_orden,
             items,
             direccion_envio: Value::Null,

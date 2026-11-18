@@ -7,8 +7,8 @@ use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
     Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
-    CreditoEstado, ItemStock, OfertaExterna, PrecioLinea, PreciosExternos, PromocionLinea,
-    StockUbicacion,
+    CreditoEstado, CuponExterno, CuponValidado, ItemStock, OfertaExterna, PrecioLinea,
+    PreciosExternos, PromocionLinea, StockUbicacion,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -48,6 +48,7 @@ struct ClientesFake {
     tasa: Option<f64>,
     directo: bool,
     promocion: Option<PromocionLinea>,
+    cupon: Option<CuponValidado>,
 }
 
 #[async_trait]
@@ -189,6 +190,28 @@ impl ClientesPort for ClientesFake {
             seriales_disponibles: 0,
         }])
     }
+
+    async fn cupon_validar(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _monto_cents: i64,
+    ) -> CuponExterno {
+        match &self.cupon {
+            Some(cupon) => CuponExterno::Ok(cupon.clone()),
+            None => CuponExterno::NoDisponible,
+        }
+    }
+
+    async fn cupon_canjear(
+        &self,
+        _empresa_id: &str,
+        _codigo: &str,
+        _order_id: &str,
+        _monto_cents: i64,
+    ) -> Option<CuponValidado> {
+        self.cupon.clone()
+    }
 }
 
 async fn provisionar(url: &str) {
@@ -229,6 +252,8 @@ async fn provisionar(url: &str) {
           estado text NOT NULL,
           total_cents integer NOT NULL DEFAULT 0,
           comision_cents integer NOT NULL DEFAULT 0,
+          descuento_cupon_cents integer NOT NULL DEFAULT 0,
+          cupon_codigo text,
           moneda text NOT NULL DEFAULT 'NIO',
           items_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           direccion_envio jsonb,
@@ -270,7 +295,8 @@ async fn provisionar(url: &str) {
           IF NEW.tipo = 'OrderCreatedEvent' THEN
             INSERT INTO orders.orden_vista
               (id, vendedor_id, comprador_id, parte_id, tienda_id, estado,
-               total_cents, comision_cents, moneda, items_json, creado_en,
+               total_cents, comision_cents, descuento_cupon_cents, cupon_codigo,
+               moneda, items_json, creado_en,
                actualizado_en, tipo_orden, fulfillment_config, metodo_pago)
             VALUES (
               NEW.aggregate_id,
@@ -281,6 +307,8 @@ async fn provisionar(url: &str) {
               'creada',
               (NEW.payload->>'total_cents')::int,
               COALESCE((NEW.payload->>'comision_cents')::int, 0),
+              COALESCE((NEW.payload->>'descuento_cupon_cents')::int, 0),
+              NULLIF(NEW.payload->>'cupon_codigo', ''),
               'NIO',
               NEW.payload->'items',
               NEW.creado_en,
@@ -537,7 +565,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
 }
 
 fn infra_directo(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, true, None)
+    infra_con_directo(db, stock, None, true, None, None)
 }
 
 fn infra_promocion(
@@ -545,7 +573,15 @@ fn infra_promocion(
     stock: i64,
     promocion: PromocionLinea,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, false, Some(promocion))
+    infra_con_directo(db, stock, None, false, Some(promocion), None)
+}
+
+fn infra_cupon(
+    db: Arc<Db>,
+    stock: i64,
+    cupon: CuponValidado,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, false, None, Some(cupon))
 }
 
 fn infra_con(
@@ -553,7 +589,7 @@ fn infra_con(
     stock: i64,
     tasa: Option<f64>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, tasa, false, None)
+    infra_con_directo(db, stock, tasa, false, None, None)
 }
 
 fn infra_con_directo(
@@ -562,12 +598,14 @@ fn infra_con_directo(
     tasa: Option<f64>,
     directo: bool,
     promocion: Option<PromocionLinea>,
+    cupon: Option<CuponValidado>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa,
         directo,
         promocion,
+        cupon,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -792,6 +830,44 @@ fn compra_en_ubicacion(cantidad: i64, ubicacion_id: &str) -> ComandoCrear {
         }
     }
     comando
+}
+
+fn compra_con_cupon(cantidad: i64, codigo: &str) -> ComandoCrear {
+    ComandoCrear {
+        cupon_codigo: Some(codigo.to_string()),
+        ..compra(cantidad)
+    }
+}
+
+#[tokio::test]
+async fn debe_aplicar_un_cupon_al_total_y_a_la_vista() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_cupon(
+        Arc::clone(&db),
+        10,
+        CuponValidado {
+            cupon_id: "cupon-1".into(),
+            codigo: "VERANO-25".into(),
+            descuento_cents: 5_000,
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra_con_cupon(2, "VERANO-25"), COMPRADOR)
+        .await
+        .expect("orden con cupon");
+    assert_eq!(orden.descuento_cupon_cents, 5_000);
+    assert_eq!(orden.cupon_codigo.as_deref(), Some("VERANO-25"));
+    assert_eq!(orden.total_cents, 15_000);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.total_cents, 15_000);
+    assert_eq!(vista.descuento_cupon_cents, 5_000);
+    assert_eq!(vista.cupon_codigo.as_deref(), Some("VERANO-25"));
 }
 
 #[tokio::test]
@@ -1134,6 +1210,7 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         tasa: None,
         directo: false,
         promocion: None,
+        cupon: None,
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),

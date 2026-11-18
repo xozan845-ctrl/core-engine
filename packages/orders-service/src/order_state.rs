@@ -99,6 +99,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn debe_marcar_la_comision_por_defecto() {
+        assert!(comision_por_defecto());
+    }
+
+    #[test]
     fn debe_permitir_la_cadena_feliz_de_compra() {
         for (de, a) in [
             ("creada", "pagada"),
