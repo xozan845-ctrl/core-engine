@@ -358,7 +358,7 @@ Migración de tenants existentes, pilotos y rollback:
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
   identity  item     inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications  analytics
     :3001    :3015    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012      :3016
-  (commissions solo stage · market-intelligence en stage/prod)
+  (commissions solo stage; el resto se despliega en los tres entornos)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
@@ -426,7 +426,7 @@ npm run test:engine               # unitarias del motor de reglas
 npm run test:smoke                # unitarias de los scripts de smoke
 npm run rules:check               # verificación de reglas del repositorio
 cp .env.example .env              # variables de DESARROLLO (producción: .env.production.example)
-docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 14 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
+docker compose -f docker-compose.dev.yml up -d --build   # app: Postgres + RabbitMQ + MinIO + Mailpit + gateway y 15 servicios (8080 host + datos/broker 5432/5672/15672 + minio 9000/9001 + mailpit 1025/8025)
 npm run demo                      # ejercicio end-to-end (TC-01..TC-08, RN-01..RN-08)
 npm run demo:verticals            # E2E de los pilotos belleza y flota contra el gateway real
 
@@ -459,7 +459,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | identity-service | 3001 | No | `identity` | `packages/identity-service` (Rust) |
 | item-service | 3015 | No | `item` | `packages/item-service` (Rust, ADR-0018) |
 | inventory-service | 3013 | No | `inventory` | `packages/inventory-service` (Rust, ADR-0018) |
-| pricing-service | 3016 | No | `pricing` | `packages/pricing-service` (Rust, ADR-0018) |
+| pricing-service | 3014 | No | `pricing` | `packages/pricing-service` (Rust, ADR-0018) |
 | stores-service | 3003 | No | `stores` | `packages/stores-service` (Rust) |
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
@@ -467,7 +467,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` (Rust) |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
-| market-intelligence-service | 3009 | No *(fuera de stage/prod)* | `intelligence` | `packages/market-intelligence-service` |
+| market-intelligence-service | 3009 | No | `intelligence` | `packages/market-intelligence-service` |
 | storage-service | 3010 | No | `storage` | `packages/storage-service` |
 | notifications-service | 3012 | No | `notifications` | `packages/notifications-service` |
 | analytics-service | 3016 | No | `analytics` | `packages/analytics-service` (Rust) |
@@ -488,9 +488,10 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 >
 > **Alcance por entorno:** `commissions-service` se despliega en **stage** para validar el
 > portal de empresa (`docker-compose.stage.yml`, ADR-37), pero **sigue fuera de producción**
-> (`docker-compose.yml`). `analytics-service` se despliega en dev, stage y producción.
-> `market-intelligence-service` solo se levanta en desarrollo. En producción, sus rutas del
-> gateway responderán 502 mientras estén bajados.
+> (`docker-compose.yml`). `analytics-service` y `market-intelligence-service` se despliegan
+> en dev, stage y producción. Ninguno de los dos participa del readiness agregado del
+> gateway (que cubre 11 servicios en producción y 12 en stage); su salud se verifica por
+> `GET /health` directo en la red interna y por sus métricas.
 
 ## Entornos y entrega (desarrollo → stage → producción)
 
@@ -577,9 +578,10 @@ pública**: `scripts/tools/swagger-aggregate.mjs` fusiona
 npm run swagger:export   # regenera docs/openapi/<servicio>/{public,internal} + los dos agregados de docs/api/
 ```
 
-Cobertura actual: **426/426 operaciones documentadas** en los 14 servicios con
-contrato versionado: **381 públicas** (270 rutas) y **36 internas** (todas con
-`x-internal-key` y schema de respuesta).
+Cobertura actual: **484/484 operaciones documentadas** en los 15 servicios con
+contrato versionado: **440 públicas** (321 rutas) y **44 internas** (todas con
+`x-internal-key` y schema de respuesta). Los agregados se generan desde
+`docs/openapi/<servicio>/` y el gate G-8 verifica que no queden desactualizados.
 
 ## Variables de entorno (`.env` en dev · `.env.production` en producción)
 

@@ -1,7 +1,8 @@
 # Core Engine · DESARROLLO (construye las imágenes en local)
 # Entorno completo y autocontenido: Postgres + RabbitMQ + MinIO + gateway + los
-# 14 microservicios (incluye `scheduling-service`, `commissions-service` y `market-intelligence-service`,
-# que NO se despliegan en producción). Publica al host los puertos de datos y
+# 15 microservicios (incluye `scheduling-service`, `commissions-service`, `analytics-service` y
+# `market-intelligence-service`; solo `commissions-service` queda fuera de producción).
+# Publica al host los puertos de datos y
 # broker SOLO para desarrollo (conectar un cliente de BD o abrir la UI de
 # RabbitMQ en localhost).
 #
