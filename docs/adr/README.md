@@ -31,6 +31,15 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0020](./0020-contrato-v2-items.md) | Aceptado (fase 1 implementada) | Contrato interno v2 de items sin `precio` ni `stock`; precio y stock se resuelven en pricing/inventory |
 | [0021](./0021-negocios-por-empresa.md) | Aceptado (fases 1-4, reportes, liquidaciones, selector, permisos, RLS, inventario, facturación, auditoría, administración, analítica, cohortes y reportes programados delegados a `analytics-service`) | `negocio` como unidad operativa completa con ciclo de vida, plantillas, transferencia de personal y analítica centralizada en `analytics-service` |
 | [0022](./0022-analytics-service.md) | Aceptado | `analytics-service` como único dueño de la analítica de negocio, empresa y plataforma |
+| [0023](./0023-venta-directa-sin-marketplace.md) | Aceptado (fase 1 implementada) | Venta directa configurable por pack: vendedor opcional y comisión explícita por línea |
+| [0024](./0024-ubicacion-despacho-por-linea.md) | Aceptado (implementado) | Ubicación de despacho opcional por línea; inventory reserva y descuenta esa ubicación |
+| [0025](./0025-promociones-en-checkout.md) | Aceptado (implementado) | Pricing resuelve la promoción vigente y orders aplica el descuento sobre el precio final |
+| [0026](./0026-fiscalidad-por-tenant.md) | Aceptado (implementado; declaraciones globales) | Jurisdicción fiscal por tenant, moneda desde la jurisdicción e IVA por línea |
+| [0027](./0027-pagos-proveedor-reembolsos.md) | Aceptado (implementado) | ACL de pasarela, cargo externo, reembolsos parciales, contracargo y conciliación |
+| [0028](./0028-cupones.md) | Aceptado (implementado) | Cupones por empresa con vigencia, mínimo, tope, usos y canje idempotente |
+| [0029](./0029-rma-devolucion-parcial.md) | Aceptado (implementado) | RMA por línea, restock idempotente y comisión proporcional |
+| [0030](./0030-resenas-wishlist.md) | Aceptado (implementado) | Reseñas moderadas y wishlist por comprador |
+| [0031](./0031-facturacion-electronica-pdf.md) | Aceptado (implementado) | Facturación electrónica/PDF opt-in por negocio con ACL de proveedor |
 
 ## Convención
 

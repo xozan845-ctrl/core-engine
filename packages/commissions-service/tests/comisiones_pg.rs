@@ -54,8 +54,10 @@ fn item(empresa: Uuid, tienda: Uuid, vendedor: Uuid, oferta: Uuid) -> ItemOrden 
         negocio_id: None,
         tienda_id: Some(tienda.to_string()),
         participacion_porcentaje: Some(60),
+        comision: true,
         precio_unitario_cents: 115_000,
         cantidad: 1,
+        descuento_cents: 0,
     }
 }
 
@@ -76,6 +78,7 @@ async fn debe_acreditar_una_linea_una_sola_vez_y_con_los_montos_de_rn04() {
         vendedor_id: Uuid::new_v4().to_string(),
         venta_cents: 115_000,
         participacion: 60,
+        cantidad: 1,
     };
     let mut tx = db.transaccion().await.expect("tx");
     let primera = comisiones
@@ -129,6 +132,7 @@ async fn debe_compensar_una_devolucion_una_sola_vez() {
         vendedor_id: Uuid::new_v4().to_string(),
         venta_cents: 10_000,
         participacion: 50,
+        cantidad: 1,
     };
     let mut tx = db.transaccion().await.expect("tx");
     comisiones
@@ -364,6 +368,63 @@ async fn debe_procesar_el_evento_de_orden_completada_una_sola_vez() {
 }
 
 #[tokio::test]
+async fn debe_omitir_lineas_de_venta_directa_sin_vendedor_ni_comision() {
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let order_id = Uuid::new_v4();
+    let mut linea = item(
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+        Uuid::new_v4(),
+    );
+    linea.vendedor_id = None;
+    linea.comision = false;
+    let orden = OrdenInterna {
+        total_cents: 115_000,
+        items: vec![linea],
+    };
+    let comisiones = Arc::new(Comisiones::nueva(Arc::clone(&db), 0.12));
+    let consumidor = PedidosConsumer::nuevo(
+        Arc::clone(&db),
+        comisiones,
+        Outbox::nueva("commissions.outbox"),
+        Arc::new(OrdenFija { orden }),
+    );
+    consumidor
+        .manejar(serde_json::json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": "order.completado",
+            "ocurrido_en": "2026-09-01T00:00:00.000Z",
+            "data": { "order_id": order_id.to_string(), "entregado_en": "2026-09-01T00:00:00.000Z" }
+        }))
+        .await
+        .expect("consumir venta directa");
+
+    let comisiones_filas: (i64,) =
+        sqlx::query_as("SELECT COUNT(*)::bigint FROM commissions.comisiones WHERE order_id = $1")
+            .bind(order_id)
+            .fetch_one(&pool)
+            .await
+            .expect("conteo comisiones");
+    assert_eq!(comisiones_filas.0, 0);
+    let outbox: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint FROM commissions.outbox
+         WHERE tipo = 'comision.acreditada' AND payload->'data'->>'order_id' = $1",
+    )
+    .bind(order_id.to_string())
+    .fetch_one(&pool)
+    .await
+    .expect("conteo outbox");
+    assert_eq!(outbox.0, 0);
+
+    db.pool().close().await;
+    pool.close().await;
+}
+
+#[tokio::test]
 async fn debe_registrar_pago_y_compensar_por_eventos() {
     let Some((db, pool)) = preparar().await else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
@@ -479,4 +540,185 @@ async fn debe_reportar_ventas_y_comisiones_por_negocio() {
         .filter_map(|fila| fila["empresario_cents"].as_i64())
         .sum();
     assert_eq!(empresario, 0);
+}
+
+#[tokio::test]
+async fn debe_compensar_una_devolucion_parcial_proporcional() {
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let comisiones = Comisiones::nueva(Arc::clone(&db), 0.12);
+    let order_id = Uuid::new_v4().to_string();
+    let datos = DatosLinea {
+        order_id: order_id.clone(),
+        linea_clave: "of-rma".into(),
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_id: None,
+        tienda_id: Uuid::new_v4().to_string(),
+        vendedor_id: Uuid::new_v4().to_string(),
+        venta_cents: 40_000,
+        participacion: 50,
+        cantidad: 4,
+    };
+    let mut tx = db.transaccion().await.expect("tx");
+    let comision = comisiones
+        .acreditar_linea(&mut tx, &datos)
+        .await
+        .expect("acreditar")
+        .expect("comision");
+    comisiones
+        .compensar_linea(&mut tx, &order_id, "of-rma", 2, "devolucion parcial")
+        .await
+        .expect("compensar");
+    tx.commit().await.expect("commit");
+
+    let fila: (i64, i64) = sqlx::query_as(
+        "SELECT COALESCE(SUM(monto_cents), 0)::bigint,
+                COALESCE(SUM(monto_empresario_cents), 0)::bigint
+           FROM commissions.compensaciones_devoluciones WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&order_id).expect("uuid"))
+    .fetch_one(&pool)
+    .await
+    .expect("compensacion");
+    assert_eq!(fila.0, -(comision.monto_vendedor_cents / 2));
+    assert_eq!(fila.1, -(comision.monto_empresario_cents.unwrap_or(0) / 2));
+
+    let estado: String =
+        sqlx::query_scalar("SELECT estado FROM commissions.comisiones WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&order_id).expect("uuid"))
+            .fetch_one(&pool)
+            .await
+            .expect("estado");
+    assert_eq!(estado, "acreditada");
+
+    db.pool().close().await;
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn debe_compensar_la_linea_completa_y_ser_idempotente() {
+    let Some((db, pool)) = preparar().await else {
+        return;
+    };
+    let comisiones = Comisiones::nueva(Arc::clone(&db), 0.12);
+    let order_id = Uuid::new_v4().to_string();
+    let datos = DatosLinea {
+        order_id: order_id.clone(),
+        linea_clave: "of-full".into(),
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_id: None,
+        tienda_id: Uuid::new_v4().to_string(),
+        vendedor_id: Uuid::new_v4().to_string(),
+        venta_cents: 10_000,
+        participacion: 50,
+        cantidad: 2,
+    };
+    let mut tx = db.transaccion().await.expect("tx");
+    comisiones
+        .acreditar_linea(&mut tx, &datos)
+        .await
+        .expect("acreditar")
+        .expect("comision");
+    tx.commit().await.expect("commit");
+
+    let mut tx = db.transaccion().await.expect("tx");
+    comisiones
+        .compensar_linea(&mut tx, &order_id, "of-full", 2, "total")
+        .await
+        .expect("compensar total");
+    comisiones
+        .compensar_linea(&mut tx, &order_id, "of-full", 2, "repetido")
+        .await
+        .expect("idempotente");
+    comisiones
+        .compensar_linea(&mut tx, &order_id, "of-full", 0, "cero")
+        .await
+        .expect("cero");
+    comisiones
+        .compensar_linea(&mut tx, &order_id, "no-existe", 1, "otra")
+        .await
+        .expect("sin linea");
+    tx.commit().await.expect("commit");
+
+    let estado: String =
+        sqlx::query_scalar("SELECT estado FROM commissions.comisiones WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&order_id).expect("uuid"))
+            .fetch_one(&pool)
+            .await
+            .expect("estado");
+    assert_eq!(estado, "compensada");
+    let compensaciones: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM commissions.compensaciones_devoluciones WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&order_id).expect("uuid"))
+    .fetch_one(&pool)
+    .await
+    .expect("compensaciones");
+    assert_eq!(compensaciones, 1);
+
+    db.pool().close().await;
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn debe_consumir_la_devolucion_recibida_y_compensar_por_evento() {
+    let Some((db, pool)) = preparar().await else {
+        return;
+    };
+    let order_id = Uuid::new_v4().to_string();
+    let comisiones = Arc::new(Comisiones::nueva(Arc::clone(&db), 0.12));
+    let datos = DatosLinea {
+        order_id: order_id.clone(),
+        linea_clave: "of-event".into(),
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_id: None,
+        tienda_id: Uuid::new_v4().to_string(),
+        vendedor_id: Uuid::new_v4().to_string(),
+        venta_cents: 20_000,
+        participacion: 50,
+        cantidad: 2,
+    };
+    let mut tx = db.transaccion().await.expect("tx");
+    comisiones
+        .acreditar_linea(&mut tx, &datos)
+        .await
+        .expect("acreditar")
+        .expect("comision");
+    tx.commit().await.expect("commit");
+
+    let consumidor = PedidosConsumer::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&comisiones),
+        Outbox::nueva("commissions.outbox"),
+        Arc::new(OrdenFija {
+            orden: OrdenInterna {
+                total_cents: 20_000,
+                items: Vec::new(),
+            },
+        }),
+    );
+    let evento = serde_json::json!({
+        "event_id": Uuid::new_v4().to_string(),
+        "tipo": "devolucion.recibida",
+        "data": {
+            "order_id": order_id,
+            "items": [{"linea_clave": "of-event", "cantidad": 2}]
+        }
+    });
+    consumidor.manejar(evento.clone()).await.expect("primera");
+    consumidor.manejar(evento).await.expect("idempotente");
+
+    let compensaciones: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM commissions.compensaciones_devoluciones WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&order_id).expect("uuid"))
+    .fetch_one(&pool)
+    .await
+    .expect("compensaciones");
+    assert_eq!(compensaciones, 1);
+
+    db.pool().close().await;
+    pool.close().await;
 }

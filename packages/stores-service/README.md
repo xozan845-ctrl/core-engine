@@ -249,3 +249,11 @@ cargo test
 - [Contrato público](../../docs/openapi/stores-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/stores-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+## Reseñas y wishlist
+
+- `GET /api/v2/tienda/items/{item_id}/resenas`: reseñas publicadas + promedio.
+- `GET/POST /api/v2/comprador/resenas`, `PATCH/DELETE /api/v2/comprador/resenas/{id}`.
+- `PATCH /api/v2/admin/resenas/{id}`: moderación (`pendiente|publicada|rechazada`).
+- `GET/POST /api/v2/comprador/favoritos`, `DELETE /api/v2/comprador/favoritos/{item_id}`.
+- Una reseña nace `pendiente`; el listado público solo muestra `publicada`.

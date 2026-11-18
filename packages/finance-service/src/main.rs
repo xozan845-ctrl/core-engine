@@ -104,13 +104,21 @@ async fn main() {
         Outbox::nueva(outbox_tabla.clone()),
         Arc::clone(&contabilidad),
     ));
-    let facturacion = Arc::new(Facturacion::nueva(
+    let mut facturacion = Facturacion::nueva(
         Arc::clone(&db),
         Outbox::nueva(outbox_tabla.clone()),
         Arc::clone(&contabilidad),
         ordenes.clone(),
         config.emitir_comprobantes_fiscales,
-    ));
+    );
+    if let Some(url) = config.facturacion_proveedor_url.clone() {
+        facturacion = facturacion.con_proveedor_http(
+            url,
+            config.facturacion_proveedor_key.clone(),
+            config.internal_request_timeout_ms,
+        );
+    }
+    let facturacion = Arc::new(facturacion);
     let comercio = Arc::new(Comercio::nuevo(Arc::clone(&db)));
     let proyecciones = Arc::new(Proyecciones::nueva(Arc::clone(&db)));
     let kpis = Arc::new(Kpis::nueva(Arc::clone(&db), vendedores));

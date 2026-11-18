@@ -30,6 +30,9 @@ pub struct Config {
     pub outbox_tabla: String,
     pub tasa_comision: f64,
     pub pago_webhook_secret: Option<String>,
+    pub pago_proveedor: String,
+    pub pago_proveedor_url: Option<String>,
+    pub pago_proveedor_key: Option<String>,
 }
 
 impl Config {
@@ -111,11 +114,14 @@ impl Config {
             },
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "orders.outbox".to_string()),
             pago_webhook_secret: leer("PAGO_WEBHOOK_SECRET"),
+            pago_proveedor: leer("PAGO_PROVEEDOR").unwrap_or_else(|| "simulado".to_string()),
+            pago_proveedor_url: leer("PAGO_PROVEEDOR_URL"),
+            pago_proveedor_key: leer("PAGO_PROVEEDOR_KEY"),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()
                     .ok()
-                    .filter(|tasa| tasa.is_finite() && *tasa > 0.0 && *tasa < 1.0)
+                    .filter(|tasa| tasa.is_finite() && *tasa >= 0.0 && *tasa < 1.0)
                     .unwrap_or(TASA_COMISION_DEFAULT),
                 None => TASA_COMISION_DEFAULT,
             },
@@ -128,6 +134,9 @@ impl Config {
         }
         if self.rabbitmq_url.is_none() {
             return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
+        if self.pago_proveedor.eq_ignore_ascii_case("http") && self.pago_proveedor_url.is_none() {
+            return Err(ConfigError::Faltante("PAGO_PROVEEDOR_URL"));
         }
         Ok(())
     }
@@ -219,6 +228,12 @@ mod tests {
             TIMEOUT_INTERNO_DEFAULT_MS
         );
         assert_eq!(config.tasa_comision, TASA_COMISION_DEFAULT);
+    }
+
+    #[test]
+    fn debe_aceptar_una_tasa_cero_para_venta_directa() {
+        let config = Config::from_pairs([("COMMISSION_RATE", "0")]).expect("config");
+        assert_eq!(config.tasa_comision, 0.0);
     }
 
     #[test]

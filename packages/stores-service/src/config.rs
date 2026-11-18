@@ -21,6 +21,7 @@ pub struct Config {
     pub item_service_url: String,
     pub pricing_service_url: String,
     pub inventory_service_url: String,
+    pub orders_service_url: String,
     pub platform_tenant_id: Option<String>,
     pub tema_herencia_ttl_ms: u64,
     pub internal_request_timeout_ms: u64,
@@ -88,6 +89,10 @@ impl Config {
                 .to_string(),
             inventory_service_url: leer("INVENTORY_SERVICE_URL")
                 .unwrap_or_else(|| "http://inventory-service:3013".to_string())
+                .trim_end_matches('/')
+                .to_string(),
+            orders_service_url: leer("ORDERS_SERVICE_URL")
+                .unwrap_or_else(|| "http://orders-service:3004".to_string())
                 .trim_end_matches('/')
                 .to_string(),
             platform_tenant_id: leer("PLATFORM_TENANT_ID"),

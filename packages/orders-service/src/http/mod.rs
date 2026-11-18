@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 pub mod carrito;
 pub mod contratos;
+pub mod devoluciones;
 pub mod entregas;
 pub mod fidelizacion;
 pub mod fulfillments;
@@ -63,6 +64,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(contratos::rutas())
         .merge(suscripciones::rutas())
         .merge(salon::rutas())
+        .merge(devoluciones::rutas())
         .merge(interno::rutas())
         .fallback(no_encontrado)
         .with_state(state.clone());

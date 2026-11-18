@@ -84,9 +84,10 @@ pub fn multiplicar(centavos: i64, cantidad: i64) -> i64 {
     centavos * cantidad
 }
 
-/// `Money.comision`: exige `0 < tasa < 1` y redondea como `Math.round`.
+/// `Money.comision`: exige `0 <= tasa < 1` y redondea como `Math.round`.
+/// La tasa 0 es válida (venta directa sin comisión de plataforma).
 pub fn comision(centavos: i64, tasa: f64) -> Result<i64, ApiError> {
-    if !tasa.is_finite() || tasa <= 0.0 || tasa >= 1.0 {
+    if !tasa.is_finite() || tasa < 0.0 || tasa >= 1.0 {
         return Err(ApiError::dominio(
             "TASA_INVALIDA",
             format!("La tasa debe estar entre 0 y 1 (recibida: {tasa})."),
@@ -141,6 +142,7 @@ mod tests {
     #[test]
     fn debe_calcular_y_formatear_la_comision() {
         assert_eq!(comision(10_000, 0.12).expect("comision"), 1_200);
+        assert_eq!(comision(10_000, 0.0).expect("sin comision"), 0);
         assert_eq!(comision(1, 0.5).expect("comision"), 1);
         assert_eq!(string(0), "0.00");
         assert_eq!(string(5), "0.05");

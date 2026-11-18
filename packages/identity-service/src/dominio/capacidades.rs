@@ -54,6 +54,8 @@ pub struct CapacidadManifiesto {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Manifiesto {
     pub empresa_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub negocio_id: Option<String>,
     pub vertical_id: Option<String>,
     pub pack: Option<PackManifiesto>,
     pub modelos: Vec<ModeloManifiesto>,
@@ -102,6 +104,29 @@ impl Capacidades {
     ) -> Result<Manifiesto, ApiError> {
         validar_empresa(empresa_id)?;
         self.validar_acceso(empresa_id, actor).await?;
+        self.manifiesto_de(empresa_id, None).await
+    }
+
+    /// Manifiesto efectivo de un negocio. Si el negocio no tiene capacidades
+    /// propias, hereda las de la empresa (mismo fallback que el guard interno).
+    pub async fn manifiesto_negocio(
+        &self,
+        empresa_id: &str,
+        negocio_id: &str,
+        actor: &UsuarioContexto,
+    ) -> Result<Manifiesto, ApiError> {
+        validar_empresa(empresa_id)?;
+        validar_negocio(negocio_id)?;
+        self.validar_acceso_negocio(empresa_id, negocio_id, actor, "capacidades.leer")
+            .await?;
+        self.manifiesto_de(empresa_id, Some(negocio_id)).await
+    }
+
+    async fn manifiesto_de(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Result<Manifiesto, ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
 
         let empresa = sqlx::query(
@@ -160,17 +185,27 @@ impl Capacidades {
             }
         }
 
-        let filas = sqlx::query(
-            "SELECT c.codigo, c.nombre, c.modulo, ec.activo, ec.config
-               FROM identity.empresa_capacidades ec
-               JOIN identity.capacidades c ON c.codigo = ec.capacidad_codigo
-              WHERE ec.empresa_id = $1::uuid
-              ORDER BY c.modulo, c.codigo",
-        )
-        .bind(empresa_id)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(interno)?;
+        let filas = match negocio_id {
+            Some(negocio_id) => {
+                let propias = sqlx::query(
+                    "SELECT c.codigo, c.nombre, c.modulo, nc.activo, nc.config
+                       FROM identity.negocio_capacidades nc
+                       JOIN identity.capacidades c ON c.codigo = nc.capacidad_codigo
+                      WHERE nc.negocio_id = $1::uuid
+                      ORDER BY c.modulo, c.codigo",
+                )
+                .bind(negocio_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(interno)?;
+                if propias.is_empty() {
+                    capacidades_de_empresa(&mut tx, empresa_id).await?
+                } else {
+                    propias
+                }
+            }
+            None => capacidades_de_empresa(&mut tx, empresa_id).await?,
+        };
         tx.commit().await.map_err(interno)?;
 
         let mut capacidades = Vec::with_capacity(filas.len());
@@ -196,6 +231,7 @@ impl Capacidades {
 
         Ok(Manifiesto {
             empresa_id: empresa_id.to_string(),
+            negocio_id: negocio_id.map(str::to_string),
             vertical_id,
             pack,
             modelos,
@@ -331,6 +367,23 @@ impl Capacidades {
         }
         Ok(())
     }
+}
+
+async fn capacidades_de_empresa(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    empresa_id: &str,
+) -> Result<Vec<sqlx::postgres::PgRow>, ApiError> {
+    sqlx::query(
+        "SELECT c.codigo, c.nombre, c.modulo, ec.activo, ec.config
+           FROM identity.empresa_capacidades ec
+           JOIN identity.capacidades c ON c.codigo = ec.capacidad_codigo
+          WHERE ec.empresa_id = $1::uuid
+          ORDER BY c.modulo, c.codigo",
+    )
+    .bind(empresa_id)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(interno)
 }
 
 fn fila_a_capacidad(fila: &sqlx::postgres::PgRow) -> Result<EmpresaCapacidad, ApiError> {

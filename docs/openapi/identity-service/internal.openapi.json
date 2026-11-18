@@ -456,6 +456,14 @@
           },
           "trazabilidad": {
             "type": "boolean"
+          },
+          "requiere_vendedor": {
+            "type": "boolean",
+            "description": "false en packs de venta directa"
+          },
+          "comision": {
+            "type": "boolean",
+            "description": "false cuando el pack no cobra comisión de marketplace"
           }
         },
         "required": [
@@ -466,7 +474,9 @@
           "items",
           "fulfillment",
           "requiere_agenda",
-          "trazabilidad"
+          "trazabilidad",
+          "requiere_vendedor",
+          "comision"
         ]
       },
       "ValoresExtensionRequestDto": {
