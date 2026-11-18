@@ -5,7 +5,9 @@ mod common;
 use common::*;
 use item_service::componentes::Componentes;
 use item_service::items::Items;
+use item_service::productos::Productos;
 use item_service::series::Series;
+use item_service::servicios::Servicios;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -14,9 +16,11 @@ static DB_LOCK: Mutex<()> = Mutex::const_new(());
 
 struct Contexto {
     _guard: tokio::sync::MutexGuard<'static, ()>,
+    db: Arc<Db>,
     items: Arc<Items>,
     series: Arc<Series>,
     componentes: Arc<Componentes>,
+    servicios: Arc<Servicios>,
 }
 
 async fn preparar() -> Contexto {
@@ -25,10 +29,21 @@ async fn preparar() -> Contexto {
     provisionar(&url).await;
     let db = db().await;
     let items = Arc::new(Items::nueva(Arc::clone(&db)));
+    let productos = Arc::new(Productos::nueva(
+        Arc::clone(&db),
+        None,
+        Some(Arc::clone(&items)),
+    ));
     Contexto {
         _guard: guard,
         series: Arc::new(Series::nueva(Arc::clone(&db))),
         componentes: Arc::new(Componentes::nueva(Arc::clone(&db), Arc::clone(&items))),
+        servicios: Arc::new(Servicios::con_productos(
+            Arc::clone(&db),
+            productos,
+            Some(Arc::clone(&items)),
+        )),
+        db,
         items,
     }
 }
@@ -166,4 +181,61 @@ async fn debe_gestionar_series_y_componentes() {
         .await
         .expect_err("ciclo");
     assert!(ciclo.codigo == "COMPONENTE_INVALIDO" || ciclo.codigo == "CONFLICTO");
+}
+
+/// Regresión de ADR-0020 fase 3b: `item.items` ya no tiene `precio_cents` ni
+/// `stock`; los servicios deben listarse y editarse sin esas columnas.
+#[tokio::test]
+async fn debe_leer_y_actualizar_servicios_sin_columnas_de_precio_stock() {
+    let ctx = preparar().await;
+    let id = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO item.items
+           (id, empresa_id, tipo, codigo, nombre, costo_cents, duration_minutes, unidad, estado)
+         VALUES ($1::uuid, $2::uuid, 'servicio', 'SERV-1', 'Instalación', 5000, 60, 'Hora (h)', 'activo')",
+    )
+    .bind(id)
+    .bind(EMPRESA)
+    .execute(ctx.db.pool())
+    .await
+    .expect("servicio");
+
+    let pagina = ctx
+        .servicios
+        .listar(&json!({"empresa_id": EMPRESA}))
+        .await
+        .expect("listar");
+    assert_eq!(pagina["total"], 1);
+    assert_eq!(pagina["items"][0]["codigo"], "SERV-1");
+    assert!(pagina["items"][0].get("precio").is_none());
+    assert!(pagina["items"][0].get("stock").is_none());
+
+    let encontrado = ctx
+        .servicios
+        .encontrar_por_codigo("SERV-1", EMPRESA)
+        .await
+        .expect("codigo");
+    assert!(encontrado.is_some());
+
+    let actualizado = ctx
+        .servicios
+        .actualizar(
+            &id.to_string(),
+            &json!({"nombre": "Instalación 2", "precio": "120.00"}),
+            EMPRESA,
+        )
+        .await
+        .expect("actualizar");
+    assert_eq!(actualizado["nombre"], "Instalación 2");
+
+    ctx.servicios
+        .eliminar(&id.to_string(), EMPRESA)
+        .await
+        .expect("eliminar");
+    let pagina = ctx
+        .servicios
+        .listar(&json!({"empresa_id": EMPRESA}))
+        .await
+        .expect("listar vacio");
+    assert_eq!(pagina["total"], 0);
 }
