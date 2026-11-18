@@ -1665,12 +1665,11 @@ async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
     assert_eq!(response.status(), StatusCode::CREATED);
     let orden = json_de(response).await;
     let order_id = orden["data"]["id"].as_str().expect("order_id");
-    let pago_id: Uuid =
-        sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
-            .bind(Uuid::parse_str(order_id).expect("uuid"))
-            .fetch_one(db.pool())
-            .await
-            .expect("pago");
+    let pago_id: Uuid = sqlx::query_scalar("SELECT id FROM orders.pagos WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(order_id).expect("uuid"))
+        .fetch_one(db.pool())
+        .await
+        .expect("pago");
 
     let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/reembolsar"))
         .header("content-type", "application/json");
