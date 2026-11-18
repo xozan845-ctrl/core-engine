@@ -1303,6 +1303,74 @@ async fn debe_impedir_devolver_mas_cantidad_que_la_comprada() {
 }
 
 #[tokio::test]
+async fn debe_rechazar_y_negar_permisos_en_una_devolucion() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    let devoluciones = Devoluciones::nueva(
+        Arc::clone(&db),
+        Arc::clone(&checkout.vistas),
+        Arc::clone(&checkout.clientes),
+        Outbox::nueva("orders.outbox"),
+    );
+    let admin = orders_service::auth::UsuarioContexto {
+        user_id: Uuid::new_v4().to_string(),
+        rol: "admin".to_string(),
+        ..Default::default()
+    };
+    let comprador = orders_service::auth::UsuarioContexto {
+        user_id: COMPRADOR.to_string(),
+        rol: "comprador".to_string(),
+        ..Default::default()
+    };
+    assert!(devoluciones
+        .obtener("no-uuid")
+        .await
+        .expect("none")
+        .is_none());
+    let creada = devoluciones
+        .crear(
+            &orden.id,
+            &comprador,
+            CrearDevolucionInput {
+                motivo: "prueba".into(),
+                items: vec![ItemDevolucionInput {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    restock: true,
+                }],
+            },
+        )
+        .await
+        .expect("crear");
+    assert_eq!(
+        devoluciones
+            .aprobar(&creada.id, &comprador)
+            .await
+            .expect_err("403")
+            .codigo,
+        "ACCESO_DENEGADO"
+    );
+    let rechazada = devoluciones
+        .rechazar(&creada.id, &admin)
+        .await
+        .expect("rechazar");
+    assert_eq!(rechazada.estado, "rechazada");
+    assert_eq!(
+        devoluciones
+            .recibir(&creada.id, &admin)
+            .await
+            .expect_err("conflicto")
+            .codigo,
+        "CONFLICTO"
+    );
+}
+
+#[tokio::test]
 async fn debe_gestionar_devoluciones_parciales_por_http() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
