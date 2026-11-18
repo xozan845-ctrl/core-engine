@@ -14,6 +14,7 @@ use std::collections::HashMap;
 
 const RESENA: &[ReglaCampo] = &[
     campo("item_id", true, &[Regla::Uuid]),
+    campo("order_id", false, &[Regla::Uuid]),
     campo(
         "calificacion",
         true,

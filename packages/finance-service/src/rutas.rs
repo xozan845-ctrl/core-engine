@@ -270,6 +270,10 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
             "/api/v2/finanzas/comprobantes/{id}/anular",
             post(finanzas::comprobante_anular),
         )
+        .route(
+            "/api/v2/finanzas/comprobantes/{id}/pdf",
+            get(finanzas::comprobante_pdf),
+        )
         // ── finanzas: modelo ────────────────────────────────────────────────
         .route(
             "/api/v2/finanzas/proyecciones",

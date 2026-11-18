@@ -479,6 +479,48 @@ pub async fn comprobante_anular(
         .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))
 }
 
+/// `GET /api/v2/finanzas/comprobantes/{id}/pdf` (capacidad electrónica).
+pub async fn comprobante_pdf(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<axum::response::Response, ApiError> {
+    let usuario = contexto(
+        &state,
+        &headers,
+        &ROLES_FINANZAS,
+        &[],
+        &[CAP_FACTURACION, "facturacion_electronica"],
+    )
+    .await?;
+    let comprobante = state
+        .facturacion
+        .obtener(&id)
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))?;
+    let empresa = comprobante
+        .empresa_id
+        .as_deref()
+        .ok_or_else(|| ApiError::dominio("EMPRESA_REQUERIDA", "Comprobante sin empresa."))?;
+    let pdf = state
+        .facturacion
+        .pdf_de(&id, empresa, comprobante.negocio_id.as_deref())
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Comprobante", &id))?;
+    let _ = usuario;
+    axum::response::Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, "application/pdf")
+        .header(
+            axum::http::header::CONTENT_DISPOSITION,
+            format!(
+                "attachment; filename=\"{}-{}.pdf\"",
+                comprobante.serie, comprobante.numero
+            ),
+        )
+        .body(axum::body::Body::from(pdf))
+        .map_err(|_| ApiError::interno())
+}
+
 // ── configuración fiscal por tenant ─────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -489,6 +531,14 @@ pub struct ConfiguracionFiscalRequest {
     pub empresa_id: Option<String>,
     #[serde(default)]
     pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub facturacion_electronica: Option<bool>,
+    #[serde(default)]
+    pub formato_pdf: Option<bool>,
+    #[serde(default)]
+    pub proveedor_electronico: Option<String>,
+    #[serde(default)]
+    pub ambiente_electronico: Option<String>,
 }
 
 fn empresa_fiscal(
@@ -530,14 +580,18 @@ pub async fn configuracion_fiscal_obtener(
         .get("negocio_id")
         .cloned()
         .or_else(|| usuario.negocio_id.clone());
-    let jurisdiccion = state
+    let config = state
         .tributacion
-        .jurisdiccion_de(&empresa, negocio.as_deref())
+        .configuracion_facturacion(&empresa, negocio.as_deref())
         .await?;
     Ok(Json(json!({
         "empresa_id": empresa,
         "negocio_id": negocio,
-        "jurisdiccion": jurisdiccion,
+        "jurisdiccion": config.jurisdiccion,
+        "facturacion_electronica": config.facturacion_electronica,
+        "formato_pdf": config.formato_pdf,
+        "proveedor_electronico": config.proveedor_electronico,
+        "ambiente_electronico": config.ambiente_electronico,
     })))
 }
 
@@ -561,14 +615,32 @@ pub async fn configuracion_fiscal_guardar(
         .clone()
         .or_else(|| usuario.negocio_id.clone());
     let jurisdiccion = dto.jurisdiccion.unwrap_or_default();
-    let guardada = state
+    let facturacion_electronica = dto.facturacion_electronica.unwrap_or(false);
+    if facturacion_electronica || dto.formato_pdf.unwrap_or(false) {
+        state
+            .exigir_capacidades(&usuario, &["facturacion_electronica"])
+            .await?;
+    }
+    let config = state
         .tributacion
-        .guardar_configuracion_fiscal(&empresa, negocio.as_deref(), &jurisdiccion)
+        .guardar_configuracion_facturacion(
+            &empresa,
+            negocio.as_deref(),
+            &jurisdiccion,
+            facturacion_electronica,
+            dto.formato_pdf.unwrap_or(false),
+            dto.proveedor_electronico.as_deref().unwrap_or("simulado"),
+            dto.ambiente_electronico.as_deref().unwrap_or("pruebas"),
+        )
         .await?;
     Ok(Json(json!({
         "empresa_id": empresa,
         "negocio_id": negocio,
-        "jurisdiccion": guardada,
+        "jurisdiccion": config.jurisdiccion,
+        "facturacion_electronica": config.facturacion_electronica,
+        "formato_pdf": config.formato_pdf,
+        "proveedor_electronico": config.proveedor_electronico,
+        "ambiente_electronico": config.ambiente_electronico,
     })))
 }
 

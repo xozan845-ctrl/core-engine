@@ -360,3 +360,17 @@ cargo test
 - [Contrato público](../../docs/openapi/finance-service/public.openapi.json)
 - [Contrato interno](../../docs/openapi/finance-service/internal.openapi.json)
 - [README de paquetes](../README.md)
+
+### Facturación electrónica y PDF (opt-in)
+
+- La capacidad `facturacion_electronica` habilita la función por negocio.
+- `PUT /finanzas/configuracion-fiscal` acepta `facturacion_electronica`,
+  `formato_pdf`, `proveedor_electronico` (`simulado|http`) y
+  `ambiente_electronico` (`pruebas|produccion`).
+- Con el flag activo, `emitir` llama al proveedor y guarda
+  `electronica_estado`/`electronica_referencia`; un fallo deja el comprobante
+  con estado `error` sin perder numeración.
+- `GET /finanzas/comprobantes/{id}/pdf` descarga el PDF si `formato_pdf=true`;
+  sin el flag responde `PDF_NO_ACTIVADO`.
+- El proveedor HTTP se configura con `FACTURACION_PROVEEDOR_URL` y
+  `FACTURACION_PROVEEDOR_KEY`; DGI concreta se conecta detrás de esa URL.

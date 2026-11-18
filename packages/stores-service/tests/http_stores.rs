@@ -8,6 +8,7 @@ use common::*;
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use stores_service::auth::CapacidadActiva;
 use stores_service::config::Config;
 use stores_service::http::{build_router, estado_de_prueba};
 use stores_service::metrics::Metrics;
@@ -41,6 +42,62 @@ fn estado_completo(db: Arc<stores_service::db::Db>) -> AppState {
         temas,
         storage,
         catalogo,
+        Arc::new(stores_service::clients::OrdenesSinConexion),
+        Arc::clone(&db),
+        tiendas,
+        ofertas,
+    )
+}
+
+struct OrdenesFijo(bool);
+
+#[async_trait::async_trait]
+impl stores_service::clients::Ordenes for OrdenesFijo {
+    async fn compra_verificada(
+        &self,
+        _order_id: &str,
+        _comprador_id: &str,
+        _item_id: &str,
+    ) -> bool {
+        self.0
+    }
+}
+
+fn estado_completo_verificado(db: Arc<stores_service::db::Db>, orden_valida: bool) -> AppState {
+    let config = Config::from_pairs([
+        ("SERVICIO", "stores-service"),
+        ("INTERNAL_API_KEY", "secreta"),
+    ])
+    .expect("config");
+    let temas = temas(None, json!({}), None, json!({}));
+    let storage = storage_vacio();
+    let catalogo = catalogo("1000.00", Some(5), true);
+    let tiendas = Arc::new(Tiendas::nueva(
+        Arc::clone(&db),
+        Arc::clone(&temas),
+        Arc::clone(&storage),
+    ));
+    let ofertas = Arc::new(Ofertas::nueva(Arc::clone(&db), Arc::clone(&catalogo)));
+    let capacidades: Arc<dyn stores_service::auth::Capacidades> = Arc::new(CapacidadesFijas(vec![
+        CapacidadActiva {
+            empresa_id: EMPRESA.to_string(),
+            capacidad_codigo: "catalogo_items".to_string(),
+            activo: true,
+        },
+        CapacidadActiva {
+            empresa_id: EMPRESA.to_string(),
+            capacidad_codigo: "resenas_verificadas".to_string(),
+            activo: true,
+        },
+    ]));
+    AppState::con_dependencias(
+        config,
+        Arc::new(Metrics::nueva("stores-service")),
+        capacidades,
+        temas,
+        storage,
+        catalogo,
+        Arc::new(OrdenesFijo(orden_valida)),
         Arc::clone(&db),
         tiendas,
         ofertas,
@@ -281,7 +338,7 @@ async fn debe_crear_moderar_resenas_y_gestionar_favoritos() {
         })),
     )
     .await;
-    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(status, StatusCode::CREATED, "{resena}");
     assert_eq!(resena["data"]["estado"], "pendiente");
     let resena_id = resena["data"]["id"].as_str().expect("id");
 
@@ -399,4 +456,65 @@ async fn debe_crear_moderar_resenas_y_gestionar_favoritos() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn debe_exigir_compra_verificada_solo_si_la_capacidad_esta_activa() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo_verificado(db().await, false));
+
+    let (status, error, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({ "item_id": ITEM, "calificacion": 5 })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "ORDER_ID_REQUERIDO");
+
+    let (status, error, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "order_id": "11111111-1111-4111-8111-111111111111"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "COMPRA_NO_VERIFICADA");
+}
+
+#[tokio::test]
+async fn debe_marcar_la_resena_como_verificada_cuando_la_compra_existe() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let app = build_router(estado_completo_verificado(db().await, true));
+
+    let (status, resena, _) = enviar(
+        &app,
+        "POST",
+        "/api/v2/comprador/resenas",
+        &headers_comprador(),
+        Some(json!({
+            "item_id": ITEM,
+            "calificacion": 5,
+            "order_id": "11111111-1111-4111-8111-111111111111"
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(resena["data"]["compra_verificada"], true);
+    assert_eq!(
+        resena["data"]["order_id"],
+        "11111111-1111-4111-8111-111111111111"
+    );
 }

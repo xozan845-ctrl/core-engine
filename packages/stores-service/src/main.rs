@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use stores_service::auth::CapacidadesHttp;
-use stores_service::clients::{CatalogoHttp, ObjetosStorageHttp, TemasIdentityHttp};
+use stores_service::clients::{CatalogoHttp, ObjetosStorageHttp, OrdenesHttp, TemasIdentityHttp};
 use stores_service::config::Config;
 use stores_service::consumidor::{cola, handler_consumidor, StockConsumer};
 use stores_service::db::Db;
@@ -67,6 +67,11 @@ async fn main() {
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
+    let ordenes = Arc::new(OrdenesHttp::nueva(
+        config.orders_service_url.clone(),
+        config.internal_api_key.clone(),
+        config.internal_request_timeout_ms,
+    ));
 
     let rabbit = Arc::new(Rabbit::nueva(
         config.rabbitmq_url.as_deref().unwrap_or_default(),
@@ -105,6 +110,7 @@ async fn main() {
         temas,
         storage,
         catalogo,
+        ordenes,
         Arc::clone(&db),
         tiendas,
         ofertas,

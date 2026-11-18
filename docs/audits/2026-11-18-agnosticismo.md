@@ -411,3 +411,12 @@ marketplace que ya funciona.
 - **P3.3 — Reseñas y wishlist: implementado.** `stores.resenas` (moderación
   pendiente→publicada) y `stores.favoritos` con RLS por comprador. Decisión en
   [ADR-0030](../adr/0030-resenas-wishlist.md).
+
+## 12. Fiscal electrónico y compra verificada
+
+- **Compra verificada en reseñas:** capacidad `resenas_verificadas` opt-in por
+  negocio; stores consulta orders y guarda `compra_verificada`/`order_id`.
+- **Facturación electrónica/PDF:** capacidad `facturacion_electronica`,
+  configuración por tenant, ACL `ProveedorFacturacionElectronica` (simulado o
+  HTTP) y PDF bajo demanda. Decisión en
+  [ADR-0031](../adr/0031-facturacion-electronica-pdf.md).

@@ -39,6 +39,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0028](./0028-cupones.md) | Aceptado (implementado) | Cupones por empresa con vigencia, mínimo, tope, usos y canje idempotente |
 | [0029](./0029-rma-devolucion-parcial.md) | Aceptado (implementado) | RMA por línea, restock idempotente y comisión proporcional |
 | [0030](./0030-resenas-wishlist.md) | Aceptado (implementado) | Reseñas moderadas y wishlist por comprador |
+| [0031](./0031-facturacion-electronica-pdf.md) | Aceptado (implementado) | Facturación electrónica/PDF opt-in por negocio con ACL de proveedor |
 
 ## Convención
 
