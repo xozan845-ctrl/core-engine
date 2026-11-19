@@ -5,6 +5,7 @@
 
 pub mod envelope;
 pub mod envios;
+pub mod interno;
 
 use crate::auth::UsuarioContexto;
 use crate::campos;
@@ -60,6 +61,14 @@ pub fn build_router(state: AppState) -> Router {
             post(envios::asignar),
         )
         .route("/api/v2/envios/{id}/estado", patch(envios::avanzar_envio))
+        .route(
+            "/internal/logistics/tenant/exportar",
+            post(interno::exportar_tenant),
+        )
+        .route(
+            "/internal/logistics/tenant/purgar",
+            post(interno::purgar_tenant),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

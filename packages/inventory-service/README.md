@@ -25,7 +25,7 @@ catálogo maestro es de `item-service`; el precio es de `pricing-service`.
 | Esquema | `inventory` (lee `item` para series/componentes) |
 | Outbox | `inventory.outbox` |
 | Capacidades | `inventario_stock`, `inventario_lotes` |
-| Consume | `order.created`, `devolucion.solicitada` |
+| Consume | `order.created`, `order.cancelled`, `devolucion.solicitada` |
 | Publica | `stock.reservado`, `stock.fallido`, `stock.reintegrado`, `stock.updated` |
 | Dependencias | `identity` (capacidades), `item` (metadatos/series) |
 | Expuesto al host | No |
@@ -55,7 +55,7 @@ catálogo maestro es de `item-service`; el precio es de `pricing-service`.
 | `ubicaciones/mod.rs` | Multi-bodega/sucursal, stock por ubicación, transferencias |
 | `reservas.rs` | Reserva/reintegro atómico de la saga, lotes y series |
 | `stock.rs` | Helpers de stock total y delta sobre `item_stock_ubicacion` |
-| `consumidor.rs` | Consumidor de `order.created` y `devolucion.solicitada` |
+| `consumidor.rs` | Consumidor de `order.created`, `order.cancelled` y `devolucion.solicitada` |
 | `http/` | Router, validación, envelope, capacidades |
 | `outbox.rs` / `rabbit.rs` | Publicación y consumo con DLQ |
 
@@ -100,7 +100,7 @@ catálogo maestro es de `item-service`; el precio es de `pricing-service`.
 | Regla | Comportamiento |
 |---|---|
 | RN-03 | Descuento atómico por línea; si una línea no alcanza, **se revierte todo** con `SAVEPOINT` y se emite `stock.fallido` |
-| RN-06 | `devolucion.solicitada` reintegra stock, lotes y series, y emite `stock.reintegrado` |
+| RN-06 | `order.cancelled` y `devolucion.solicitada` reintegran stock, lotes y series, y emiten `stock.reintegrado`; si no hay reserva vigente la liberación es no-op |
 | FEFO | Primero vence primero; lotes vencidos excluidos; si no alcanza → `STOCK_LOTE_INSUFICIENTE` |
 | Seriales | Si el item `track_serial`, se reservan unidades `disponible` concretas; faltante → fallo de línea |
 | Cotizaciones | `order.created` con `tipo_orden=cotizacion` solo marca el evento como procesado, no reserva |
@@ -181,7 +181,8 @@ Respuestas sin envelope; errores con el mismo `{codigo,mensaje,detalles?}`.
 | Evento | Cola | Efecto |
 |---|---|---|
 | `order.created` | `inventory.pedidos` | Reserva stock/lotes/series o emite `stock.fallido` |
-| `devolucion.solicitada` | `inventory.pedidos` | Reintegra stock y series, emite `stock.reintegrado` |
+| `order.cancelled` | `inventory.pedidos` | Libera la reserva de una orden cancelada o expirada; emite `stock.reintegrado` |
+| `devolucion.solicitada` | `inventory.pedidos` | Reintegra stock y series de una orden pagada/devuelta; emite `stock.reintegrado` |
 
 ### Publica
 
@@ -194,7 +195,7 @@ Respuestas sin envelope; errores con el mismo `{codigo,mensaje,detalles?}`.
 
 Idempotencia: `inventory.eventos_procesados(event_id)`. Reintentos con backoff;
 al agotar `REINTENTOS_MAXIMOS` → DLQ. La cola se declara con
-`routing_keys = [order.created, devolucion.solicitada]`.
+`routing_keys = [order.created, order.cancelled, devolucion.solicitada]`.
 
 ---
 

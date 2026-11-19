@@ -883,15 +883,35 @@ async fn debe_reintegrar_la_orden_completa_en_la_ubicacion() {
         "item_id": ITEM,
         "ubicacion_id": segunda.to_string(),
     }]);
+    let orden = "99999999-1111-4222-8333-444444444444";
+
     let mut tx = ctx.db.transaccion().await.expect("tx");
-    inventory_service::reservas::Reservas::reintegrar_en_transaccion(
-        &mut tx,
-        "99999999-1111-4222-8333-444444444444",
-        &items,
-    )
-    .await
-    .expect("reintegrar");
+    let reserva =
+        inventory_service::reservas::Reservas::reservar_en_transaccion(&mut tx, orden, &items)
+            .await
+            .expect("reservar");
+    assert_eq!(reserva["ok"], true);
     tx.commit().await.expect("commit");
+
+    let stock_reservado: i64 = sqlx::query_scalar(
+        "SELECT stock::bigint FROM inventory.item_stock_ubicacion
+          WHERE item_id = $1::uuid AND ubicacion_id = $2::uuid",
+    )
+    .bind(ITEM)
+    .bind(segunda)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("stock");
+    assert_eq!(stock_reservado, 3);
+
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let liberado =
+        inventory_service::reservas::Reservas::reintegrar_en_transaccion(&mut tx, orden, &items)
+            .await
+            .expect("reintegrar");
+    assert!(liberado);
+    tx.commit().await.expect("commit");
+
     let stock: i64 = sqlx::query_scalar(
         "SELECT stock::bigint FROM inventory.item_stock_ubicacion
           WHERE item_id = $1::uuid AND ubicacion_id = $2::uuid",
@@ -901,5 +921,13 @@ async fn debe_reintegrar_la_orden_completa_en_la_ubicacion() {
     .fetch_one(ctx.db.pool())
     .await
     .expect("stock");
-    assert_eq!(stock, 7);
+    assert_eq!(stock, 5);
+
+    let mut tx = ctx.db.transaccion().await.expect("tx");
+    let segunda_liberacion =
+        inventory_service::reservas::Reservas::reintegrar_en_transaccion(&mut tx, orden, &items)
+            .await
+            .expect("reintegrar idempotente");
+    assert!(!segunda_liberacion);
+    tx.commit().await.expect("commit");
 }

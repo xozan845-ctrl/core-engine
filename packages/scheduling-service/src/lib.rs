@@ -14,6 +14,7 @@ pub mod config;
 pub mod db;
 pub mod errors;
 pub mod http;
+pub mod lifecycle;
 pub mod logs;
 pub mod metrics;
 pub mod outbox;
