@@ -64,7 +64,7 @@ async fn exportar_tenant(
     .bind(&usuarios)
     .fetch_one(pool)
     .await
-    .map_err(|_| ApiError::interno())?;
+    .map_err(error_interno)?;
 
     let mut tablas = serde_json::Map::new();
     tablas.insert("ordenes".into(), ordenes);
@@ -96,7 +96,7 @@ async fn exportar_tenant(
         .bind(empresa)
         .fetch_one(pool)
         .await
-        .map_err(|_| ApiError::interno())?;
+        .map_err(error_interno)?;
         tablas.insert(nombre.to_string(), datos);
     }
     super::ok(json!({
@@ -205,7 +205,7 @@ async fn purgar_tenant(
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|_| ApiError::interno())?;
+    .map_err(error_interno)?;
     sqlx::query(
         "UPDATE orders.pagos SET referencia = '', confirmado_por = NULL WHERE empresa_id = $1",
     )
@@ -362,4 +362,8 @@ async fn historia(
         })
         .collect();
     ok(salida)
+}
+
+fn error_interno(_: sqlx::Error) -> ApiError {
+    ApiError::interno()
 }

@@ -447,3 +447,32 @@ async fn debe_permitir_clases_grupales_hasta_la_capacidad_del_recurso() {
         .await
         .expect("el cupo liberado permite una nueva cita");
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/28_scheduling.sql"))
+        .execute(&pool)
+        .await
+        .expect("migracion scheduling");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/67_citas_capacidad.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion capacidad de citas");
+    let req = scheduling_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = scheduling_service::lifecycle::exportar(&pool, &req)
+        .await
+        .expect("exportar");
+    assert!(datos["citas"].is_array());
+    scheduling_service::lifecycle::purgar(&pool, &req)
+        .await
+        .expect("purgar");
+}
