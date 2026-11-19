@@ -62,6 +62,28 @@ pub fn ip_de(headers: &HeaderMap) -> String {
         .unwrap_or_else(|| "desconocida".to_string())
 }
 
+/// IP del cliente para auditoría de sesión. Solo confía en `X-Forwarded-For`
+/// cuando el despliegue declara un proxy de confianza (`TRUST_FORWARDED_FOR`).
+pub fn ip_cliente(headers: &HeaderMap, confiar_en_forwarded: bool) -> Option<String> {
+    let forwarded = headers
+        .get("x-forwarded-for")
+        .and_then(|valor| valor.to_str().ok())
+        .and_then(|valor| valor.split(',').next())
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty() && *valor != "desconocida");
+    if confiar_en_forwarded {
+        if let Some(ip) = forwarded {
+            return Some(ip.to_string());
+        }
+    }
+    headers
+        .get("x-real-ip")
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string)
+}
+
 pub fn es_media_publica(metodo: &str, ruta: &str) -> bool {
     const PREFIJO: &str = "/api/v2/storage/public/objetos/";
     matches!(metodo, "GET" | "HEAD")
@@ -99,6 +121,16 @@ mod tests {
             rate.consumir("2.2.2.2", "global", 2, ttl),
             ResultadoLimite::Permitido { .. }
         ));
+    }
+
+    #[test]
+    fn debe_ignorar_forwarded_sin_proxy_confiable() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "1.2.3.4, 10.0.0.1".parse().unwrap());
+        assert_eq!(ip_cliente(&headers, false), None);
+        assert_eq!(ip_cliente(&headers, true).as_deref(), Some("1.2.3.4"));
+        headers.insert("x-real-ip", "9.9.9.9".parse().unwrap());
+        assert_eq!(ip_cliente(&headers, false).as_deref(), Some("9.9.9.9"));
     }
 
     #[test]
