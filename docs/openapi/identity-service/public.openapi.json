@@ -26,7 +26,7 @@
         },
         "responses": {
           "201": {
-            "description": "Sesión creada (JWT + refresh)",
+            "description": "Sesión creada o verificación de correo requerida",
             "content": {
               "application/json": {
                 "schema": {
@@ -37,7 +37,27 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/SesionResponseDto"
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/SesionResponseDto"
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "usuario",
+                            "verificacion_requerida"
+                          ],
+                          "properties": {
+                            "usuario": {
+                              "$ref": "#/components/schemas/UsuarioResponseDto"
+                            },
+                            "verificacion_requerida": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          }
+                        }
+                      ]
                     },
                     "meta": {
                       "$ref": "#/components/schemas/MetaRespuesta"
@@ -493,6 +513,322 @@
         ]
       }
     },
+    "/api/v2/auth/verificar-correo": {
+      "post": {
+        "operationId": "AuthController_verificarCorreo",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarCorreoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verificar el correo con un token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/reenviar-verificacion": {
+      "post": {
+        "operationId": "AuthController_reenviarVerificacion",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReenviarVerificacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reenviar el correo de verificación",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/mfa/iniciar": {
+      "post": {
+        "operationId": "AuthController_mfaIniciar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Secreto y URL otpauth",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MfaInicioResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar la configuración de MFA TOTP",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/mfa/confirmar": {
+      "post": {
+        "operationId": "AuthController_mfaConfirmar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaCodigoRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MFA activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MfaConfirmacionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar MFA y entregar códigos de recuperación",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/mfa/desactivar": {
+      "post": {
+        "operationId": "AuthController_mfaDesactivar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaDesactivarRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Desactivar MFA con la contraseña actual",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/sesiones": {
+      "get": {
+        "operationId": "AuthController_sesiones",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Sesiones activas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SesionDispositivoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar sesiones y dispositivos activos",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v2/auth/sesiones/{id}": {
+      "delete": {
+        "operationId": "AuthController_revocarSesion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OkResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revocar una sesión propia",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v2/auth/me": {
       "get": {
         "operationId": "AuthController_yo",
@@ -679,6 +1015,96 @@
         "summary": "Asociar o quitar el avatar de un usuario/vendedor",
         "tags": [
           "Usuarios"
+        ]
+      }
+    },
+    "/api/v2/usuarios/{id}/mfa/reset": {
+      "post": {
+        "operationId": "UsuariosController_resetMfa",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Id del usuario",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MFA desactivado por un administrador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resetear MFA de un usuario (super_admin/admin)",
+        "tags": [
+          "Usuarios"
+        ]
+      }
+    },
+    "/api/v2/admin/auditoria/retencion": {
+      "post": {
+        "operationId": "AuditoriaController_purgarRetencion",
+        "responses": {
+          "200": {
+            "description": "Auditoría depurada según retención",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aplicar la retención configurada a la auditoría",
+        "tags": [
+          "Auditoría"
         ]
       }
     },
@@ -1027,6 +1453,406 @@
         ]
       }
     },
+    "/api/v2/empresas/{id}/estado": {
+      "patch": {
+        "operationId": "EmpresasController_cambiarEstado",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarEstadoEmpresaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado del tenant actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transición de estado inválida"
+          },
+          "403": {
+            "description": "Solo super_admin/admin"
+          },
+          "404": {
+            "description": "Empresa no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suspender, cerrar o reactivar una empresa",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v2/empresas/{id}/exportacion": {
+      "get": {
+        "operationId": "EmpresasController_exportar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exportación de los datos de identidad del tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ExportacionTenantResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo super_admin/admin"
+          },
+          "404": {
+            "description": "Empresa no encontrada"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Exportar los datos de identidad del tenant",
+        "tags": [
+          "Empresas"
+        ]
+      },
+      "post": {
+        "operationId": "EmpresasController_iniciarExportacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Job de exportación creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Iniciar exportación asíncrona (identidad + servicios)",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v2/empresas/{id}/eliminacion": {
+      "get": {
+        "operationId": "EmpresasController_consultarEliminacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Última solicitud de eliminación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SolicitudEliminacionTenantDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sin solicitudes"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar la solicitud de eliminación del tenant",
+        "tags": [
+          "Empresas"
+        ]
+      },
+      "post": {
+        "operationId": "EmpresasController_solicitarEliminacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarEliminacionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud creada; el tenant queda inactivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SolicitudEliminacionTenantDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya hay una solicitud pendiente"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Solicitar la eliminación del tenant con retención",
+        "tags": [
+          "Empresas"
+        ]
+      },
+      "delete": {
+        "operationId": "EmpresasController_cancelarEliminacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SolicitudEliminacionTenantDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sin solicitud pendiente"
+          },
+          "409": {
+            "description": "La retención ya venció"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar la eliminación antes de que venza la retención",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v2/empresas/{id}/eliminacion/purgar": {
+      "post": {
+        "operationId": "EmpresasController_purgarEliminacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la empresa",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Identidad anonimizada y solicitud purgada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SolicitudEliminacionTenantDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo super_admin"
+          },
+          "404": {
+            "description": "Sin solicitud pendiente"
+          },
+          "409": {
+            "description": "La retención aún no vence"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Purgar la identidad del tenant al vencer la retención",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
     "/api/v2/empresas/{id}/vendedores": {
       "post": {
         "operationId": "EmpresasController_vendedor",
@@ -1226,13 +2052,18 @@
             "name": "empresaId",
             "required": true,
             "in": "path",
-            "schema": {"format": "uuid", "type": "string"}
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
             "name": "tipo",
             "required": false,
             "in": "query",
-            "schema": {"type": "string"}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1242,22 +2073,35 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"}
+                      "items": {
+                        "$ref": "#/components/schemas/EsquemaRegistroResponseDto"
+                      }
                     },
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Listar esquemas de registros por empresa",
-        "tags": ["Registros"]
+        "tags": [
+          "Registros"
+        ]
       }
     },
     "/api/v2/empresas/{empresaId}/registros/esquemas/{tipo}": {
@@ -1268,13 +2112,18 @@
             "name": "empresaId",
             "required": true,
             "in": "path",
-            "schema": {"format": "uuid", "type": "string"}
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
             "name": "tipo",
             "required": true,
             "in": "path",
-            "schema": {"type": "string"}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1284,19 +2133,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/EsquemaRegistroResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener el esquema activo de un tipo de registro",
-        "tags": ["Registros"]
+        "tags": [
+          "Registros"
+        ]
       },
       "put": {
         "operationId": "RegistrosController_guardarEsquema",
@@ -1305,20 +2167,27 @@
             "name": "empresaId",
             "required": true,
             "in": "path",
-            "schema": {"format": "uuid", "type": "string"}
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
             "name": "tipo",
             "required": true,
             "in": "path",
-            "schema": {"type": "string"}
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/GuardarEsquemaRegistroRequestDto"}
+              "schema": {
+                "$ref": "#/components/schemas/GuardarEsquemaRegistroRequestDto"
+              }
             }
           }
         },
@@ -1329,19 +2198,32 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
-                    "data": {"$ref": "#/components/schemas/EsquemaRegistroResponseDto"},
-                    "meta": {"$ref": "#/components/schemas/MetaRespuesta"}
+                    "data": {
+                      "$ref": "#/components/schemas/EsquemaRegistroResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
                   }
                 }
               }
             }
           }
         },
-        "security": [{"bearer": []}],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Guardar una nueva versión del esquema de registro",
-        "tags": ["Registros"]
+        "tags": [
+          "Registros"
+        ]
       }
     },
     "/api/v2/empresas/{empresaId}/features": {
@@ -5023,6 +5905,120 @@
           "API keys"
         ]
       }
+    },
+    "/api/v2/empresas/{id}/exportacion/{job_id}": {
+      "get": {
+        "operationId": "EmpresasController_estadoExportacion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "job_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el estado de una exportación",
+        "tags": [
+          "Empresas"
+        ]
+      }
+    },
+    "/api/v2/exportaciones/{job_id}/descarga": {
+      "get": {
+        "operationId": "EmpresasController_descargarExportacion",
+        "parameters": [
+          {
+            "name": "job_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo JSON firmado (HMAC-SHA256)",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "x-core-sha256": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-core-signature": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-core-formato": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Descargar el archivo firmado de una exportación",
+        "tags": [
+          "Empresas"
+        ]
+      }
     }
   },
   "components": {
@@ -5393,6 +6389,61 @@
         "required": [
           "slug"
         ]
+      },
+      "CambiarEstadoEmpresaRequestDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "activa",
+              "suspendida",
+              "inactiva"
+            ]
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "SolicitarEliminacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "retencion_dias": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3650,
+            "default": 30
+          }
+        }
+      },
+      "SolicitudEliminacionTenantDto": {
+        "type": "object",
+        "properties": {
+          "solicitud": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "purgable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "solicitud",
+          "purgable"
+        ]
+      },
+      "ExportacionTenantResponseDto": {
+        "type": "object",
+        "additionalProperties": true
       },
       "ApiKeyCreadaResponseDto": {
         "type": "object",
@@ -6640,15 +7691,38 @@
       "EsquemaRegistroResponseDto": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "empresa_id": {"type": "string", "format": "uuid"},
-          "tipo": {"type": "string"},
-          "version": {"type": "integer"},
-          "esquema": {"type": "object"},
-          "activo": {"type": "boolean"},
-          "creado_por": {"type": "string", "format": "uuid"},
-          "creado_en": {"type": "string", "format": "date-time"},
-          "actualizado_en": {"type": "string", "format": "date-time"}
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "esquema": {
+            "type": "object"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
         "required": [
           "id",
@@ -6665,9 +7739,13 @@
       "GuardarEsquemaRegistroRequestDto": {
         "type": "object",
         "properties": {
-          "esquema": {"type": "object"}
+          "esquema": {
+            "type": "object"
+          }
         },
-        "required": ["esquema"]
+        "required": [
+          "esquema"
+        ]
       },
       "ManifiestoEmpresaResponseDto": {
         "type": "object",
@@ -7110,6 +8188,128 @@
           "valores"
         ]
       },
+      "VerificarCorreoRequestDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ReenviarVerificacionRequestDto": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "correo"
+        ]
+      },
+      "MfaCodigoRequestDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "codigo"
+        ]
+      },
+      "MfaDesactivarRequestDto": {
+        "type": "object",
+        "properties": {
+          "contrasena": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contrasena"
+        ]
+      },
+      "MfaInicioResponseDto": {
+        "type": "object",
+        "properties": {
+          "secreto": {
+            "type": "string"
+          },
+          "otpauth_url": {
+            "type": "string"
+          },
+          "mfa_habilitado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "secreto",
+          "otpauth_url",
+          "mfa_habilitado"
+        ]
+      },
+      "MfaConfirmacionResponseDto": {
+        "type": "object",
+        "properties": {
+          "mfa_habilitado": {
+            "type": "boolean"
+          },
+          "codigos_recuperacion": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "mfa_habilitado",
+          "codigos_recuperacion"
+        ]
+      },
+      "SesionDispositivoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "creada_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expira_en": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_agent": {
+            "type": "string",
+            "nullable": true
+          },
+          "ultimo_uso_en": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "creada_en",
+          "expira_en"
+        ]
+      },
       "LoginRequestDto": {
         "type": "object",
         "properties": {
@@ -7122,6 +8322,11 @@
             "type": "string",
             "description": "Contraseña",
             "example": "secreto123"
+          },
+          "codigo_mfa": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "Código TOTP o código de recuperación; obligatorio si MFA está activo"
           }
         },
         "required": [

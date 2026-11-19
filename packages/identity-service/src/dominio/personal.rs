@@ -966,6 +966,10 @@ impl Personal {
             avatar_url: None,
             creado_en: iso_ms(creado_en),
         };
+        // Aceptar la invitación prueba el control del correo.
+        self.auth
+            .marcar_correo_verificado(&usuario_id.to_string())
+            .await?;
         let sesion = self.auth.crear_sesion(&usuario).await?;
         let mut salida = serde_json::to_value(&sesion).map_err(|_| ApiError::interno())?;
         if let Some(usuario_salida) = salida.get_mut("usuario").and_then(Value::as_object_mut) {
