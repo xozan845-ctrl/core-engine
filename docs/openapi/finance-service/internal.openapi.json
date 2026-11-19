@@ -52,26 +52,209 @@
         ]
       }
     },
+    "/internal/finance/configuracion-fiscal": {
+      "get": {
+        "operationId": "InternoController_configuracionFiscal",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración fiscal efectiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "empresa_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "negocio_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "jurisdiccion": {
+                      "type": "string"
+                    },
+                    "moneda": {
+                      "type": "string"
+                    },
+                    "tasa_iva": {
+                      "type": "number"
+                    },
+                    "impuesto_activo": {
+                      "type": "boolean"
+                    },
+                    "precios_con_impuesto": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Configuración fiscal efectiva para checkout",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/notas-credito": {
+      "post": {
+        "operationId": "InternoController_notaCredito",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orden_id",
+                  "devolucion_id",
+                  "empresa_id",
+                  "base_cents",
+                  "iva_cents",
+                  "total_cents"
+                ],
+                "properties": {
+                  "orden_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "devolucion_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "parte_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "base_cents": {
+                    "type": "integer"
+                  },
+                  "iva_cents": {
+                    "type": "integer"
+                  },
+                  "total_cents": {
+                    "type": "integer"
+                  },
+                  "moneda": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nota de crédito emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Emitir nota de crédito parcial (servicio→servicio)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
     "/internal/finance/tipos-cambio": {
       "get": {
         "operationId": "InternoController_tipoCambio",
         "parameters": [
-          {"name": "base", "required": true, "in": "query", "schema": {"type": "string"}},
-          {"name": "quote", "required": true, "in": "query", "schema": {"type": "string"}}
+          {
+            "name": "base",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quote",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Tasa vigente",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/TipoCambioInternoResponseDto"}
+                "schema": {
+                  "$ref": "#/components/schemas/TipoCambioInternoResponseDto"
+                }
               }
             }
           }
         },
-        "security": [{"internalKey": []}],
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
         "summary": "Tipo de cambio vigente (servicio→servicio)",
-        "tags": ["Finanzas (interno)"]
+        "tags": [
+          "Finanzas (interno)"
+        ]
       }
     },
     "/internal/finance/creditos": {
@@ -193,6 +376,126 @@
         "summary": "Declaraciones del periodo (reportes)",
         "tags": [
           "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/tenant/purgar": {
+      "post": {
+        "operationId": "finance_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/finance/tenant/exportar": {
+      "post": {
+        "operationId": "finance_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     }
@@ -394,15 +697,41 @@
       "TipoCambioInternoResponseDto": {
         "type": "object",
         "properties": {
-          "id": {"type": "string", "format": "uuid"},
-          "base": {"type": "string"},
-          "quote": {"type": "string"},
-          "tasa": {"type": "string"},
-          "vigente_desde": {"type": "string", "format": "date-time"},
-          "creado_por": {"type": "string", "format": "uuid"},
-          "creado_en": {"type": "string", "format": "date-time"}
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "base": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "tasa": {
+            "type": "string"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "creado_por": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "creado_en": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        "required": ["id", "base", "quote", "tasa", "vigente_desde", "creado_por", "creado_en"]
+        "required": [
+          "id",
+          "base",
+          "quote",
+          "tasa",
+          "vigente_desde",
+          "creado_por",
+          "creado_en"
+        ]
       },
       "SujetoTributarioResponseDto": {
         "type": "object",

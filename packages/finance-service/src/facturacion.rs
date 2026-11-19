@@ -10,7 +10,7 @@ use crate::outbox::{Outbox, COMPROBANTE_EMITIDO};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use sqlx::Row;
 use std::sync::Arc;
 use std::time::Duration;
@@ -60,11 +60,17 @@ pub trait Ordenes: Send + Sync {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct OrdenItemFiscal {
     #[serde(default)]
+    pub sku: String,
+    #[serde(default)]
     pub precio_unitario_cents: i64,
     #[serde(default)]
     pub cantidad: i64,
     #[serde(default)]
     pub descuento_cents: i64,
+    #[serde(default)]
+    pub impuesto_cents: i64,
+    #[serde(default)]
+    pub total_linea_cents: i64,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -242,6 +248,24 @@ pub struct EmitirComprobante {
     pub ruc: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct NotaCreditoDto {
+    pub orden_id: String,
+    pub devolucion_id: String,
+    pub empresa_id: String,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub parte_id: Option<String>,
+    pub base_cents: i64,
+    pub iva_cents: i64,
+    pub total_cents: i64,
+    #[serde(default)]
+    pub moneda: Option<String>,
+    #[serde(default)]
+    pub items: Value,
+}
+
 pub struct Facturacion {
     db: Arc<Db>,
     outbox: Outbox,
@@ -249,6 +273,7 @@ pub struct Facturacion {
     ordenes: Arc<dyn Ordenes>,
     emitir: bool,
     http: Option<Arc<FacturacionHttp>>,
+    pdf_almacen: Option<Arc<crate::pdf_almacen::PdfAlmacen>>,
 }
 
 impl Facturacion {
@@ -266,7 +291,13 @@ impl Facturacion {
             ordenes,
             emitir,
             http: None,
+            pdf_almacen: None,
         }
+    }
+
+    pub fn con_pdf_almacen(mut self, almacen: crate::pdf_almacen::PdfAlmacen) -> Self {
+        self.pdf_almacen = Some(Arc::new(almacen));
+        self
     }
 
     pub fn con_proveedor_http(
@@ -394,19 +425,32 @@ impl Facturacion {
         } else {
             let mut base = 0;
             let mut iva = 0;
+            let con_snapshot = orden
+                .items
+                .iter()
+                .any(|item| item.total_linea_cents > 0 || item.impuesto_cents > 0);
             for item in &orden.items {
                 let neto = item
                     .precio_unitario_cents
                     .saturating_mul(item.cantidad)
                     .saturating_sub(item.descuento_cents);
-                if neto <= 0 {
+                if neto <= 0 && item.total_linea_cents <= 0 {
                     continue;
                 }
-                let base_linea = money::desde_centavos(neto)?;
-                base = money::sumar(base, base_linea)?;
-                iva = money::sumar(iva, money::multiplicar_por(base_linea, tasa_iva)?)?;
+                if item.total_linea_cents > 0 || item.impuesto_cents > 0 {
+                    let base_linea = item
+                        .total_linea_cents
+                        .saturating_sub(item.impuesto_cents)
+                        .max(0);
+                    base = money::sumar(base, money::desde_centavos(base_linea)?)?;
+                    iva = money::sumar(iva, money::desde_centavos(item.impuesto_cents)?)?;
+                } else {
+                    let base_linea = money::desde_centavos(neto)?;
+                    base = money::sumar(base, base_linea)?;
+                    iva = money::sumar(iva, money::multiplicar_por(base_linea, tasa_iva)?)?;
+                }
             }
-            if orden.descuento_cupon_cents > 0 && base > 0 {
+            if !con_snapshot && orden.descuento_cupon_cents > 0 && base > 0 {
                 let cupon = orden.descuento_cupon_cents.min(base);
                 base -= cupon;
                 iva = money::multiplicar_por(base, tasa_iva)?;
@@ -417,10 +461,42 @@ impl Facturacion {
         let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
         let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
         let parte_id = dto.parte_id.clone();
+        let items_fiscales: Vec<Value> = orden
+            .items
+            .iter()
+            .map(|item| {
+                let neto = item
+                    .precio_unitario_cents
+                    .saturating_mul(item.cantidad)
+                    .saturating_sub(item.descuento_cents);
+                let (base_linea, iva_linea, total_linea) =
+                    if item.total_linea_cents > 0 || item.impuesto_cents > 0 {
+                        let base = item
+                            .total_linea_cents
+                            .saturating_sub(item.impuesto_cents)
+                            .max(0);
+                        (base, item.impuesto_cents, item.total_linea_cents)
+                    } else {
+                        let base = neto.max(0);
+                        let iva = (base as f64 * tasa_iva).round() as i64;
+                        (base, iva, base + iva)
+                    };
+                json!({
+                    "sku": item.sku,
+                    "cantidad": item.cantidad,
+                    "base_cents": base_linea,
+                    "iva_cents": iva_linea,
+                    "total_cents": total_linea,
+                })
+            })
+            .collect();
         let datos_cliente = json!({
             "parte_id": dto.parte_id,
             "razon_social": dto.razon_social,
             "ruc": dto.ruc,
+            "emisor_ruc": serie.ruc_emisor,
+            "orden_id": dto.orden_id,
+            "items": items_fiscales,
         });
 
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
@@ -540,7 +616,16 @@ impl Facturacion {
                 .await?;
         }
         tx.commit().await.map_err(error_db)?;
-        let mut comprobante = comprobante;
+        self.enviar_electronico(comprobante).await
+    }
+
+    /// Envía el comprobante al proveedor electrónico si el tenant lo activó.
+    /// Un fallo del proveedor no invalida el comprobante: queda con
+    /// `electronica_estado = error` para reintento operativo.
+    async fn enviar_electronico(
+        &self,
+        mut comprobante: Comprobante,
+    ) -> Result<Comprobante, ApiError> {
         if let Some(empresa_id) = comprobante.empresa_id.as_deref() {
             let configuracion = sqlx::query(
                 "SELECT facturacion_electronica, proveedor_electronico, ambiente_electronico
@@ -600,6 +685,332 @@ impl Facturacion {
         Ok(comprobante)
     }
 
+    /// Emite una nota de crédito parcial con montos explícitos de una RMA.
+    pub async fn emitir_nota_credito(&self, dto: NotaCreditoDto) -> Result<Comprobante, ApiError> {
+        if dto.base_cents < 0
+            || dto.iva_cents < 0
+            || dto.total_cents <= 0
+            || dto.base_cents.saturating_add(dto.iva_cents) != dto.total_cents
+        {
+            return Err(ApiError::dominio(
+                "MONTO_NOTA_CREDITO_INVALIDO",
+                "La nota de crédito requiere base + IVA = total.",
+            ));
+        }
+        let negocio_uuid = dto
+            .negocio_id
+            .as_deref()
+            .map(uuid::Uuid::parse_str)
+            .transpose()
+            .map_err(|_| ApiError::interno())?;
+        let serie = sqlx::query(
+            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+                    jurisdiccion, activa
+               FROM finance.series_comprobantes
+              WHERE tipo = 'NOTA_CREDITO' AND activa
+                AND (negocio_id = $1::uuid OR negocio_id IS NULL)
+              ORDER BY (negocio_id IS NOT NULL) DESC, serie
+              LIMIT 1",
+        )
+        .bind(negocio_uuid)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .ok_or_else(|| {
+            ApiError::dominio(
+                "SERIE_NO_DISPONIBLE",
+                "No hay serie activa para NOTA_CREDITO.",
+            )
+        })?;
+        let serie = serie_de_fila(&serie);
+        let moneda = sqlx::query_scalar::<_, String>(
+            "SELECT moneda FROM finance.jurisdicciones WHERE codigo_pais = $1",
+        )
+        .bind(&serie.jurisdiccion)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .or(dto.moneda.clone())
+        .unwrap_or_else(|| "NIO".to_string());
+        let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
+        let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
+        let datos_cliente = json!({
+            "devolucion_id": dto.devolucion_id,
+            "razon_social": Value::Null,
+            "ruc": Value::Null,
+            "emisor_ruc": serie.ruc_emisor,
+            "orden_id": dto.orden_id,
+            "items": dto.items,
+        });
+
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let fila = sqlx::query(
+            "INSERT INTO finance.comprobantes
+               (id, serie, numero, tipo, orden_id, empresa_id, negocio_id, parte_id,
+                base_gravada_cents, iva_cents, exento_cents, total_cents, moneda,
+                estado, datos_cliente, emitido_en)
+             VALUES (gen_random_uuid(), $1, $2, 'NOTA_CREDITO', $3::uuid, $4::uuid,
+                     $5::uuid, $6::uuid, $7, $8, 0, $9, $10, $11, $12,
+                     CASE WHEN $11 = 'EMITIDO' THEN NOW() ELSE NULL END)
+             RETURNING id, serie, numero, tipo, orden_id, empresa_id, negocio_id, parte_id,
+                       base_gravada_cents, iva_cents, exento_cents, total_cents, moneda,
+                       estado, datos_cliente, emitido_en, creado_en,
+                       electronica_estado, electronica_referencia, electronica_enviada_en",
+        )
+        .bind(&serie.serie)
+        .bind(&numero)
+        .bind(
+            uuid::Uuid::parse_str(&dto.orden_id)
+                .map_err(|_| ApiError::validacion(json!([{"campo": "orden_id"}])))?,
+        )
+        .bind(
+            uuid::Uuid::parse_str(&dto.empresa_id)
+                .map_err(|_| ApiError::validacion(json!([{"campo": "empresa_id"}])))?,
+        )
+        .bind(negocio_uuid)
+        .bind(
+            dto.parte_id
+                .as_deref()
+                .map(uuid::Uuid::parse_str)
+                .transpose()
+                .map_err(|_| ApiError::interno())?,
+        )
+        .bind(dto.base_cents as i32)
+        .bind(dto.iva_cents as i32)
+        .bind(dto.total_cents as i32)
+        .bind(&moneda)
+        .bind(estado)
+        .bind(sqlx::types::Json(&datos_cliente))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        let comprobante = comprobante_de_fila(&fila);
+        sqlx::query(
+            "UPDATE finance.series_comprobantes
+             SET secuencial_actual = secuencial_actual + 1 WHERE serie = $1",
+        )
+        .bind(&serie.serie)
+        .execute(&mut *tx)
+        .await
+        .map_err(error_db)?;
+
+        if estado == "EMITIDO" && dto.iva_cents > 0 {
+            self.contabilidad
+                .registrar_en_transaccion(
+                    &mut tx,
+                    &ParametrosAsiento {
+                        concepto: format!("IVA revertido nota de credito {}", comprobante.numero),
+                        tipo: "AJUSTE".to_string(),
+                        referencia_tipo: Some("comprobante".to_string()),
+                        referencia_id: Some(comprobante.id.clone()),
+                        fecha: None,
+                        moneda: None,
+                        creado_por: Some("sistema".to_string()),
+                        detalles: vec![
+                            DetalleAsiento {
+                                cuenta_codigo: "2.1.3".to_string(),
+                                debe_cents: dto.iva_cents,
+                                haber_cents: 0,
+                                concepto: Some("IVA por pagar revertido".to_string()),
+                                orden: None,
+                            },
+                            DetalleAsiento {
+                                cuenta_codigo: "2.1.2".to_string(),
+                                debe_cents: 0,
+                                haber_cents: dto.iva_cents,
+                                concepto: Some("IVA trasladado revertido".to_string()),
+                                orden: None,
+                            },
+                        ],
+                    },
+                )
+                .await?;
+            self.outbox
+                .insertar_en_transaccion(
+                    &mut tx,
+                    COMPROBANTE_EMITIDO,
+                    json!({
+                        "comprobante_id": comprobante.id,
+                        "serie": comprobante.serie,
+                        "numero": comprobante.numero,
+                        "tipo": "NOTA_CREDITO",
+                        "orden_id": dto.orden_id,
+                        "devolucion_id": dto.devolucion_id,
+                        "base_gravada_cents": dto.base_cents,
+                        "iva_cents": dto.iva_cents,
+                        "total_cents": dto.total_cents,
+                        "moneda": moneda,
+                    }),
+                )
+                .await?;
+        }
+        tx.commit().await.map_err(error_db)?;
+        self.enviar_electronico(comprobante).await
+    }
+
+    /// Exporta los datos fiscales del tenant. No incluye bytes de PDF.
+    pub async fn exportar_tenant(
+        &self,
+        empresa_id: &str,
+        negocio_ids: &[String],
+        usuario_ids: &[String],
+    ) -> Result<Value, ApiError> {
+        let empresa = uuid::Uuid::parse_str(empresa_id)
+            .map_err(|_| ApiError::dominio("EMPRESA_INVALIDA", "empresa_id debe ser UUID."))?;
+        let negocios: Vec<uuid::Uuid> = negocio_ids
+            .iter()
+            .filter_map(|valor| uuid::Uuid::parse_str(valor).ok())
+            .collect();
+        let usuarios: Vec<uuid::Uuid> = usuario_ids
+            .iter()
+            .filter_map(|valor| uuid::Uuid::parse_str(valor).ok())
+            .collect();
+        let mut datos = Map::new();
+        let comprobantes: Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.creado_en), '[]'::jsonb)
+               FROM finance.comprobantes c WHERE c.empresa_id = $1",
+        )
+        .bind(empresa)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        datos.insert("comprobantes".into(), comprobantes);
+        let pdfs: Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                        'comprobante_id', p.comprobante_id,
+                        'objeto_id', p.objeto_id,
+                        'generado_en', p.generado_en,
+                        'contenido_base64', encode(p.contenido, 'base64')
+                    )), '[]'::jsonb)
+               FROM finance.comprobante_pdf p
+              WHERE p.comprobante_id IN (
+                  SELECT id FROM finance.comprobantes WHERE empresa_id = $1
+              )",
+        )
+        .bind(empresa)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        datos.insert("comprobantes_pdf".into(), pdfs);
+        for (nombre, sql) in [
+            (
+                "configuracion_fiscal",
+                "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+                   FROM finance.configuracion_fiscal t WHERE t.empresa_id = $1",
+            ),
+            (
+                "credito_cuentas",
+                "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+                   FROM finance.credito_cuentas t WHERE t.empresa_id = $1",
+            ),
+            (
+                "workspace_registros",
+                "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+                   FROM finance.workspace_registros t WHERE t.tenant_id = $1",
+            ),
+        ] {
+            let valor: Value = sqlx::query_scalar(sql)
+                .bind(empresa)
+                .fetch_one(self.db.pool())
+                .await
+                .map_err(error_db)?;
+            datos.insert(nombre.into(), valor);
+        }
+        let series: Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+               FROM finance.series_comprobantes t WHERE t.negocio_id = ANY($1::uuid[])",
+        )
+        .bind(&negocios)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        datos.insert("series_comprobantes".into(), series);
+        let asientos: Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.creado_en), '[]'::jsonb)
+               FROM finance.asientos a
+              WHERE a.referencia_tipo = 'comprobante'
+                AND a.referencia_id IN (
+                    SELECT id::text FROM finance.comprobantes WHERE empresa_id = $1
+                )",
+        )
+        .bind(empresa)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        datos.insert("asientos".into(), asientos);
+        let metricas: Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+               FROM finance.metricas_vendedores t WHERE t.vendedor_id = ANY($1::uuid[])",
+        )
+        .bind(&usuarios)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        datos.insert("metricas_vendedores".into(), metricas);
+        Ok(Value::Object(datos))
+    }
+
+    /// Anonimiza los datos personales del tenant en finanzas y elimina su
+    /// configuración fiscal. Los comprobantes y asientos se conservan por
+    /// retención contable.
+    pub async fn purgar_tenant(
+        &self,
+        empresa_id: &str,
+        _negocio_ids: &[String],
+        usuario_ids: &[String],
+    ) -> Result<Value, ApiError> {
+        let empresa = uuid::Uuid::parse_str(empresa_id)
+            .map_err(|_| ApiError::dominio("EMPRESA_INVALIDA", "empresa_id debe ser UUID."))?;
+        let usuarios: Vec<uuid::Uuid> = usuario_ids
+            .iter()
+            .filter_map(|valor| uuid::Uuid::parse_str(valor).ok())
+            .collect();
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        sqlx::query(
+            "UPDATE finance.comprobantes
+                SET datos_cliente = jsonb_build_object('redactado', true),
+                    parte_id = NULL
+              WHERE empresa_id = $1",
+        )
+        .bind(empresa)
+        .execute(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        sqlx::query(
+            "DELETE FROM finance.comprobante_pdf
+              WHERE comprobante_id IN (
+                  SELECT id FROM finance.comprobantes WHERE empresa_id = $1
+              )",
+        )
+        .bind(empresa)
+        .execute(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        sqlx::query("DELETE FROM finance.configuracion_fiscal WHERE empresa_id = $1")
+            .bind(empresa)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        sqlx::query("DELETE FROM finance.credito_cuentas WHERE empresa_id = $1")
+            .bind(empresa)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        sqlx::query("DELETE FROM finance.workspace_registros WHERE tenant_id = $1")
+            .bind(empresa)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        // Las series se conservan: los comprobantes retenidos las referencian.
+        sqlx::query("DELETE FROM finance.metricas_vendedores WHERE vendedor_id = ANY($1::uuid[])")
+            .bind(&usuarios)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
+        Ok(json!({ "empresa_id": empresa_id, "anonimizado": true }))
+    }
+
     /// Indica si el tenant tiene PDF habilitado y devuelve el comprobante.
     pub async fn pdf_de(
         &self,
@@ -623,11 +1034,70 @@ impl Facturacion {
                 "La facturación PDF no está activada para este negocio.",
             ));
         }
+        let comprobante_id = uuid::Uuid::parse_str(id)
+            .map_err(|_| ApiError::dominio("ID_INVALIDO", "El comprobante debe ser un UUID."))?;
+        let guardado: Option<(Option<Vec<u8>>, Option<uuid::Uuid>)> = sqlx::query_as(
+            "SELECT contenido, objeto_id FROM finance.comprobante_pdf WHERE comprobante_id = $1",
+        )
+        .bind(comprobante_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        if let Some((contenido, objeto_id)) = &guardado {
+            if let Some(pdf) = contenido {
+                return Ok(Some(pdf.clone()));
+            }
+            if let (Some(objeto_id), Some(almacen)) = (objeto_id, self.pdf_almacen.as_ref()) {
+                if let Ok(pdf) = almacen.leer(empresa_id, &objeto_id.to_string()).await {
+                    return Ok(Some(pdf));
+                }
+            }
+        }
         let comprobante = self
             .obtener(id)
             .await?
             .ok_or_else(|| ApiError::no_encontrado("Comprobante", id))?;
-        Ok(Some(crate::pdf::comprobante_pdf(&comprobante)))
+        let pdf = crate::pdf::comprobante_pdf(&comprobante);
+        let mut objeto_id = None;
+        let mut contenido = Some(pdf.clone());
+        if let Some(almacen) = self.pdf_almacen.as_ref() {
+            let nombre = format!("comprobante-{}.pdf", comprobante.numero);
+            if let Ok(id) = almacen.subir(empresa_id, &nombre, &pdf).await {
+                if let Ok(uuid) = uuid::Uuid::parse_str(&id) {
+                    objeto_id = Some(uuid);
+                    contenido = None;
+                }
+            }
+        }
+        sqlx::query(
+            "INSERT INTO finance.comprobante_pdf (comprobante_id, contenido, objeto_id)
+             VALUES ($1, $2, $3) ON CONFLICT (comprobante_id) DO NOTHING",
+        )
+        .bind(comprobante_id)
+        .bind(&contenido)
+        .bind(objeto_id)
+        .execute(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        // En una carrera, devolvemos la copia persistida canónica.
+        let guardado: Option<(Option<Vec<u8>>, Option<uuid::Uuid>)> = sqlx::query_as(
+            "SELECT contenido, objeto_id FROM finance.comprobante_pdf WHERE comprobante_id = $1",
+        )
+        .bind(comprobante_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        if let Some((Some(pdf), _)) = guardado {
+            return Ok(Some(pdf));
+        }
+        if let Some((_, Some(objeto_id))) = guardado {
+            if let Some(almacen) = self.pdf_almacen.as_ref() {
+                if let Ok(pdf) = almacen.leer(empresa_id, &objeto_id.to_string()).await {
+                    return Ok(Some(pdf));
+                }
+            }
+        }
+        Ok(Some(pdf))
     }
 
     pub async fn obtener(&self, id: &str) -> Result<Option<Comprobante>, ApiError> {
