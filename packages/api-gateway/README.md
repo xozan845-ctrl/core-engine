@@ -141,9 +141,10 @@ Microservicio destino
 ### Anti-spoofing
 
 El gateway **no copia** las cabeceras entrantes: construye un `HeaderMap` nuevo
-con `x-request-id`, `Content-Type`, `Accept`, `Range` (solo media) y las
-cabeceras derivadas del JWT. Cualquier `x-user-*`, `x-tenant`, `x-negocio`,
-`x-internal-key` enviada por el cliente se descarta. Esto implementa R-GW-3.
+con `x-request-id`, `Content-Type`, `Accept`, `Range` (solo media),
+`Idempotency-Key` y las cabeceras derivadas del JWT. Cualquier `x-user-*`,
+`x-tenant`, `x-negocio`, `x-internal-key` enviada por el cliente se descarta.
+Esto implementa R-GW-3.
 
 ### Rutas públicas y deny-by-default
 
@@ -254,7 +255,9 @@ Implementación **en memoria por proceso**, con ventanas fijas de 60 s y clave
 | `login` | 10 req/min | `POST /api/v2/auth/login`, `POST /api/v2/auth/token` |
 | `ready` | 10 req/min | `GET /ready` |
 
-- La IP se toma de `X-Forwarded-For` (primer valor), luego `X-Real-IP`, luego
+- La IP de sesión solo usa `X-Forwarded-For` si `TRUST_FORWARDED_FOR=true`
+  (proxy de confianza); si no, usa `X-Real-IP`. Se reenvía como `X-Client-IP`.
+- La IP de rate limit se toma de `X-Forwarded-For` (primer valor), luego `X-Real-IP`, luego
   `"desconocida"`. **No** hay validación de proxies de confianza en este
   componente; el despliegue debe garantizar que el borde de infraestructura
   reescribe esas cabeceras.
@@ -273,8 +276,9 @@ Implementación **en memoria por proceso**, con ventanas fijas de 60 s y clave
 - CORS solo se emite si el `Origin` coincide **exactamente** con un elemento de
   `CORS_ORIGINS`. No hay comodines.
 - Métodos permitidos: `GET, POST, PATCH, PUT, DELETE, OPTIONS`.
-- Cabeceras permitidas: `Content-Type, Authorization, x-request-id`.
-- Expuestas: `x-request-id`.
+- Cabeceras permitidas: `Content-Type, Authorization, x-request-id,
+  Idempotency-Key`.
+- Expuestas: `x-request-id, Idempotency-Replayed`.
 - `Vary: Origin`.
 - Cabeceras de hardening aplicadas a toda respuesta (incluidas las proxificadas):
   `x-content-type-options`, `x-frame-options: DENY`,

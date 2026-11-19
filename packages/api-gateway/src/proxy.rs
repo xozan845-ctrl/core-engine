@@ -4,7 +4,7 @@ use crate::auth::aplicar_auth;
 use crate::config::Config;
 use crate::errors::ApiError;
 use crate::policy::encontrar_politica;
-use crate::rate_limit::es_media_publica;
+use crate::rate_limit::{es_media_publica, ip_cliente};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::{Request, State};
@@ -12,6 +12,7 @@ use axum::http::{header, HeaderMap, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use http_body_util::BodyExt;
 use regex::Regex;
+use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -164,6 +165,70 @@ pub fn encontrar_destino<'a>(
     })
 }
 
+/// Construye el `HeaderMap` limpio que viaja al microservicio. No copia
+/// cabeceras del cliente salvo la clave de idempotencia y `Range` en media.
+fn construir_cabeceras(
+    request_id: &str,
+    es_media: bool,
+    auth: &HashMap<String, String>,
+    rango: Option<&str>,
+    idempotency_key: Option<&str>,
+    user_agent: Option<&str>,
+    ip_cliente: Option<&str>,
+) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    if let Ok(valor) = HeaderValue::from_str(request_id) {
+        headers.insert("x-request-id", valor);
+    }
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static(if es_media {
+            "application/octet-stream"
+        } else {
+            "application/json"
+        }),
+    );
+    headers.insert(
+        header::ACCEPT,
+        HeaderValue::from_static(if es_media {
+            "image/*,video/*,*/*"
+        } else {
+            "application/json"
+        }),
+    );
+    for (clave, valor) in auth {
+        if let (Ok(nombre), Ok(valor)) = (
+            axum::http::header::HeaderName::from_bytes(clave.as_bytes()),
+            HeaderValue::from_str(valor),
+        ) {
+            headers.insert(nombre, valor);
+        }
+    }
+    if es_media {
+        if let Some(rango) = rango {
+            if let Ok(valor) = HeaderValue::from_str(rango) {
+                headers.insert(header::RANGE, valor);
+            }
+        }
+    }
+    if let Some(clave) = idempotency_key {
+        if let Ok(valor) = HeaderValue::from_str(clave) {
+            headers.insert("idempotency-key", valor);
+        }
+    }
+    if let Some(agent) = user_agent {
+        if let Ok(valor) = HeaderValue::from_str(agent) {
+            headers.insert(header::USER_AGENT, valor);
+        }
+    }
+    if let Some(ip) = ip_cliente {
+        if let Ok(valor) = HeaderValue::from_str(ip) {
+            headers.insert("x-client-ip", valor);
+        }
+    }
+    headers
+}
+
 pub async fn reenviar(State(state): State<AppState>, request: Request) -> Response {
     let metodo = request.method().clone();
     let ruta = request.uri().path().to_string();
@@ -176,6 +241,16 @@ pub async fn reenviar(State(state): State<AppState>, request: Request) -> Respon
     let rango = request
         .headers()
         .get(header::RANGE)
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::to_string);
+    let idempotency_key = request
+        .headers()
+        .get("idempotency-key")
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::to_string);
+    let user_agent = request
+        .headers()
+        .get(header::USER_AGENT)
         .and_then(|valor| valor.to_str().ok())
         .map(str::to_string);
     let ruta_query = request
@@ -203,6 +278,7 @@ pub async fn reenviar(State(state): State<AppState>, request: Request) -> Respon
         .into_response();
     };
     let es_media = es_media_publica(metodo.as_str(), &ruta);
+    let ip_cliente = ip_cliente(request.headers(), state.config.confiar_en_forwarded);
     let cuerpo = if matches!(metodo, Method::GET | Method::HEAD | Method::OPTIONS) {
         Vec::new()
     } else {
@@ -219,41 +295,15 @@ pub async fn reenviar(State(state): State<AppState>, request: Request) -> Respon
         }
     };
 
-    let mut headers = HeaderMap::new();
-    if let Ok(valor) = HeaderValue::from_str(&request_id) {
-        headers.insert("x-request-id", valor);
-    }
-    headers.insert(
-        header::CONTENT_TYPE,
-        HeaderValue::from_static(if es_media {
-            "application/octet-stream"
-        } else {
-            "application/json"
-        }),
+    let headers = construir_cabeceras(
+        &request_id,
+        es_media,
+        &auth,
+        rango.as_deref(),
+        idempotency_key.as_deref(),
+        user_agent.as_deref(),
+        ip_cliente.as_deref(),
     );
-    headers.insert(
-        header::ACCEPT,
-        HeaderValue::from_static(if es_media {
-            "image/*,video/*,*/*"
-        } else {
-            "application/json"
-        }),
-    );
-    for (clave, valor) in auth {
-        if let (Ok(nombre), Ok(valor)) = (
-            axum::http::header::HeaderName::from_bytes(clave.as_bytes()),
-            HeaderValue::from_str(&valor),
-        ) {
-            headers.insert(nombre, valor);
-        }
-    }
-    if es_media {
-        if let Some(rango) = rango.as_deref() {
-            if let Ok(valor) = HeaderValue::from_str(rango) {
-                headers.insert(header::RANGE, valor);
-            }
-        }
-    }
 
     let url = format!("{}{}", destino.url, ruta_query);
     let cliente = state.http.clone();
@@ -323,6 +373,46 @@ mod tests {
 
     fn config() -> Config {
         Config::from_pairs(Vec::<(&str, &str)>::new()).expect("config")
+    }
+
+    #[test]
+    fn debe_reenviar_la_clave_de_idempotencia_sin_copiar_otras_cabeceras() {
+        let mut auth = HashMap::new();
+        auth.insert("x-user-id".to_string(), "u-1".to_string());
+        let headers = construir_cabeceras(
+            "req-1",
+            false,
+            &auth,
+            None,
+            Some("clave-idempotente-1"),
+            Some("agente-test"),
+            Some("1.2.3.4"),
+        );
+        assert_eq!(
+            headers
+                .get(header::USER_AGENT)
+                .and_then(|valor| valor.to_str().ok()),
+            Some("agente-test")
+        );
+        assert_eq!(
+            headers
+                .get("idempotency-key")
+                .and_then(|valor| valor.to_str().ok()),
+            Some("clave-idempotente-1")
+        );
+        assert_eq!(
+            headers
+                .get("x-user-id")
+                .and_then(|valor| valor.to_str().ok()),
+            Some("u-1")
+        );
+        assert_eq!(
+            headers
+                .get("x-client-ip")
+                .and_then(|valor| valor.to_str().ok()),
+            Some("1.2.3.4")
+        );
+        assert!(headers.get("x-tenant").is_none());
     }
 
     #[test]
