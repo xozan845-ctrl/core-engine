@@ -10,6 +10,7 @@
 
 pub mod auth;
 pub mod config;
+pub mod crypto;
 pub mod db;
 pub mod dominio;
 pub mod email;
@@ -17,6 +18,7 @@ pub mod errors;
 pub mod http;
 pub mod logs;
 pub mod metrics;
+pub mod purga;
 pub mod seed;
 pub mod state;
 pub mod storage;

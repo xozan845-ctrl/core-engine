@@ -1,6 +1,7 @@
 //! Arranque del servicio: configuración, PostgreSQL, router y apagado ordenado.
 
 use identity_service::config::Config;
+use identity_service::crypto::CifradoSecreto;
 use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
 use identity_service::dominio::auditoria::Auditoria;
@@ -18,10 +19,12 @@ use identity_service::dominio::personal::Personal;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::Usuarios;
+use identity_service::dominio::verificacion::VerificacionEmail;
 use identity_service::email::{crear_email, Email};
 use identity_service::http::build_router;
 use identity_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use identity_service::metrics::Metrics;
+use identity_service::purga::PurgaExterna;
 use identity_service::seed;
 use identity_service::state::{AppState, Servicios};
 use identity_service::storage::Storage;
@@ -71,12 +74,47 @@ async fn main() {
         config.storage_service_url.clone(),
         config.internal_api_key.clone(),
     ));
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), Arc::clone(&storage)));
+    let clave_mfa = match config.clave_mfa() {
+        Ok(clave) => clave,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    let cifrado = match CifradoSecreto::nueva(clave_mfa) {
+        Ok(cifrado) => Arc::new(cifrado),
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+    };
+    let usuarios = Arc::new(Usuarios::nueva(
+        Arc::clone(&db),
+        Arc::clone(&storage),
+        Arc::clone(&cifrado),
+    ));
+    let purga = Arc::new(PurgaExterna::nueva(
+        config.servicios_purga.clone(),
+        config.internal_api_key.clone(),
+    ));
     let empresas = Arc::new(Empresas::nueva(
         Arc::clone(&db),
         Arc::clone(&usuarios),
         Arc::clone(&storage),
+        Arc::clone(&purga),
+        config
+            .export_signing_key
+            .clone()
+            .unwrap_or_else(|| config.jwt_secret.clone()),
     ));
+    let empresas_bg = Arc::clone(&empresas);
+    tokio::spawn(async move {
+        if let Ok(jobs) = empresas_bg.reanudar_exportaciones().await {
+            for job_id in jobs {
+                let _ = empresas_bg.ejecutar_exportacion(&job_id).await;
+            }
+        }
+    });
     let configuracion = Arc::new(ConfiguracionSitio::nueva(
         Arc::clone(&db),
         Arc::clone(&storage),
@@ -97,6 +135,12 @@ async fn main() {
         Arc::clone(&db),
         Arc::clone(&usuarios),
         Arc::clone(&sesiones),
+        Arc::clone(&email),
+        config.frontend_url.clone(),
+    ));
+    let verificacion = Arc::new(VerificacionEmail::nueva(
+        Arc::clone(&db),
+        Arc::clone(&usuarios),
         Arc::clone(&email),
         config.frontend_url.clone(),
     ));
@@ -137,6 +181,7 @@ async fn main() {
             registros,
             packs,
             password_reset,
+            verificacion,
         },
     );
     let app = build_router(estado);
