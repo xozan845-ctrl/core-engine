@@ -343,13 +343,20 @@ pub async fn interno_recalcular(
 pub async fn interno_purgar_tenant(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(tenant_id): Path<String>,
+    Json(cuerpo): Json<Value>,
 ) -> Result<Json<Value>, ApiError> {
     exigir_clave_interna(
         &headers,
         state.config.internal_api_key.as_deref().unwrap_or(""),
     )?;
-    let resultado = state.objetos()?.purgar_tenant(&tenant_id).await?;
+    let tenant_id = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .filter(|valor| es_uuid(valor))
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "empresa_id", "restricciones": ["isUuid"]}]))
+        })?;
+    let resultado = state.objetos()?.purgar_tenant(tenant_id).await?;
     Ok(Json(
         json!({ "servicio": "storage", "estado": "completado", "detalle": resultado }),
     ))
