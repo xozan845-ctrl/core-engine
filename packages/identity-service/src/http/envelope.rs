@@ -14,12 +14,13 @@ use http_body_util::BodyExt;
 use serde_json::{json, Value};
 
 /// Rutas que no usan el envelope: infraestructura, docs y binarios públicos.
-const RUTAS_SIN_ENVELOPE: [&str; 5] = [
+const RUTAS_SIN_ENVELOPE: [&str; 6] = [
     "/internal",
     "/health",
     "/metrics",
     "/docs",
     "/api/v2/storage/public",
+    "/api/v2/exportaciones",
 ];
 
 pub fn ruta_lleva_envelope(ruta: &str) -> bool {

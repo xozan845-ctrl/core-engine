@@ -418,7 +418,7 @@ mod tests {
         .is_err());
         assert!(validar(
             ACEPTAR,
-            &json!({"nombre": "Ana", "contrasena": "secreto123"})
+            &json!({"nombre": "Ana", "contrasena": "ClaveSegura2026!"})
         )
         .is_ok());
     }

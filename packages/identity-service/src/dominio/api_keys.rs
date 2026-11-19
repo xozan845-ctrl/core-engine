@@ -7,6 +7,7 @@ use crate::auth::{crear_access_token, UsuarioContexto, UsuarioToken};
 use crate::config::Config;
 use crate::db::{iso_ms, uuid_texto, Db};
 use crate::errors::ApiError;
+use axum::http::StatusCode;
 use base64::Engine;
 use chrono::{DateTime, Duration, Utc};
 use rand::RngCore;
@@ -198,6 +199,19 @@ impl ApiKeys {
                     return Err(ApiError::no_autorizado("API key invalida o expirada."));
                 }
             }
+        }
+        let estado_empresa: Option<String> =
+            sqlx::query_scalar("SELECT estado FROM identity.empresas WHERE id = $1::uuid")
+                .bind(&api_key.empresa_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+        if estado_empresa.as_deref() != Some("activa") {
+            return Err(ApiError::nueva(
+                "EMPRESA_NO_ACTIVA",
+                "La empresa de la API key no esta activa.",
+                StatusCode::FORBIDDEN,
+            ));
         }
         sqlx::query("UPDATE identity.api_keys SET ultimo_uso_en = NOW() WHERE id = $1::uuid")
             .bind(&api_key.id)

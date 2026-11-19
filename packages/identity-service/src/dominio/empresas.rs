@@ -3,6 +3,7 @@
 //! Réplica de `empresas/empresas.service.ts`. Se opera con `to_jsonb` para
 //! conservar el contrato completo de la fila sin duplicar 30 campos Rust.
 
+use crate::crypto::{hmac_sha256_hex, sha256_hex};
 use crate::db::Db;
 use crate::dominio::auditoria;
 use crate::dominio::media::{
@@ -15,18 +16,32 @@ use crate::dominio::tema::{
 };
 use crate::dominio::usuarios::{correo_valido, CrearVendedor, Usuarios};
 use crate::errors::ApiError;
+use crate::purga::PurgaExterna;
 use crate::storage::Storage;
+use chrono::Utc;
 use serde_json::{json, Map, Value};
 use sqlx::{Postgres, Row, Transaction};
 use std::sync::Arc;
 use uuid::Uuid;
 
 const MAX_INTENTOS_SLUG: u32 = 50;
+const ESTADOS_EMPRESA: [&str; 3] = ["activa", "suspendida", "inactiva"];
 
 pub struct Empresas {
     db: Arc<Db>,
     usuarios: Arc<Usuarios>,
     storage: Arc<Storage>,
+    purga: Arc<PurgaExterna>,
+    firma_clave: Arc<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DescargaExportacion {
+    pub empresa_id: String,
+    pub formato: String,
+    pub sha256: String,
+    pub firma: String,
+    pub contenido: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,11 +65,19 @@ pub struct CrearVendedorEmpresa {
 }
 
 impl Empresas {
-    pub fn nueva(db: Arc<Db>, usuarios: Arc<Usuarios>, storage: Arc<Storage>) -> Self {
+    pub fn nueva(
+        db: Arc<Db>,
+        usuarios: Arc<Usuarios>,
+        storage: Arc<Storage>,
+        purga: Arc<PurgaExterna>,
+        firma_clave: String,
+    ) -> Self {
         Self {
             db,
             usuarios,
             storage,
+            purga,
+            firma_clave: Arc::new(firma_clave),
         }
     }
 
@@ -531,6 +554,919 @@ impl Empresas {
         tx.commit().await.map_err(interno)?;
         let nuevos: Value = fila.try_get("datos").map_err(interno)?;
         Ok(Self::con_urls(&nuevos))
+    }
+
+    /// Cambia el estado del tenant y revoca las sesiones si deja de estar
+    /// activo. `inactiva` representa el cierre operativo; la reactivación
+    /// queda disponible para un administrador de plataforma.
+    pub async fn cambiar_estado(
+        &self,
+        empresa_id: &str,
+        estado: &str,
+        motivo: Option<&str>,
+        actor_usuario_id: &str,
+    ) -> Result<Value, ApiError> {
+        let estado = estado.trim().to_lowercase();
+        if !ESTADOS_EMPRESA.contains(&estado.as_str()) {
+            return Err(ApiError::dominio(
+                "ESTADO_EMPRESA_INVALIDO",
+                "Usa activa, suspendida o inactiva.",
+            ));
+        }
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        }
+
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT estado, to_jsonb(e) AS datos
+               FROM identity.empresas e
+              WHERE e.id = $1::uuid
+              FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(fila) = fila else {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        };
+        let actual: String = fila.try_get("estado").map_err(interno)?;
+        let datos_actuales: Value = fila.try_get("datos").map_err(interno)?;
+        if actual == estado {
+            tx.commit().await.map_err(interno)?;
+            return Ok(Self::con_urls(&datos_actuales));
+        }
+        if !transicion_estado_permitida(&actual, &estado) {
+            return Err(ApiError::dominio(
+                "TRANSICION_ESTADO_INVALIDA",
+                format!("No se puede pasar de \"{actual}\" a \"{estado}\"."),
+            ));
+        }
+
+        let fila = sqlx::query(
+            "UPDATE identity.empresas AS e
+                SET estado = $1
+              WHERE e.id = $2::uuid
+              RETURNING to_jsonb(e) AS datos",
+        )
+        .bind(&estado)
+        .bind(empresa_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let datos: Value = fila.try_get("datos").map_err(interno)?;
+
+        if estado != "activa" {
+            revocar_sesiones_tenant(&mut tx, empresa_id).await?;
+        }
+
+        auditoria::registrar(
+            &mut tx,
+            actor_usuario_id,
+            empresa_id,
+            None,
+            "empresa.estado",
+            "empresa",
+            Some(empresa_id),
+            json!({
+                "anterior": actual,
+                "nuevo": estado,
+                "motivo": motivo,
+            }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        Ok(Self::con_urls(&datos))
+    }
+
+    /// Exporta los datos que posee identity para el tenant. Los datos de otros
+    /// servicios se listan como pendientes en `alcance` para no fingir una
+    /// exportación completa.
+    pub async fn exportar(&self, empresa_id: &str, actor_id: &str) -> Result<Value, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let empresa: Option<Value> = sqlx::query_scalar(
+            "SELECT to_jsonb(e) AS datos FROM identity.empresas e WHERE e.id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(empresa) = empresa else {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        };
+
+        let asignaciones = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.creado_en), '[]'::jsonb)
+               FROM identity.asignaciones_personal a WHERE a.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let usuarios = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                        'id', u.id, 'nombre', u.nombre, 'correo', u.correo,
+                        'rol', u.rol, 'tenant_id', u.tenant_id,
+                        'participacion_porcentaje', u.participacion_porcentaje,
+                        'creado_en', u.creado_en
+                    ) ORDER BY u.creado_en), '[]'::jsonb)
+               FROM identity.usuarios u WHERE u.tenant_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let negocios = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(n) ORDER BY n.creado_en), '[]'::jsonb)
+               FROM identity.negocios n WHERE n.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let partes = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.creado_en), '[]'::jsonb)
+               FROM identity.partes p WHERE p.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let contactos = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.creado_en), '[]'::jsonb)
+               FROM identity.medios_contacto c WHERE c.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let direcciones = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(d) ORDER BY d.creado_en), '[]'::jsonb)
+               FROM identity.direcciones_partes d WHERE d.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let relaciones = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.creado_en), '[]'::jsonb)
+               FROM identity.relaciones_partes r WHERE r.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let capacidades = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.capacidad_codigo), '[]'::jsonb)
+               FROM identity.empresa_capacidades c WHERE c.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let extensiones = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(v) ORDER BY v.creado_en), '[]'::jsonb)
+               FROM identity.extensiones_empresa_valores v WHERE v.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let slugs = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY s.creado_en), '[]'::jsonb)
+               FROM identity.empresa_slugs s WHERE s.empresa_id = $1::uuid",
+            empresa_id,
+        )
+        .await?;
+        let auditoria = jsonb_por_empresa(
+            &mut tx,
+            "SELECT COALESCE(jsonb_agg(datos ORDER BY creado_en DESC), '[]'::jsonb)
+               FROM (
+                   SELECT to_jsonb(a) AS datos, a.creado_en
+                     FROM identity.auditoria a
+                    WHERE a.empresa_id = $1::uuid
+                    ORDER BY a.creado_en DESC
+                    LIMIT 1000
+               ) reciente",
+            empresa_id,
+        )
+        .await?;
+
+        auditoria::registrar(
+            &mut tx,
+            actor_id,
+            empresa_id,
+            None,
+            "empresa.export",
+            "empresa",
+            Some(empresa_id),
+            json!({ "formato": "core-engine.tenant-export.v1" }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+
+        Ok(json!({
+            "formato": "core-engine.tenant-export.v1",
+            "generado_en": crate::db::iso_ms(Utc::now()),
+            "empresa": Self::con_urls(&empresa),
+            "asignaciones_personal": asignaciones,
+            "usuarios": usuarios,
+            "negocios": negocios,
+            "partes": partes,
+            "contactos": contactos,
+            "direcciones": direcciones,
+            "relaciones": relaciones,
+            "capacidades": capacidades,
+            "extensiones_valores": extensiones,
+            "slugs": slugs,
+            "auditoria": auditoria,
+            "alcance": {
+                "incluye": ["identity"],
+                "pendiente": [
+                    "orders", "catalog", "inventory", "pricing",
+                    "finance", "logistics", "analytics"
+                ]
+            }
+        }))
+    }
+
+    /// Cierra el tenant y registra una solicitud de eliminación con retención.
+    pub async fn solicitar_eliminacion(
+        &self,
+        empresa_id: &str,
+        motivo: Option<&str>,
+        retencion_dias: i32,
+        actor_id: &str,
+    ) -> Result<Value, ApiError> {
+        if !(0..=3650).contains(&retencion_dias) {
+            return Err(ApiError::dominio(
+                "RETENCION_INVALIDA",
+                "La retención debe estar entre 0 y 3650 días.",
+            ));
+        }
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let estado: Option<String> = sqlx::query_scalar(
+            "SELECT estado FROM identity.empresas WHERE id = $1::uuid FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(estado) = estado else {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        };
+        let pendiente: Option<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM identity.solicitudes_eliminacion_tenant
+              WHERE empresa_id = $1::uuid AND estado = 'pendiente' FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if pendiente.is_some() {
+            return Err(ApiError::conflicto(
+                "Ya existe una solicitud de eliminación pendiente para esta empresa.",
+            ));
+        }
+        if estado != "inactiva" {
+            sqlx::query("UPDATE identity.empresas SET estado = 'inactiva' WHERE id = $1::uuid")
+                .bind(empresa_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+            revocar_sesiones_tenant(&mut tx, empresa_id).await?;
+            auditoria::registrar(
+                &mut tx,
+                actor_id,
+                empresa_id,
+                None,
+                "empresa.estado",
+                "empresa",
+                Some(empresa_id),
+                json!({
+                    "anterior": estado,
+                    "nuevo": "inactiva",
+                    "motivo": "eliminacion_solicitada",
+                }),
+            )
+            .await?;
+        }
+        let fila = sqlx::query(
+            "INSERT INTO identity.solicitudes_eliminacion_tenant AS s
+               (empresa_id, motivo, retencion_hasta, solicitado_por)
+             VALUES ($1::uuid, $2, CURRENT_DATE + $3::int, $4::uuid)
+             RETURNING to_jsonb(s) AS datos,
+                       (retencion_hasta <= CURRENT_DATE) AS purgable",
+        )
+        .bind(empresa_id)
+        .bind(motivo.unwrap_or(""))
+        .bind(retencion_dias)
+        .bind(actor_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let datos: Value = fila.try_get("datos").map_err(interno)?;
+        let purgable: bool = fila.try_get("purgable").map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            actor_id,
+            empresa_id,
+            None,
+            "empresa.eliminacion_solicitada",
+            "empresa",
+            Some(empresa_id),
+            json!({ "retencion_dias": retencion_dias, "purgable": purgable }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({ "solicitud": datos, "purgable": purgable }))
+    }
+
+    pub async fn consultar_eliminacion(&self, empresa_id: &str) -> Result<Option<Value>, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Ok(None);
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT to_jsonb(s) AS datos,
+                    (s.estado = 'pendiente' AND s.retencion_hasta <= CURRENT_DATE) AS purgable
+               FROM identity.solicitudes_eliminacion_tenant s
+              WHERE s.empresa_id = $1::uuid
+              ORDER BY s.creado_en DESC
+              LIMIT 1",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        match fila {
+            Some(fila) => {
+                let datos: Value = fila.try_get("datos").map_err(interno)?;
+                let purgable: bool = fila.try_get("purgable").map_err(interno)?;
+                Ok(Some(json!({ "solicitud": datos, "purgable": purgable })))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub async fn cancelar_eliminacion(
+        &self,
+        empresa_id: &str,
+        actor_id: &str,
+    ) -> Result<Value, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado(
+                "Solicitud de eliminación",
+                empresa_id,
+            ));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT id, (retencion_hasta <= CURRENT_DATE) AS vencida
+               FROM identity.solicitudes_eliminacion_tenant
+              WHERE empresa_id = $1::uuid AND estado IN ('pendiente', 'purgada')
+              FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(fila) = fila else {
+            return Err(ApiError::no_encontrado(
+                "Solicitud de eliminación",
+                empresa_id,
+            ));
+        };
+        let vencida: bool = fila.try_get("vencida").map_err(interno)?;
+        if vencida {
+            return Err(ApiError::conflicto(
+                "La retención ya venció; la solicitud no se puede cancelar.",
+            ));
+        }
+        let fila = sqlx::query(
+            "UPDATE identity.solicitudes_eliminacion_tenant AS s
+                SET estado = 'cancelada', actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid AND estado = 'pendiente'
+              RETURNING to_jsonb(s) AS datos",
+        )
+        .bind(empresa_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let datos: Value = fila.try_get("datos").map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            actor_id,
+            empresa_id,
+            None,
+            "empresa.eliminacion_cancelada",
+            "empresa",
+            Some(empresa_id),
+            json!({}),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({ "solicitud": datos, "purgable": false }))
+    }
+
+    /// Anonimiza los datos de identidad del tenant una vez vencida la
+    /// retención. Conserva las filas ancla (`empresas`, `usuarios`, `partes`)
+    /// para no romper referencias de otros servicios.
+    pub async fn purgar_eliminacion(
+        &self,
+        empresa_id: &str,
+        actor_id: &str,
+    ) -> Result<Value, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado(
+                "Solicitud de eliminación",
+                empresa_id,
+            ));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT id, (retencion_hasta <= CURRENT_DATE) AS vencida
+               FROM identity.solicitudes_eliminacion_tenant
+              WHERE empresa_id = $1::uuid AND estado IN ('pendiente', 'purgada')
+              FOR UPDATE",
+        )
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(fila) = fila else {
+            return Err(ApiError::no_encontrado(
+                "Solicitud de eliminación",
+                empresa_id,
+            ));
+        };
+        let solicitud_id: Uuid = fila.try_get("id").map_err(interno)?;
+        let vencida: bool = fila.try_get("vencida").map_err(interno)?;
+        if !vencida {
+            return Err(ApiError::conflicto(
+                "La retención aún no vence; no se puede purgar la identidad.",
+            ));
+        }
+
+        let negocio_ids: Vec<String> = sqlx::query_scalar(
+            "SELECT id::text FROM identity.negocios WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let usuario_ids: Vec<String> =
+            sqlx::query_scalar("SELECT id::text FROM identity.usuarios WHERE tenant_id = $1::uuid")
+                .bind(empresa_id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(interno)?;
+
+        sqlx::query(
+            "UPDATE identity.empresas
+                SET nombre = 'Empresa eliminada',
+                    slug = 'eliminada-' || replace(id::text, '-', ''),
+                    estado = 'inactiva',
+                    ruc = '', razon_social = '', nombre_comercial = '',
+                    descripcion = '', telefono = '', correo_contacto = '',
+                    sitio_web = '', direccion = '', ciudad = '',
+                    departamento = '', pais = '', moneda = 'NIO',
+                    zona_horaria = 'UTC', sector = '',
+                    representante_legal = '', horario_atencion = '',
+                    logo_objeto_id = NULL,
+                    background_objeto_id = NULL,
+                    background_media_type = NULL,
+                    background_poster_objeto_id = NULL,
+                    background_alt = '', background_overlay = 0,
+                    background_position = 'center', background_activo = false,
+                    plantilla_override = NULL, tema_override = '{}'::jsonb,
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET nombre = 'Usuario eliminado',
+                    correo = 'eliminado+' || replace(id::text, '-', '')
+                             || '@core-engine.invalid',
+                    contrasena_hash = '!eliminado',
+                    personal_id = NULL,
+                    participacion_porcentaje = NULL,
+                    avatar_objeto_id = NULL,
+                    actualizado_en = NOW()
+              WHERE tenant_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+
+        sqlx::query(
+            "DELETE FROM identity.sesiones
+              WHERE usuario_id IN (
+                  SELECT id FROM identity.usuarios WHERE tenant_id = $1::uuid
+              )",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "DELETE FROM identity.password_reset_tokens
+              WHERE usuario_id IN (
+                  SELECT id FROM identity.usuarios WHERE tenant_id = $1::uuid
+              )",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        for tabla in [
+            "identity.api_keys",
+            "identity.asignaciones_personal",
+            "identity.invitaciones_personal",
+            "identity.empresa_slugs",
+            "identity.exportacion_jobs",
+        ] {
+            sqlx::query(&format!("DELETE FROM {tabla} WHERE empresa_id = $1::uuid"))
+                .bind(empresa_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+        }
+
+        sqlx::query(
+            "UPDATE identity.partes
+                SET nombre = 'Parte eliminada', nombre_comercial = '',
+                    identificador_valor = '', metadata = '{}'::jsonb,
+                    estado = 'archivado', eliminado_en = COALESCE(eliminado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.medios_contacto
+                SET valor = '', etiqueta = '', metadata = '{}'::jsonb,
+                    verificado_en = NULL, eliminado_en = COALESCE(eliminado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.direcciones_partes
+                SET etiqueta = '', linea_1 = '', linea_2 = '', ciudad = '',
+                    departamento = '', pais = '', codigo_postal = '',
+                    referencias = '', latitud = NULL, longitud = NULL,
+                    metadata = '{}'::jsonb,
+                    eliminado_en = COALESCE(eliminado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.relaciones_partes
+                SET metadata = '{}'::jsonb, activo = false, actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.partes_registros
+                SET titulo = 'Registro eliminado', datos = '{}'::jsonb,
+                    adjuntos = '[]'::jsonb,
+                    eliminado_en = COALESCE(eliminado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.extensiones_empresa_valores
+                SET valores = '{}'::jsonb, actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.negocios
+                SET nombre = 'Negocio eliminado', estado = 'inactivo',
+                    archivado_en = COALESCE(archivado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+
+        let fila = sqlx::query(
+            "UPDATE identity.solicitudes_eliminacion_tenant AS s
+                SET estado = 'purgada', purgado_en = NOW(), actualizado_en = NOW()
+              WHERE id = $1::uuid
+              RETURNING to_jsonb(s) AS datos",
+        )
+        .bind(solicitud_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let datos: Value = fila.try_get("datos").map_err(interno)?;
+        // El rastro previo se conserva sin PII; el evento de purga se inserta
+        // después y queda como constancia de la operación.
+        sqlx::query(
+            "UPDATE identity.auditoria
+                SET actor_usuario_id = NULL, request_id = NULL, datos = '{}'::jsonb
+              WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            actor_id,
+            empresa_id,
+            None,
+            "empresa.eliminacion_purgada",
+            "empresa",
+            Some(empresa_id),
+            json!({ "solicitud_id": solicitud_id.to_string() }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        let servicios = self
+            .purga
+            .ejecutar(empresa_id, &negocio_ids, &usuario_ids)
+            .await;
+        Ok(json!({
+            "solicitud": datos,
+            "purgable": false,
+            "servicios": servicios,
+        }))
+    }
+
+    /// Crea un job de exportación asíncrona (identidad + servicios).
+    pub async fn iniciar_exportacion(
+        &self,
+        empresa_id: &str,
+        actor_id: &str,
+    ) -> Result<Value, ApiError> {
+        if !es_uuid(empresa_id) {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        }
+        let existe: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM identity.empresas WHERE id = $1::uuid")
+                .bind(empresa_id)
+                .fetch_optional(self.db.pool())
+                .await
+                .map_err(interno)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado("Empresa", empresa_id));
+        }
+        let fila = sqlx::query(
+            "INSERT INTO identity.exportacion_jobs (empresa_id, solicitado_por)
+             VALUES ($1::uuid, $2::uuid)
+             RETURNING id, estado, formato, creado_en",
+        )
+        .bind(empresa_id)
+        .bind(actor_id)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(interno)?;
+        let job_id: Uuid = fila.try_get("id").map_err(interno)?;
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        auditoria::registrar(
+            &mut tx,
+            actor_id,
+            empresa_id,
+            None,
+            "empresa.export_solicitada",
+            "empresa",
+            Some(empresa_id),
+            json!({ "job_id": job_id.to_string() }),
+        )
+        .await?;
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({
+            "job_id": job_id.to_string(),
+            "estado": fila.try_get::<String, _>("estado").map_err(interno)?,
+            "formato": fila.try_get::<String, _>("formato").map_err(interno)?,
+            "creado_en": crate::db::iso_ms(fila.try_get::<chrono::DateTime<Utc>, _>("creado_en").map_err(interno)?),
+        }))
+    }
+
+    pub async fn estado_exportacion(
+        &self,
+        empresa_id: &str,
+        job_id: &str,
+    ) -> Result<Value, ApiError> {
+        if !es_uuid(empresa_id) || !es_uuid(job_id) {
+            return Err(ApiError::no_encontrado("Exportación", job_id));
+        }
+        let datos: Option<Value> = sqlx::query_scalar(
+            "SELECT to_jsonb(j) - 'contenido' AS datos
+               FROM identity.exportacion_jobs j
+              WHERE j.id = $1::uuid AND j.empresa_id = $2::uuid",
+        )
+        .bind(job_id)
+        .bind(empresa_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(interno)?;
+        datos.ok_or_else(|| ApiError::no_encontrado("Exportación", job_id))
+    }
+
+    /// Devuelve el archivo firmado de un job completado.
+    pub async fn descargar_exportacion(
+        &self,
+        job_id: &str,
+    ) -> Result<DescargaExportacion, ApiError> {
+        if !es_uuid(job_id) {
+            return Err(ApiError::no_encontrado("Exportación", job_id));
+        }
+        let fila = sqlx::query(
+            "SELECT empresa_id, formato, contenido, sha256, firma, estado
+               FROM identity.exportacion_jobs WHERE id = $1::uuid",
+        )
+        .bind(job_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(interno)?
+        .ok_or_else(|| ApiError::no_encontrado("Exportación", job_id))?;
+        let estado: String = fila.try_get("estado").map_err(interno)?;
+        if estado != "completado" {
+            return Err(ApiError::conflicto(
+                "La exportación aún no está completada.",
+            ));
+        }
+        let contenido: Option<Vec<u8>> = fila.try_get("contenido").map_err(interno)?;
+        let contenido = contenido.ok_or_else(ApiError::interno)?;
+        Ok(DescargaExportacion {
+            empresa_id: fila
+                .try_get::<Uuid, _>("empresa_id")
+                .map_err(interno)?
+                .to_string(),
+            formato: fila.try_get("formato").map_err(interno)?,
+            sha256: fila.try_get("sha256").map_err(interno)?,
+            firma: fila.try_get("firma").map_err(interno)?,
+            contenido,
+        })
+    }
+
+    /// Reanuda jobs que quedaron pendientes o en proceso tras un reinicio.
+    pub async fn reanudar_exportaciones(&self) -> Result<Vec<String>, ApiError> {
+        sqlx::query(
+            "UPDATE identity.exportacion_jobs
+                SET estado = 'pendiente', iniciado_en = NULL
+              WHERE estado = 'en_proceso'",
+        )
+        .execute(self.db.pool())
+        .await
+        .map_err(interno)?;
+        sqlx::query_scalar(
+            "SELECT id::text FROM identity.exportacion_jobs
+              WHERE estado = 'pendiente' ORDER BY creado_en LIMIT 50",
+        )
+        .fetch_all(self.db.pool())
+        .await
+        .map_err(interno)
+    }
+
+    /// Ejecuta el job en segundo plano. Es idempotente: un job completado no
+    /// se vuelve a generar.
+    pub async fn ejecutar_exportacion(&self, job_id: &str) -> Result<(), ApiError> {
+        if !es_uuid(job_id) {
+            return Ok(());
+        }
+        let fila = match sqlx::query(
+            "SELECT empresa_id, solicitado_por, estado
+               FROM identity.exportacion_jobs WHERE id = $1::uuid",
+        )
+        .bind(job_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(interno)?
+        {
+            Some(fila) => fila,
+            None => return Ok(()),
+        };
+        let estado: String = fila.try_get("estado").map_err(interno)?;
+        if estado == "completado" || estado == "en_proceso" {
+            return Ok(());
+        }
+        let empresa_id: Uuid = fila.try_get("empresa_id").map_err(interno)?;
+        let actor_id: Option<Uuid> = fila.try_get("solicitado_por").map_err(interno)?;
+        let actor_id = actor_id
+            .map(|valor| valor.to_string())
+            .unwrap_or_else(|| "sistema".to_string());
+        let actualizado = sqlx::query(
+            "UPDATE identity.exportacion_jobs
+                SET estado = 'en_proceso', iniciado_en = NOW(), error = NULL
+              WHERE id = $1::uuid AND estado IN ('pendiente', 'fallido')",
+        )
+        .bind(job_id)
+        .execute(self.db.pool())
+        .await
+        .map_err(interno)?;
+        if actualizado.rows_affected() == 0 {
+            return Ok(());
+        }
+        let empresa = empresa_id.to_string();
+        let negocio_ids: Vec<String> = sqlx::query_scalar(
+            "SELECT id::text FROM identity.negocios WHERE empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_all(self.db.pool())
+        .await
+        .map_err(interno)?;
+        let usuario_ids: Vec<String> =
+            sqlx::query_scalar("SELECT id::text FROM identity.usuarios WHERE tenant_id = $1::uuid")
+                .bind(empresa_id)
+                .fetch_all(self.db.pool())
+                .await
+                .map_err(interno)?;
+
+        let resultado: Result<(), ApiError> = async {
+            let identidad = self.exportar(&empresa, &actor_id).await?;
+            let servicios = self
+                .purga
+                .exportar(&empresa, &negocio_ids, &usuario_ids)
+                .await;
+            let cuerpo = json!({
+                "formato": "core-engine.tenant-export.v2",
+                "generado_en": crate::db::iso_ms(Utc::now()),
+                "empresa_id": empresa,
+                "identidad": identidad,
+                "servicios": servicios,
+            });
+            let bytes = serde_json::to_vec(&cuerpo).map_err(|_| ApiError::interno())?;
+            let sha = sha256_hex(&bytes);
+            let firma = hmac_sha256_hex(self.firma_clave.as_bytes(), &bytes);
+            let servicios_estado: Vec<Value> = cuerpo
+                .get("servicios")
+                .and_then(Value::as_array)
+                .map(|valores| {
+                    valores
+                        .iter()
+                        .map(|valor| {
+                            json!({
+                                "servicio": valor.get("servicio"),
+                                "estado": valor.get("estado"),
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            sqlx::query(
+                "UPDATE identity.exportacion_jobs
+                    SET estado = 'completado', contenido = $2, tamano_bytes = $3,
+                        sha256 = $4, firma = $5, servicios = $6::jsonb,
+                        completado_en = NOW()
+                  WHERE id = $1::uuid",
+            )
+            .bind(job_id)
+            .bind(&bytes)
+            .bind(bytes.len() as i64)
+            .bind(&sha)
+            .bind(&firma)
+            .bind(sqlx::types::Json(&servicios_estado))
+            .execute(self.db.pool())
+            .await
+            .map_err(interno)?;
+            Ok(())
+        }
+        .await;
+        if let Err(error) = resultado {
+            let _ = sqlx::query(
+                "UPDATE identity.exportacion_jobs
+                    SET estado = 'fallido', error = $2, completado_en = NOW()
+                  WHERE id = $1::uuid",
+            )
+            .bind(job_id)
+            .bind(&error.mensaje)
+            .execute(self.db.pool())
+            .await;
+            return Err(error);
+        }
+        Ok(())
     }
 
     pub async fn actualizar_perfil(
@@ -1162,6 +2098,51 @@ fn es_codigo_segmento(valor: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
+/// Ejecuta una consulta que devuelve un `jsonb` agregado y recibe un único
+/// parámetro `empresa_id`.
+async fn jsonb_por_empresa(
+    tx: &mut Transaction<'_, Postgres>,
+    sql: &str,
+    empresa_id: &str,
+) -> Result<Value, ApiError> {
+    sqlx::query_scalar(sql)
+        .bind(empresa_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(interno)
+}
+
+/// Suspender/cerrar corta el refresh de todos los usuarios del tenant; los
+/// access tokens vigentes expiran en su TTL corto.
+async fn revocar_sesiones_tenant(
+    tx: &mut Transaction<'_, Postgres>,
+    empresa_id: &str,
+) -> Result<(), ApiError> {
+    sqlx::query(
+        "UPDATE identity.sesiones
+            SET revocada_en = NOW()
+          WHERE revocada_en IS NULL
+            AND usuario_id IN (
+                SELECT id FROM identity.usuarios WHERE tenant_id = $1::uuid
+            )",
+    )
+    .bind(empresa_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(interno)?;
+    Ok(())
+}
+
+/// `inactiva` es el cierre operativo; solo un administrador puede reactivar.
+fn transicion_estado_permitida(actual: &str, nuevo: &str) -> bool {
+    matches!(
+        (actual, nuevo),
+        ("activa", "suspendida" | "inactiva")
+            | ("suspendida", "activa" | "inactiva")
+            | ("inactiva", "activa")
+    )
+}
+
 fn texto(valor: &Value, clave: &str) -> String {
     valor
         .get(clave)
@@ -1258,6 +2239,17 @@ mod tests {
     fn debe_normalizar_el_slug_desde_el_nombre() {
         assert_eq!(slug_desde_nombre("Mi Empresa", "empresa"), "mi-empresa");
         assert!(es_slug_valido(&normalizar_slug("Café Ñandú")));
+    }
+
+    #[test]
+    fn debe_validar_las_transiciones_de_estado_del_tenant() {
+        assert!(transicion_estado_permitida("activa", "suspendida"));
+        assert!(transicion_estado_permitida("activa", "inactiva"));
+        assert!(transicion_estado_permitida("suspendida", "activa"));
+        assert!(transicion_estado_permitida("suspendida", "inactiva"));
+        assert!(transicion_estado_permitida("inactiva", "activa"));
+        assert!(!transicion_estado_permitida("inactiva", "suspendida"));
+        assert!(!transicion_estado_permitida("suspendida", "suspendida"));
     }
 
     #[test]

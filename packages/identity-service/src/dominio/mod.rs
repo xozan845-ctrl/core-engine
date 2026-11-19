@@ -19,4 +19,6 @@ pub mod registros;
 pub mod sesiones;
 pub mod slug;
 pub mod tema;
+pub mod totp;
 pub mod usuarios;
+pub mod verificacion;

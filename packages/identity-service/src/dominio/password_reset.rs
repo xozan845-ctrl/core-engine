@@ -5,7 +5,7 @@
 //!   anteriores del mismo usuario.
 //! - La respuesta de la solicitud nunca revela si el correo existe (OWASP A07).
 
-use crate::auth::hash_contrasena;
+use crate::auth::{hash_contrasena, validar_contrasena};
 use crate::db::Db;
 use crate::dominio::sesiones::Sesiones;
 use crate::dominio::usuarios::Usuarios;
@@ -111,14 +111,7 @@ impl PasswordReset {
     }
 
     pub async fn confirmar(&self, token: &str, nueva: &str) -> Result<(), ApiError> {
-        if nueva.chars().count() < 8 {
-            return Err(ApiError::dominio(
-                "CONTRASENA_DEBIL",
-                "La nueva contrasena debe tener al menos 8 caracteres.",
-            ));
-        }
         let token_hash = hash_token(token.trim());
-        let hash = hash_contrasena(nueva)?;
 
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
@@ -132,13 +125,28 @@ impl PasswordReset {
         .await
         .map_err(interno)?;
         let usuario_id = validar_token(fila)?;
+        let usuario = self
+            .usuarios
+            .encontrar_por_id(&usuario_id)
+            .await?
+            .ok_or_else(|| ApiError::no_encontrado("Usuario", &usuario_id))?;
+        validar_contrasena(nueva, &usuario.correo, &usuario.nombre)?;
+        let hash = hash_contrasena(nueva)?;
 
-        sqlx::query("UPDATE identity.usuarios SET contrasena_hash = $1 WHERE id = $2::uuid")
-            .bind(hash)
-            .bind(&usuario_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET contrasena_hash = $1,
+                    password_actualizado_en = NOW(),
+                    intentos_fallidos = 0,
+                    bloqueado_hasta = NULL,
+                    actualizado_en = NOW()
+              WHERE id = $2::uuid",
+        )
+        .bind(hash)
+        .bind(&usuario_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
         sqlx::query(
             "UPDATE identity.password_reset_tokens SET usado_en = NOW()
               WHERE usuario_id = $1::uuid AND usado_en IS NULL",
