@@ -145,7 +145,8 @@ async fn main() {
         ventas,
         reportes,
         capacidades,
-    );
+    )
+    .con_db(Arc::clone(&db));
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

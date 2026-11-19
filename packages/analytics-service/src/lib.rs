@@ -9,6 +9,7 @@ pub mod consumidor;
 pub mod db;
 pub mod errors;
 pub mod http;
+pub mod lifecycle;
 pub mod logs;
 pub mod metrics;
 pub mod rabbit;

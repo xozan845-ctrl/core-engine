@@ -311,6 +311,10 @@ impl FieldService {
     pub fn nuevo(db: Arc<Db>, partes: Arc<dyn Partes>) -> Self {
         Self { db, partes }
     }
+
+    pub fn db(&self) -> &Arc<Db> {
+        &self.db
+    }
 }
 
 mod asistencia;
