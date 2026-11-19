@@ -50,6 +50,16 @@ impl AlmacenObjetos for AlmacenFake {
     ) -> Result<String, AlmacenError> {
         Ok(format!("http://minio/{bucket}/{objeto}?download=1"))
     }
+    async fn subir(
+        &self,
+        bucket: &str,
+        objeto: &str,
+        bytes: Vec<u8>,
+        content_type: &str,
+    ) -> Result<(), AlmacenError> {
+        subir(self, bucket, objeto, &bytes, content_type).await;
+        Ok(())
+    }
     async fn estadisticas(
         &self,
         bucket: &str,
@@ -279,4 +289,145 @@ async fn debe_gestionar_buckets_objetos_cuotas_y_publicos() {
         .bind(tenant_uuid)
         .execute(db.pool())
         .await;
+}
+
+#[tokio::test]
+async fn debe_purgar_todos_los_objetos_de_un_tenant() {
+    let Some(url) = url() else {
+        return;
+    };
+    let pool = PgPool::connect(&url).await.expect("postgres");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/09_storage.sql"))
+        .execute(&pool)
+        .await
+        .expect("migracion storage");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/09a_storage_publico.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion storage publico");
+    pool.close().await;
+
+    let config = Arc::new(Config::from_pairs([("SERVICIO", "storage-service")]).expect("config"));
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let almacen = Arc::new(AlmacenFake::default());
+    let buckets = Arc::new(Buckets::nueva(
+        Arc::clone(&db),
+        almacen.clone(),
+        Arc::clone(&config),
+    ));
+    let objetos = Objetos::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&buckets),
+        Arc::new(Outbox::nueva("storage.outbox")),
+        almacen.clone(),
+        Arc::clone(&config),
+    );
+    let tenant = Uuid::new_v4().to_string();
+    buckets.asegurar(&tenant).await.expect("bucket");
+    for nombre in ["a.png", "b.png"] {
+        let solicitud = objetos
+            .solicitar_subida(
+                &tenant,
+                None,
+                DatosSubida {
+                    nombre: nombre.into(),
+                    content_type: "image/png".into(),
+                    tamano_bytes: 3,
+                    ..Default::default()
+                },
+            )
+            .await
+            .expect("solicitud");
+        subir(
+            &almacen,
+            &solicitud.bucket,
+            &solicitud.objeto,
+            b"abc",
+            "image/png",
+        )
+        .await;
+        objetos
+            .confirmar(&tenant, &solicitud.objeto_id)
+            .await
+            .expect("confirmar");
+    }
+    let estado = buckets.estado(&tenant).await.expect("estado");
+    assert_eq!(estado.objetos, 2);
+    let exportado = objetos.exportar_tenant(&tenant).await.expect("exportar");
+    assert_eq!(exportado["objetos"].as_array().map(Vec::len), Some(2));
+    assert_eq!(exportado["objetos"][0]["contenido_base64"], "YWJj");
+
+    let resultado = objetos.purgar_tenant(&tenant).await.expect("purga");
+    assert_eq!(resultado["objetos"], 2);
+    assert_eq!(resultado["errores"], 0);
+    assert!(almacen.objetos.lock().await.is_empty());
+    let estado = buckets.estado(&tenant).await.expect("estado");
+    assert_eq!(estado.objetos, 0);
+    assert_eq!(estado.usado_bytes, 0);
+
+    let repetido = objetos
+        .purgar_tenant(&tenant)
+        .await
+        .expect("purga repetida");
+    assert_eq!(repetido["objetos"], 0);
+}
+
+#[tokio::test]
+async fn debe_subir_y_leer_contenido_directo() {
+    let Some(url) = url() else { return };
+    let pool = PgPool::connect(&url).await.expect("postgres");
+    sqlx::raw_sql(include_str!("../../../infra/db/init/09_storage.sql"))
+        .execute(&pool)
+        .await
+        .expect("migracion storage");
+    pool.close().await;
+
+    let config = Arc::new(Config::from_pairs([("SERVICIO", "storage-service")]).expect("config"));
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let almacen = Arc::new(AlmacenFake::default());
+    let buckets = Arc::new(Buckets::nueva(
+        Arc::clone(&db),
+        almacen.clone(),
+        Arc::clone(&config),
+    ));
+    let objetos = Objetos::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&buckets),
+        Arc::new(Outbox::nueva("storage.outbox")),
+        almacen.clone(),
+        Arc::clone(&config),
+    );
+    let tenant = Uuid::new_v4().to_string();
+    buckets.asegurar(&tenant).await.expect("bucket");
+
+    let subido = objetos
+        .subir_contenido(
+            &tenant,
+            None,
+            "comprobante.pdf",
+            "application/pdf",
+            b"%PDF-1.4 demo".to_vec(),
+            false,
+            Some("comprobante de prueba".into()),
+        )
+        .await
+        .expect("subir");
+    assert_eq!(subido.estado, "activo");
+    assert_eq!(subido.tamano_bytes, 13);
+
+    let leido = objetos
+        .leer_contenido(&tenant, &subido.id)
+        .await
+        .expect("leer");
+    assert_eq!(leido.content_type, "application/pdf");
+    let bytes = leido
+        .cuerpo
+        .cuerpo
+        .collect()
+        .await
+        .expect("bytes")
+        .into_bytes();
+    assert_eq!(bytes.as_ref(), b"%PDF-1.4 demo");
 }
