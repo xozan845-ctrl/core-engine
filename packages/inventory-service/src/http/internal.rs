@@ -7,7 +7,7 @@ use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 
 fn exigir_clave(state: &AppState, headers: &HeaderMap) -> Result<(), ApiError> {
@@ -184,4 +184,30 @@ pub async fn devolucion(
     .await?;
     tx.commit().await.map_err(crate::db::interno)?;
     ok(serde_json::json!({ "ok": true }))
+}
+
+/// POST /internal/inventory/tenant/exportar
+pub async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let datos = crate::lifecycle::exportar(state.db()?.pool(), &dto)
+        .await
+        .map_err(|_| ApiError::interno())?;
+    ok(json!({ "servicio": "inventory", "estado": "completado", "datos": datos }))
+}
+
+/// POST /internal/inventory/tenant/purgar
+pub async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let detalle = crate::lifecycle::purgar(state.db()?.pool(), &dto)
+        .await
+        .map_err(|_| ApiError::interno())?;
+    ok(json!({ "servicio": "inventory", "estado": "completado", "detalle": detalle }))
 }

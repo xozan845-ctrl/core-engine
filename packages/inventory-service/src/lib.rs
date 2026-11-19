@@ -13,6 +13,7 @@ pub mod db;
 pub mod errors;
 pub mod http;
 pub mod inventario;
+pub mod lifecycle;
 pub mod logs;
 pub mod metrics;
 pub mod money;

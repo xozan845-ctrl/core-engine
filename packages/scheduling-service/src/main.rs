@@ -101,7 +101,8 @@ async fn main() {
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let estado = AppState::con_dependencias(config, metrics, agenda, capacidades);
+    let estado =
+        AppState::con_dependencias(config, metrics, agenda, capacidades).con_db(Arc::clone(&db));
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {
