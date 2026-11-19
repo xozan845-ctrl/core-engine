@@ -118,6 +118,16 @@ async fn main() {
             config.internal_request_timeout_ms,
         );
     }
+    if config.pdf_almacenamiento.eq_ignore_ascii_case("storage") {
+        if let Some(url) = config.storage_service_url.clone() {
+            facturacion =
+                facturacion.con_pdf_almacen(finance_service::pdf_almacen::PdfAlmacen::nueva(
+                    url,
+                    config.internal_api_key.clone(),
+                    config.internal_request_timeout_ms,
+                ));
+        }
+    }
     let facturacion = Arc::new(facturacion);
     let comercio = Arc::new(Comercio::nuevo(Arc::clone(&db)));
     let proyecciones = Arc::new(Proyecciones::nueva(Arc::clone(&db)));

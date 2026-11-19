@@ -308,6 +308,14 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         )
         .route("/internal/finance/tipos-cambio", get(interno::tipo_cambio))
         .route(
+            "/internal/finance/configuracion-fiscal",
+            get(interno::configuracion_fiscal),
+        )
+        .route(
+            "/internal/finance/notas-credito",
+            post(interno::nota_credito),
+        )
+        .route(
             "/internal/finance/creditos",
             post(interno::registrar_credito),
         )
@@ -318,5 +326,13 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         .route(
             "/internal/finance/declaraciones",
             get(interno::declaraciones),
+        )
+        .route(
+            "/internal/finance/tenant/purgar",
+            post(interno::purgar_tenant),
+        )
+        .route(
+            "/internal/finance/tenant/exportar",
+            post(interno::exportar_tenant),
         )
 }
