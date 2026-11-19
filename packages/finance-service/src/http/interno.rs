@@ -12,6 +12,51 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
+#[derive(Debug, Deserialize)]
+pub struct PurgaTenant {
+    pub empresa_id: String,
+    #[serde(default)]
+    pub negocio_ids: Vec<String>,
+    #[serde(default)]
+    pub usuario_ids: Vec<String>,
+}
+
+/// POST /internal/finance/tenant/exportar
+pub async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<PurgaTenant>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let datos = state
+        .facturacion
+        .exportar_tenant(&dto.empresa_id, &dto.negocio_ids, &dto.usuario_ids)
+        .await?;
+    Ok(Json(json!({
+        "servicio": "finance",
+        "estado": "completado",
+        "datos": datos,
+    })))
+}
+
+/// POST /internal/finance/tenant/purgar
+pub async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<PurgaTenant>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let detalle = state
+        .facturacion
+        .purgar_tenant(&dto.empresa_id, &dto.negocio_ids, &dto.usuario_ids)
+        .await?;
+    Ok(Json(json!({
+        "servicio": "finance",
+        "estado": "completado",
+        "detalle": detalle,
+    })))
+}
+
 pub async fn sujeto(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -82,6 +127,61 @@ pub async fn declaraciones(
             })
             .await?,
     ))
+}
+
+/// `GET /internal/finance/configuracion-fiscal?empresa_id=&negocio_id=`.
+pub async fn configuracion_fiscal(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let empresa = query
+        .get("empresa_id")
+        .map(String::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([
+                {"campo": "empresa_id", "restricciones": ["isString"]}
+            ]))
+        })?;
+    if uuid::Uuid::parse_str(empresa).is_err() {
+        return Err(ApiError::validacion(json!([
+            {"campo": "empresa_id", "restricciones": ["isUuid"]}
+        ])));
+    }
+    let negocio = query
+        .get("negocio_id")
+        .map(String::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+    let config = state
+        .tributacion
+        .configuracion_facturacion(empresa, negocio)
+        .await?;
+    Ok(Json(json!({
+        "empresa_id": empresa,
+        "negocio_id": negocio,
+        "jurisdiccion": config.jurisdiccion.codigo_pais,
+        "moneda": config.jurisdiccion.moneda,
+        "tasa_iva": config.jurisdiccion.tasa_iva,
+        "impuesto_activo": config.impuesto_activo,
+        "precios_con_impuesto": config.precios_con_impuesto,
+    })))
+}
+
+/// `POST /internal/finance/notas-credito` (devolución parcial desde orders).
+pub async fn nota_credito(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<crate::facturacion::Comprobante>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let dto: crate::facturacion::NotaCreditoDto = serde_json::from_value(cuerpo).map_err(|_| {
+        ApiError::validacion(json!([{"campo": "body", "restricciones": ["isObject"]}]))
+    })?;
+    Ok(Json(state.facturacion.emitir_nota_credito(dto).await?))
 }
 
 pub async fn tipo_cambio(

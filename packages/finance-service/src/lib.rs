@@ -20,6 +20,7 @@ pub mod metrics;
 pub mod money;
 pub mod outbox;
 pub mod pdf;
+pub mod pdf_almacen;
 pub mod rabbit;
 pub mod rutas;
 pub mod state;
