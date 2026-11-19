@@ -12,7 +12,7 @@ use serde_json::Value;
 use sqlx::Row;
 use uuid::Uuid;
 
-const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, comision_cents,
+const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, impuesto_cents, comision_cents,
               descuento_cupon_cents, cupon_codigo, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, metodo_pago, fulfillment_config,
@@ -28,6 +28,8 @@ pub struct OrderView {
     pub negocio_id: Option<String>,
     pub estado: String,
     pub total_cents: i64,
+    #[serde(default)]
+    pub impuesto_cents: i64,
     pub comision_cents: i64,
     #[serde(default)]
     pub descuento_cupon_cents: i64,
@@ -284,6 +286,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
         negocio_id: crate::db::uuid_opcional(fila, "negocio_id").map_err(error_db)?,
         estado: fila.try_get("estado").map_err(error_db)?,
         total_cents: i64::from(fila.try_get::<i32, _>("total_cents").map_err(error_db)?),
+        impuesto_cents: i64::from(fila.try_get::<i32, _>("impuesto_cents").unwrap_or(0)),
         comision_cents: i64::from(fila.try_get::<i32, _>("comision_cents").map_err(error_db)?),
         descuento_cupon_cents: i64::from(
             fila.try_get::<i32, _>("descuento_cupon_cents").unwrap_or(0),
@@ -347,6 +350,7 @@ mod tests {
             negocio_id: None,
             estado: "creada".into(),
             total_cents: 100,
+            impuesto_cents: 0,
             comision_cents: 12,
             descuento_cupon_cents: 0,
             cupon_codigo: None,

@@ -16,6 +16,14 @@ pub fn rutas() -> Router<AppState> {
         .route("/api/v2/admin/devoluciones/{id}/aprobar", post(aprobar))
         .route("/api/v2/admin/devoluciones/{id}/recibir", post(recibir))
         .route("/api/v2/admin/devoluciones/{id}/rechazar", post(rechazar))
+        .route(
+            "/api/v2/admin/devoluciones/{id}/reembolsar",
+            post(reembolsar),
+        )
+        .route(
+            "/api/v2/admin/devoluciones/{id}/nota-credito",
+            post(nota_credito),
+        )
 }
 
 async fn crear(
@@ -82,5 +90,31 @@ async fn rechazar(
 ) -> Result<Response, ApiError> {
     let usuario = autorizar(&headers, &["super_admin", "admin"], &[])?;
     let devolucion = state.devoluciones()?.rechazar(&id, &usuario).await?;
+    ok(serde_json::to_value(devolucion).map_err(|_| ApiError::interno())?)
+}
+
+async fn reembolsar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    let usuario = autorizar(&headers, &["super_admin", "admin"], &[])?;
+    let devolucion = state
+        .devoluciones()?
+        .reembolsar_devolucion(&id, &usuario)
+        .await?;
+    ok(serde_json::to_value(devolucion).map_err(|_| ApiError::interno())?)
+}
+
+async fn nota_credito(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    let usuario = autorizar(&headers, &["super_admin", "admin"], &[])?;
+    let devolucion = state
+        .devoluciones()?
+        .emitir_nota_credito(&id, &usuario)
+        .await?;
     ok(serde_json::to_value(devolucion).map_err(|_| ApiError::interno())?)
 }

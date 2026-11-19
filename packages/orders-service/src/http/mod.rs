@@ -79,7 +79,16 @@ pub fn aplicar_capas(router: Router, state: AppState) -> Router {
             state.clone(),
             metricas,
         ))
-        .layer(axum::middleware::from_fn_with_state(state, correlacion))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            correlacion,
+        ))
+        // La idempotencia va lo más afuera posible para guardar la respuesta
+        // final (ya envuelta) y reenviarla idéntica en un reintento.
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            crate::idempotencia::middleware,
+        ))
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
