@@ -32,6 +32,8 @@ pub struct ConfiguracionFacturacion {
     pub formato_pdf: bool,
     pub proveedor_electronico: String,
     pub ambiente_electronico: String,
+    pub impuesto_activo: bool,
+    pub precios_con_impuesto: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -264,7 +266,8 @@ impl Tributacion {
     ) -> Result<ConfiguracionFacturacion, ApiError> {
         let fila = sqlx::query(
             "SELECT jurisdiccion, facturacion_electronica, formato_pdf,
-                    proveedor_electronico, ambiente_electronico
+                    proveedor_electronico, ambiente_electronico,
+                    impuesto_activo, precios_con_impuesto
                FROM finance.configuracion_fiscal
               WHERE empresa_id = $1::uuid
                 AND (negocio_id = $2::uuid OR negocio_id IS NULL)
@@ -281,23 +284,35 @@ impl Tributacion {
             .ok_or_else(|| {
                 ApiError::dominio("SIN_JURISDICCION", "No hay jurisdicción configurada.")
             })?;
-        let (electronica, pdf, proveedor, ambiente) = match fila {
-            Some(fila) => (
-                fila.try_get("facturacion_electronica").unwrap_or(false),
-                fila.try_get("formato_pdf").unwrap_or(false),
-                fila.try_get::<String, _>("proveedor_electronico")
-                    .unwrap_or_else(|_| "simulado".to_string()),
-                fila.try_get::<String, _>("ambiente_electronico")
-                    .unwrap_or_else(|_| "pruebas".to_string()),
-            ),
-            None => (false, false, "simulado".to_string(), "pruebas".to_string()),
-        };
+        let (electronica, pdf, proveedor, ambiente, impuesto_activo, precios_con_impuesto) =
+            match fila {
+                Some(fila) => (
+                    fila.try_get("facturacion_electronica").unwrap_or(false),
+                    fila.try_get("formato_pdf").unwrap_or(false),
+                    fila.try_get::<String, _>("proveedor_electronico")
+                        .unwrap_or_else(|_| "simulado".to_string()),
+                    fila.try_get::<String, _>("ambiente_electronico")
+                        .unwrap_or_else(|_| "pruebas".to_string()),
+                    fila.try_get("impuesto_activo").unwrap_or(false),
+                    fila.try_get("precios_con_impuesto").unwrap_or(true),
+                ),
+                None => (
+                    false,
+                    false,
+                    "simulado".to_string(),
+                    "pruebas".to_string(),
+                    false,
+                    true,
+                ),
+            };
         Ok(ConfiguracionFacturacion {
             jurisdiccion,
             facturacion_electronica: electronica,
             formato_pdf: pdf,
             proveedor_electronico: proveedor,
             ambiente_electronico: ambiente,
+            impuesto_activo,
+            precios_con_impuesto,
         })
     }
 
@@ -311,6 +326,8 @@ impl Tributacion {
         formato_pdf: bool,
         proveedor_electronico: &str,
         ambiente_electronico: &str,
+        impuesto_activo: bool,
+        precios_con_impuesto: bool,
     ) -> Result<ConfiguracionFacturacion, ApiError> {
         let empresa = uuid::Uuid::parse_str(empresa_id)
             .map_err(|_| ApiError::dominio("EMPRESA_INVALIDA", "Empresa inválida."))?;
@@ -348,14 +365,16 @@ impl Tributacion {
                     "INSERT INTO finance.configuracion_fiscal
                        (empresa_id, negocio_id, jurisdiccion, facturacion_electronica,
                         formato_pdf, proveedor_electronico, ambiente_electronico,
-                        actualizado_en)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                        impuesto_activo, precios_con_impuesto, actualizado_en)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
                      ON CONFLICT (empresa_id, negocio_id) WHERE negocio_id IS NOT NULL
                      DO UPDATE SET jurisdiccion = EXCLUDED.jurisdiccion,
                                    facturacion_electronica = EXCLUDED.facturacion_electronica,
                                    formato_pdf = EXCLUDED.formato_pdf,
                                    proveedor_electronico = EXCLUDED.proveedor_electronico,
                                    ambiente_electronico = EXCLUDED.ambiente_electronico,
+                                   impuesto_activo = EXCLUDED.impuesto_activo,
+                                   precios_con_impuesto = EXCLUDED.precios_con_impuesto,
                                    actualizado_en = NOW()",
                 )
                 .bind(empresa)
@@ -365,6 +384,8 @@ impl Tributacion {
                 .bind(formato_pdf)
                 .bind(proveedor_electronico)
                 .bind(ambiente_electronico)
+                .bind(impuesto_activo)
+                .bind(precios_con_impuesto)
                 .execute(self.db.pool())
                 .await
                 .map_err(error_db)?;
@@ -374,14 +395,16 @@ impl Tributacion {
                     "INSERT INTO finance.configuracion_fiscal
                        (empresa_id, negocio_id, jurisdiccion, facturacion_electronica,
                         formato_pdf, proveedor_electronico, ambiente_electronico,
-                        actualizado_en)
-                     VALUES ($1, NULL, $2, $3, $4, $5, $6, NOW())
+                        impuesto_activo, precios_con_impuesto, actualizado_en)
+                     VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, NOW())
                      ON CONFLICT (empresa_id) WHERE negocio_id IS NULL
                      DO UPDATE SET jurisdiccion = EXCLUDED.jurisdiccion,
                                    facturacion_electronica = EXCLUDED.facturacion_electronica,
                                    formato_pdf = EXCLUDED.formato_pdf,
                                    proveedor_electronico = EXCLUDED.proveedor_electronico,
                                    ambiente_electronico = EXCLUDED.ambiente_electronico,
+                                   impuesto_activo = EXCLUDED.impuesto_activo,
+                                   precios_con_impuesto = EXCLUDED.precios_con_impuesto,
                                    actualizado_en = NOW()",
                 )
                 .bind(empresa)
@@ -390,6 +413,8 @@ impl Tributacion {
                 .bind(formato_pdf)
                 .bind(proveedor_electronico)
                 .bind(ambiente_electronico)
+                .bind(impuesto_activo)
+                .bind(precios_con_impuesto)
                 .execute(self.db.pool())
                 .await
                 .map_err(error_db)?;

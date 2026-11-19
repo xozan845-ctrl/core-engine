@@ -8,7 +8,8 @@ use finance_service::consumidor::Consumidor;
 use finance_service::contabilidad::{Contabilidad, DetalleAsiento, ParametrosAsiento};
 use finance_service::db::Db;
 use finance_service::facturacion::{
-    Comprobante, EmitirComprobante, Facturacion, OrdenItemFiscal, OrdenResumen, Ordenes,
+    Comprobante, EmitirComprobante, Facturacion, NotaCreditoDto, OrdenItemFiscal, OrdenResumen,
+    Ordenes,
 };
 use finance_service::finanzas::proyecciones::{Proyecciones, SupuestosProyeccion};
 use finance_service::outbox::Outbox;
@@ -44,16 +45,44 @@ impl Ordenes for OrdenesFijas {
             negocio_id: None,
             items: vec![
                 OrdenItemFiscal {
+                    sku: "SKU-60".into(),
                     precio_unitario_cents: 60_000,
                     cantidad: 1,
                     descuento_cents: 0,
+                    impuesto_cents: 0,
+                    total_linea_cents: 0,
                 },
                 OrdenItemFiscal {
+                    sku: "SKU-40".into(),
                     precio_unitario_cents: 40_000,
                     cantidad: 1,
                     descuento_cents: 0,
+                    impuesto_cents: 0,
+                    total_linea_cents: 0,
                 },
             ],
+            descuento_cupon_cents: 0,
+        })
+    }
+}
+
+struct OrdenesSnapshot;
+
+#[async_trait]
+impl Ordenes for OrdenesSnapshot {
+    async fn consultar(&self, order_id: &str) -> Option<OrdenResumen> {
+        (order_id == "33333333-3333-4333-8333-333333333333").then_some(OrdenResumen {
+            total_cents: 23_000,
+            empresa_id: Some("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".to_string()),
+            negocio_id: None,
+            items: vec![OrdenItemFiscal {
+                sku: "SKU-1".into(),
+                precio_unitario_cents: 10_000,
+                cantidad: 2,
+                descuento_cents: 0,
+                impuesto_cents: 3_000,
+                total_linea_cents: 23_000,
+            }],
             descuento_cupon_cents: 0,
         })
     }
@@ -234,6 +263,8 @@ async fn provisionar(url: &str) {
           formato_pdf boolean NOT NULL DEFAULT false,
           proveedor_electronico text NOT NULL DEFAULT 'simulado',
           ambiente_electronico text NOT NULL DEFAULT 'pruebas',
+          impuesto_activo boolean NOT NULL DEFAULT false,
+          precios_con_impuesto boolean NOT NULL DEFAULT true,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW()
         );
@@ -309,6 +340,12 @@ async fn provisionar(url: &str) {
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS empresa_id uuid;
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_estado text;
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_referencia text;
+        CREATE TABLE IF NOT EXISTS finance.comprobante_pdf (
+          comprobante_id uuid PRIMARY KEY,
+          contenido bytea,
+          objeto_id uuid,
+          generado_en timestamptz NOT NULL DEFAULT NOW()
+        );
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_enviada_en timestamptz;
         CREATE TABLE finance.series_comprobantes (
           serie text PRIMARY KEY,
@@ -578,9 +615,9 @@ async fn debe_registrar_y_compensar_el_credito_de_una_orden() {
     let db = Arc::new(Db::conectar(&url).await.expect("db"));
     let comercio = Comercio::nuevo(Arc::clone(&db));
     let empresa = "44444444-4444-4444-8444-444444444444";
-    let parte = "55555555-5555-4555-8555-555555555555";
+    let parte = Uuid::new_v4().to_string();
     sqlx::query("INSERT INTO identity.partes (id, empresa_id, nombre) VALUES ($1, $2, 'Ana')")
-        .bind(Uuid::parse_str(parte).unwrap())
+        .bind(Uuid::parse_str(&parte).unwrap())
         .bind(Uuid::parse_str(empresa).unwrap())
         .execute(db.pool())
         .await
@@ -588,7 +625,7 @@ async fn debe_registrar_y_compensar_el_credito_de_una_orden() {
     let empresario = usuario("empresario", Some(empresa));
     let cuenta = comercio
         .guardar_cuenta_credito(
-            parte,
+            &parte,
             CuentaCreditoInput {
                 limite_cents: 10_000,
                 activo: Some(true),
@@ -602,7 +639,7 @@ async fn debe_registrar_y_compensar_el_credito_de_una_orden() {
 
     let entrada = CreditoInterno {
         empresa_id: empresa.into(),
-        parte_id: parte.into(),
+        parte_id: parte.clone(),
         order_id: "22222222-2222-4222-8222-222222222222".into(),
         monto_cents: 4_000,
         concepto: "Pedido".into(),
@@ -811,6 +848,88 @@ async fn debe_emitir_comprobantes_con_secuencial_consecutivo() {
 }
 
 #[tokio::test]
+async fn debe_reutilizar_el_snapshot_de_iva_de_la_orden() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesSnapshot),
+        false,
+    );
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            tipo: "FACTURA".into(),
+            orden_id: "33333333-3333-4333-8333-333333333333".into(),
+            parte_id: None,
+            razon_social: Some("Ana".into()),
+            ruc: None,
+        })
+        .await
+        .expect("comprobante");
+    assert_eq!(comprobante.base_gravada_cents, 20_000);
+    assert_eq!(comprobante.iva_cents, 3_000);
+    assert_eq!(comprobante.total_cents, 23_000);
+}
+
+#[tokio::test]
+async fn debe_emitir_nota_de_credito_parcial() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    );
+    let nota = facturacion
+        .emitir_nota_credito(NotaCreditoDto {
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            devolucion_id: "44444444-4444-4444-8444-444444444444".into(),
+            empresa_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa".into(),
+            negocio_id: None,
+            parte_id: None,
+            base_cents: 10_000,
+            iva_cents: 1_500,
+            total_cents: 11_500,
+            moneda: Some("NIO".into()),
+            items: json!([{"sku": "SKU-1", "cantidad": 1}]),
+        })
+        .await
+        .expect("nota credito");
+    assert_eq!(nota.tipo, "NOTA_CREDITO");
+    assert_eq!(nota.estado, "EMITIDO");
+    assert_eq!(nota.base_gravada_cents, 10_000);
+    assert_eq!(nota.iva_cents, 1_500);
+    assert_eq!(nota.total_cents, 11_500);
+    assert_eq!(nota.numero, "NC001-00000001");
+
+    let asientos: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM finance.asientos
+          WHERE referencia_id = $1 AND referencia_tipo = 'comprobante'",
+    )
+    .bind(&nota.id)
+    .fetch_one(db.pool())
+    .await
+    .expect("asientos");
+    assert_eq!(asientos, 1);
+}
+
+#[tokio::test]
 async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
     let Some(url) = url() else { return };
     let _guard = DB_LOCK.lock().await;
@@ -834,6 +953,8 @@ async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
             true,
             "simulado",
             "pruebas",
+            false,
+            true,
         )
         .await
         .expect("configuracion");
@@ -870,6 +991,27 @@ async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
         .expect("pdf")
         .expect("pdf bytes");
     assert!(pdf.starts_with(b"%PDF-1.4"));
+    let texto = String::from_utf8_lossy(&pdf);
+    assert!(texto.contains("RUC-1"));
+    assert!(texto.contains("SKU-60"));
+    let guardados: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM finance.comprobante_pdf WHERE comprobante_id = $1::uuid",
+    )
+    .bind(&comprobante.id)
+    .fetch_one(db.pool())
+    .await
+    .expect("pdf guardado");
+    assert_eq!(guardados, 1);
+    let pdf_repetido = facturacion
+        .pdf_de(
+            &comprobante.id,
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+        )
+        .await
+        .expect("pdf")
+        .expect("pdf bytes");
+    assert_eq!(pdf, pdf_repetido);
 }
 
 #[tokio::test]
@@ -1006,4 +1148,234 @@ async fn debe_registrar_y_leer_tipos_de_cambio() {
         .await
         .expect_err("misma moneda");
     assert_eq!(error.codigo, "VALIDACION");
+}
+
+#[tokio::test]
+async fn debe_purgar_los_datos_personales_del_tenant_en_finanzas() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    );
+    let empresa = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            parte_id: None,
+            tipo: "FACTURA".into(),
+            razon_social: Some("Cliente PII".into()),
+            ruc: Some("RUC-PII".into()),
+        })
+        .await
+        .expect("comprobante");
+    Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    )
+    .guardar_configuracion_fiscal(empresa, None, "NI")
+    .await
+    .expect("config");
+
+    facturacion
+        .purgar_tenant(empresa, &[], &[])
+        .await
+        .expect("purga");
+
+    let datos: serde_json::Value =
+        sqlx::query_scalar("SELECT datos_cliente FROM finance.comprobantes WHERE id = $1::uuid")
+            .bind(&comprobante.id)
+            .fetch_one(db.pool())
+            .await
+            .expect("datos");
+    assert_eq!(datos, json!({ "redactado": true }));
+    let configuraciones: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM finance.configuracion_fiscal WHERE empresa_id = $1::uuid",
+    )
+    .bind(empresa)
+    .fetch_one(db.pool())
+    .await
+    .expect("config");
+    assert_eq!(configuraciones, 0);
+}
+
+#[tokio::test]
+async fn debe_exportar_los_datos_fiscales_del_tenant() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    );
+    let empresa = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            parte_id: None,
+            tipo: "FACTURA".into(),
+            razon_social: Some("Cliente export".into()),
+            ruc: Some("RUC-EXPORT".into()),
+        })
+        .await
+        .expect("comprobante");
+    let datos = facturacion
+        .exportar_tenant(empresa, &[], &[])
+        .await
+        .expect("exportar");
+    let comprobantes = datos["comprobantes"].as_array().expect("comprobantes");
+    assert!(comprobantes
+        .iter()
+        .any(|valor| valor["id"] == comprobante.id));
+    assert!(datos["asientos"].is_array());
+}
+
+#[tokio::test]
+async fn debe_guardar_el_pdf_en_storage_cuando_esta_configurado() {
+    use axum::extract::State;
+    use axum::http::header;
+    use axum::response::IntoResponse;
+    use axum::routing::{get, post};
+    use axum::{Json, Router};
+    use std::sync::Arc as StdArc;
+    use tokio::sync::Mutex as TokioMutex;
+
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+
+    Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    )
+    .guardar_configuracion_facturacion(
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        None,
+        "NI",
+        false,
+        true,
+        "simulado",
+        "pruebas",
+        false,
+        true,
+    )
+    .await
+    .expect("configuracion pdf");
+
+    let almacen = StdArc::new(TokioMutex::new(Vec::<u8>::new()));
+    let app = Router::new()
+        .route(
+            "/internal/storage/objetos",
+            post(
+                |State(bytes): State<StdArc<TokioMutex<Vec<u8>>>>,
+                 Json(dto): Json<serde_json::Value>| async move {
+                    use base64::Engine;
+                    let contenido = dto
+                        .get("contenido_base64")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or_default();
+                    let decodificado = base64::engine::general_purpose::STANDARD
+                        .decode(contenido)
+                        .unwrap_or_default();
+                    *bytes.lock().await = decodificado;
+                    Json(json!({ "id": "77777777-7777-4777-8777-777777777777" }))
+                },
+            ),
+        )
+        .route(
+            "/internal/storage/objetos/{id}/contenido",
+            get(
+                |State(bytes): State<StdArc<TokioMutex<Vec<u8>>>>| async move {
+                    let bytes = bytes.lock().await.clone();
+                    ([(header::CONTENT_TYPE, "application/pdf")], bytes).into_response()
+                },
+            ),
+        )
+        .with_state(almacen);
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("listener");
+    let direccion = listener.local_addr().expect("addr");
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    )
+    .con_pdf_almacen(finance_service::pdf_almacen::PdfAlmacen::nueva(
+        format!("http://{direccion}"),
+        Some("clave".into()),
+        2000,
+    ));
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            parte_id: None,
+            tipo: "FACTURA".into(),
+            razon_social: Some("Cliente storage".into()),
+            ruc: None,
+        })
+        .await
+        .expect("comprobante");
+    let pdf = facturacion
+        .pdf_de(
+            &comprobante.id,
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+        )
+        .await
+        .expect("pdf")
+        .expect("bytes");
+    assert!(pdf.starts_with(b"%PDF-1.4"));
+    let guardado: (Option<Vec<u8>>, Option<String>) = sqlx::query_as(
+        "SELECT contenido, objeto_id::text FROM finance.comprobante_pdf WHERE comprobante_id = $1::uuid",
+    )
+    .bind(&comprobante.id)
+    .fetch_one(db.pool())
+    .await
+    .expect("fila");
+    assert!(guardado.0.is_none());
+    assert_eq!(
+        guardado.1.as_deref(),
+        Some("77777777-7777-4777-8777-777777777777")
+    );
+    let repetido = facturacion
+        .pdf_de(
+            &comprobante.id,
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+        )
+        .await
+        .expect("pdf")
+        .expect("bytes");
+    assert_eq!(pdf, repetido);
 }
