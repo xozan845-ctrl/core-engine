@@ -11,6 +11,8 @@ pub const PUERTO_ORDERS: u16 = 3004;
 pub const TIMEOUT_INTERNO_DEFAULT_MS: u64 = 3000;
 pub const TASA_COMISION_DEFAULT: f64 = 0.12;
 pub const CARRITO_EXPIRACION_MS: i64 = 30 * 60 * 1000;
+pub const ORDEN_PAGO_TTL_MINUTOS_DEFAULT: u64 = 30;
+pub const ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT: u64 = 60;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
@@ -33,6 +35,10 @@ pub struct Config {
     pub pago_proveedor: String,
     pub pago_proveedor_url: Option<String>,
     pub pago_proveedor_key: Option<String>,
+    /// Minutos que una orden puede quedar impaga antes de expirar. `0` desactiva
+    /// el barrido.
+    pub orden_pago_ttl_minutos: u64,
+    pub orden_expiracion_intervalo_segundos: u64,
 }
 
 impl Config {
@@ -117,6 +123,13 @@ impl Config {
             pago_proveedor: leer("PAGO_PROVEEDOR").unwrap_or_else(|| "simulado".to_string()),
             pago_proveedor_url: leer("PAGO_PROVEEDOR_URL"),
             pago_proveedor_key: leer("PAGO_PROVEEDOR_KEY"),
+            orden_pago_ttl_minutos: leer("ORDEN_PAGO_TTL_MINUTOS")
+                .and_then(|valor| valor.parse::<u64>().ok())
+                .unwrap_or(ORDEN_PAGO_TTL_MINUTOS_DEFAULT),
+            orden_expiracion_intervalo_segundos: leer("ORDEN_EXPIRACION_INTERVALO_SEGUNDOS")
+                .and_then(|valor| valor.parse::<u64>().ok())
+                .filter(|segundos| *segundos > 0)
+                .unwrap_or(ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()
@@ -172,6 +185,14 @@ mod tests {
         assert_eq!(config.servicio, NOMBRE_SERVICIO);
         assert_eq!(config.outbox_tabla, "orders.outbox");
         assert_eq!(config.tasa_comision, TASA_COMISION_DEFAULT);
+        assert_eq!(
+            config.orden_pago_ttl_minutos,
+            ORDEN_PAGO_TTL_MINUTOS_DEFAULT
+        );
+        assert_eq!(
+            config.orden_expiracion_intervalo_segundos,
+            ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT
+        );
         assert_eq!(config.stores_service_url, "http://stores-service:3003");
         assert_eq!(
             config.inventory_service_url,
@@ -196,9 +217,13 @@ mod tests {
             ("INTERNAL_REQUEST_TIMEOUT_MS", "1500"),
             ("OUTBOX_TABLA", "orders.outbox"),
             ("COMMISSION_RATE", "0.1"),
+            ("ORDEN_PAGO_TTL_MINUTOS", "45"),
+            ("ORDEN_EXPIRACION_INTERVALO_SEGUNDOS", "120"),
         ])
         .expect("config");
         assert_eq!(config.puerto, 4004);
+        assert_eq!(config.orden_pago_ttl_minutos, 45);
+        assert_eq!(config.orden_expiracion_intervalo_segundos, 120);
         assert_eq!(config.stores_service_url, "http://stores:3003");
         assert_eq!(config.item_service_url, "http://item:3015");
         assert_eq!(config.pricing_service_url, "http://pricing:3014");
@@ -234,6 +259,20 @@ mod tests {
     fn debe_aceptar_una_tasa_cero_para_venta_directa() {
         let config = Config::from_pairs([("COMMISSION_RATE", "0")]).expect("config");
         assert_eq!(config.tasa_comision, 0.0);
+    }
+
+    #[test]
+    fn debe_permitir_desactivar_la_expiracion_y_descartar_intervalos_invalidos() {
+        let config = Config::from_pairs([
+            ("ORDEN_PAGO_TTL_MINUTOS", "0"),
+            ("ORDEN_EXPIRACION_INTERVALO_SEGUNDOS", "0"),
+        ])
+        .expect("config");
+        assert_eq!(config.orden_pago_ttl_minutos, 0);
+        assert_eq!(
+            config.orden_expiracion_intervalo_segundos,
+            ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT
+        );
     }
 
     #[test]
