@@ -31,6 +31,16 @@ pub struct ItemOrden {
     pub precio_unitario_cents: i64,
     #[serde(default)]
     pub descuento_cents: i64,
+    /// Impuesto de la línea en centavos (snapshot al crear la orden).
+    #[serde(default)]
+    pub impuesto_cents: i64,
+    /// Tasa aplicada en puntos base: 1500 = 15 %.
+    #[serde(default)]
+    pub tasa_impuesto_bps: i64,
+    /// Total final de la línea, con descuento de cupón e IVA según la
+    /// configuración fiscal. `0` en órdenes antiguas.
+    #[serde(default)]
+    pub total_linea_cents: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub promocion_id: Option<String>,
     pub vendedor_id: Option<String>,

@@ -167,6 +167,14 @@ struct StockV2 {
     seriales_disponibles: i64,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConfiguracionFiscal {
+    pub tasa_iva: f64,
+    pub impuesto_activo: bool,
+    pub precios_con_impuesto: bool,
+    pub moneda: String,
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct StockUbicacion {
     #[serde(default)]
@@ -219,6 +227,15 @@ pub trait ClientesPort: Send + Sync {
     /// Configuración operativa del pack; `SinConfiguracion` = sin restricción.
     async fn configuracion(&self, _empresa_id: &str) -> ConfiguracionExterna {
         ConfiguracionExterna::SinConfiguracion
+    }
+
+    /// Configuración fiscal efectiva para calcular IVA por línea.
+    async fn configuracion_fiscal(
+        &self,
+        _empresa_id: &str,
+        _negocio_id: Option<&str>,
+    ) -> Option<ConfiguracionFiscal> {
+        None
     }
     async fn ofertas(&self, ids: &[String]) -> Vec<OfertaExterna>;
     async fn precios(
@@ -282,6 +299,12 @@ pub trait ClientesPort: Send + Sync {
     }
 
     async fn cupon_liberar(&self, _empresa_id: &str, _codigo: &str, _order_id: &str) {}
+
+    /// Emite una nota de crédito parcial en finance; devuelve su id.
+    async fn nota_credito(&self, _payload: &Value) -> Option<String> {
+        None
+    }
+
     async fn devolver_stock(
         &self,
         _order_id: &str,
@@ -364,6 +387,45 @@ impl Clientes {
         tasa.as_str()
             .and_then(|valor| valor.parse::<f64>().ok())
             .or_else(|| tasa.as_f64())
+    }
+
+    pub async fn configuracion_fiscal(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Option<ConfiguracionFiscal> {
+        let mut peticion = self
+            .http
+            .get(format!(
+                "{}/internal/finance/configuracion-fiscal",
+                self.finance_url
+            ))
+            .query(&[("empresa_id", empresa_id)])
+            .header("x-internal-key", &self.clave);
+        if let Some(negocio_id) = negocio_id {
+            peticion = peticion.query(&[("negocio_id", negocio_id)]);
+        }
+        let respuesta = peticion.send().await.ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let cuerpo: Value = respuesta.json().await.ok()?;
+        Some(ConfiguracionFiscal {
+            tasa_iva: cuerpo.get("tasa_iva").and_then(Value::as_f64)?,
+            impuesto_activo: cuerpo
+                .get("impuesto_activo")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            precios_con_impuesto: cuerpo
+                .get("precios_con_impuesto")
+                .and_then(Value::as_bool)
+                .unwrap_or(true),
+            moneda: cuerpo
+                .get("moneda")
+                .and_then(Value::as_str)
+                .unwrap_or("NIO")
+                .to_string(),
+        })
     }
 
     pub async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
@@ -795,6 +857,29 @@ impl Clientes {
             .map(|respuesta| respuesta.status().is_success())
             .unwrap_or(false)
     }
+
+    pub async fn nota_credito(&self, payload: &Value) -> Option<String> {
+        let respuesta = self
+            .http
+            .post(format!(
+                "{}/internal/finance/notas-credito",
+                self.finance_url
+            ))
+            .header("x-internal-key", &self.clave)
+            .json(payload)
+            .send()
+            .await
+            .ok()?;
+        if !respuesta.status().is_success() {
+            return None;
+        }
+        let cuerpo: Value = respuesta.json().await.ok()?;
+        cuerpo
+            .get("comprobante_id")
+            .or_else(|| cuerpo.get("id"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+    }
 }
 
 #[derive(Deserialize)]
@@ -828,6 +913,14 @@ impl ClientesPort for Clientes {
 
     async fn tipo_cambio(&self, base: &str, quote: &str) -> Option<f64> {
         Clientes::tipo_cambio(self, base, quote).await
+    }
+
+    async fn configuracion_fiscal(
+        &self,
+        empresa_id: &str,
+        negocio_id: Option<&str>,
+    ) -> Option<ConfiguracionFiscal> {
+        Clientes::configuracion_fiscal(self, empresa_id, negocio_id).await
     }
 
     async fn configuracion(&self, empresa_id: &str) -> ConfiguracionExterna {
@@ -920,6 +1013,10 @@ impl ClientesPort for Clientes {
 
     async fn cupon_liberar(&self, empresa_id: &str, codigo: &str, order_id: &str) {
         Clientes::cupon_liberar(self, empresa_id, codigo, order_id).await
+    }
+
+    async fn nota_credito(&self, payload: &Value) -> Option<String> {
+        Clientes::nota_credito(self, payload).await
     }
 
     async fn devolver_stock(&self, order_id: &str, devolucion_id: &str, items: &[Value]) -> bool {
