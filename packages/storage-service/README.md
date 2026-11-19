@@ -83,6 +83,15 @@ toca `almacen.rs` (ACL, R-AR-6).
 |---|---|
 | `storage.buckets` | `tenant_id`, `bucket`, `cuota_bytes`, `usado_bytes`, `estado`, contadores |
 | `storage.objetos` | `tenant_id`, `bucket`, `objeto` (clave), nombre original, `content_type`, carpeta, etiquetas, tamaño, `etag`, estado, `publico`, autor, fechas |
+
+La purga de tenant (`POST /internal/storage/tenant/purgar`) marca todos los
+objetos como eliminados, resta el uso de cuota, emite
+`storage.objeto.eliminado` por objeto y borra los ficheros físicos. Es
+idempotente.
+La exportación (`POST /internal/storage/tenant/exportar`) devuelve metadatos y
+bucket, sin bytes.
+`POST /internal/storage/objetos` permite subida directa servicio→servicio
+(PDFs) y `GET /internal/storage/objetos/{id}/contenido` los sirve.
 | `storage.eventos_procesados` | Idempotencia (reservado) |
 | `storage.outbox` | Eventos |
 
@@ -194,6 +203,7 @@ con TTL (`STORAGE_URL_TTL_SEGUNDOS`, 900 s) para el tenant activo.
 | GET | `/api/v2/admin/storage/tenants` | admin |
 | GET/PATCH | `/api/v2/admin/storage/tenants/{tenantId}` | admin |
 | POST | `/api/v2/admin/storage/tenants/{tenantId}/recalcular` | admin |
+| POST | `/internal/storage/tenant/purgar` | servicio (clave interna) |
 
 ---
 
@@ -204,6 +214,8 @@ con TTL (`STORAGE_URL_TTL_SEGUNDOS`, 900 s) para el tenant activo.
 | GET | `/internal/storage/tenants/{tenantId}` | identity/stores (estado y cuota) |
 | POST | `/internal/storage/tenants/{tenantId}/recalcular` | operación |
 | GET | `/internal/storage/objetos/{id}` | identity/stores (metadata para validar medios) |
+| POST | `/internal/storage/objetos` | subida directa de bytes (PDFs) |
+| GET | `/internal/storage/objetos/{id}/contenido` | lectura de bytes por tenant |
 
 La metadata interna incluye `tenant_id`, `estado`, `publico`, `content_type` y
 tamaño, que es lo que usan identity y stores para aceptar avatares, logos y
