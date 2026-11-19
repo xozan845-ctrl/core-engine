@@ -401,6 +401,7 @@ async fn debe_rechazar_la_asignacion_de_un_envio_ya_fijado() {
 #[tokio::test]
 async fn debe_exportar_y_purgar_el_tenant() {
     let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
     provisionar(&url).await;
     let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
     let req = logistics_service::lifecycle::TenantRequest {
@@ -415,4 +416,44 @@ async fn debe_exportar_y_purgar_el_tenant() {
     logistics_service::lifecycle::purgar(&pool, &req)
         .await
         .expect("purgar");
+}
+
+#[tokio::test]
+async fn debe_servir_los_endpoints_internos_de_ciclo_de_vida() {
+    use axum::extract::State;
+    use axum::http::{HeaderMap, HeaderValue};
+    use axum::Json;
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let config = logistics_service::config::Config::from_pairs([
+        ("SERVICIO", "logistics-service"),
+        ("INTERNAL_API_KEY", "clave-interna"),
+    ])
+    .expect("config");
+    let estado = logistics_service::state::AppState::nueva(
+        config,
+        logistics_service::metrics::Metrics::nueva("logistics-service"),
+    )
+    .con_db(db);
+    assert!(estado.db().is_ok());
+    let mut headers = HeaderMap::new();
+    headers.insert("x-internal-key", HeaderValue::from_static("clave-interna"));
+    let empresa_id = Uuid::new_v4().to_string();
+    let req = || logistics_service::lifecycle::TenantRequest {
+        empresa_id: empresa_id.clone(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let _ = logistics_service::http::interno::exportar_tenant(
+        State(estado.clone()),
+        headers.clone(),
+        Json(req()),
+    )
+    .await
+    .expect("exportar http");
+    let _ = logistics_service::http::interno::purgar_tenant(State(estado), headers, Json(req()))
+        .await
+        .expect("purgar http");
 }
