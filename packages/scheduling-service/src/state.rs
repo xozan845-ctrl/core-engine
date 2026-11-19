@@ -2,6 +2,8 @@
 
 use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::config::Config;
+use crate::db::Db;
+use crate::errors::ApiError;
 use crate::metrics::Metrics;
 use crate::scheduling::{AgendaNoDisponible, AgendaPort};
 use std::sync::Arc;
@@ -13,6 +15,7 @@ pub struct AppState {
     pub metrics: Arc<Metrics>,
     pub agenda: Arc<dyn AgendaPort>,
     pub capacidades: Arc<dyn Capacidades>,
+    pub db: Option<Arc<Db>>,
     pub inicio: Instant,
 }
 
@@ -24,6 +27,7 @@ impl AppState {
             metrics: Arc::new(metrics),
             agenda: Arc::new(AgendaNoDisponible),
             capacidades: Arc::new(CapacidadesNoDisponible),
+            db: None,
             inicio: Instant::now(),
         }
     }
@@ -39,7 +43,17 @@ impl AppState {
             metrics,
             agenda,
             capacidades,
+            db: None,
             inicio: Instant::now(),
         }
+    }
+
+    pub fn con_db(mut self, db: Arc<Db>) -> Self {
+        self.db = Some(db);
+        self
+    }
+
+    pub fn db(&self) -> Result<&Arc<Db>, ApiError> {
+        self.db.as_ref().ok_or_else(ApiError::interno)
     }
 }

@@ -110,6 +110,14 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/internal/inventario/resumen", get(internal::resumen))
         .route("/internal/inventario/lineas", get(internal::lineas))
+        .route(
+            "/internal/inventory/tenant/exportar",
+            post(internal::exportar_tenant),
+        )
+        .route(
+            "/internal/inventory/tenant/purgar",
+            post(internal::purgar_tenant),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

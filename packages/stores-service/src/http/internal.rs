@@ -162,3 +162,35 @@ pub async fn desasignar_vendedor(
         .await?;
     Ok((axum::http::StatusCode::CREATED, Json(json!({ "ok": true }))).into_response())
 }
+
+/// POST /internal/stores/tenant/exportar
+pub async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let datos = crate::lifecycle::exportar(state.db()?.pool(), &dto)
+        .await
+        .map_err(|_| ApiError::interno())?;
+    Ok(
+        Json(json!({ "servicio": "stores", "estado": "completado", "datos": datos }))
+            .into_response(),
+    )
+}
+
+/// POST /internal/stores/tenant/purgar
+pub async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let detalle = crate::lifecycle::purgar(state.db()?.pool(), &dto)
+        .await
+        .map_err(|_| ApiError::interno())?;
+    Ok(
+        Json(json!({ "servicio": "stores", "estado": "completado", "detalle": detalle }))
+            .into_response(),
+    )
+}

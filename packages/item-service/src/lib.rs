@@ -16,6 +16,7 @@ pub mod db;
 pub mod errors;
 pub mod http;
 pub mod items;
+pub mod lifecycle;
 pub mod logs;
 pub mod metrics;
 pub mod money;

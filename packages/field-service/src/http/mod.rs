@@ -2,6 +2,7 @@
 
 pub mod envelope;
 pub mod field;
+pub mod interno;
 
 use crate::auth::UsuarioContexto;
 use crate::campos;
@@ -156,6 +157,14 @@ pub fn build_router(state: AppState) -> Router {
             post(field::guardar_cumplimiento),
         )
         .route("/api/v2/field/sync", post(field::sincronizar))
+        .route(
+            "/internal/field/tenant/exportar",
+            post(interno::exportar_tenant),
+        )
+        .route(
+            "/internal/field/tenant/purgar",
+            post(interno::purgar_tenant),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
