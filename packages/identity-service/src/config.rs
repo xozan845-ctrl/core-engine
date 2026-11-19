@@ -5,6 +5,9 @@
 //! producción un secreto ausente detiene el arranque, nunca se degrada a un
 //! valor conocido.
 
+use crate::purga::ServicioPurga;
+use base64::Engine;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::env;
 
@@ -41,6 +44,20 @@ pub struct Config {
     pub smtp_port: u16,
     pub smtp_user: Option<String>,
     pub smtp_password: Option<String>,
+    /// Exige correo verificado para login/refresh. Por defecto se activa en
+    /// producción y queda desactivado en desarrollo/tests.
+    pub exigir_correo_verificado: bool,
+    /// Clave base64 de 32 bytes para cifrar secretos MFA en reposo. En
+    /// producción es obligatoria; en desarrollo se deriva del JWT.
+    pub mfa_encryption_key: Option<String>,
+    /// Servicios a los que se propaga la purga de un tenant.
+    pub servicios_purga: Vec<ServicioPurga>,
+    /// Días que se conserva `identity.auditoria`; `0` desactiva la limpieza.
+    pub auditoria_retencion_dias: i64,
+    /// `anonimizar` conserva el evento y redacta PII; `eliminar` borra filas.
+    pub auditoria_retencion_modo: String,
+    /// Clave HMAC para firmar exportaciones; por defecto usa `JWT_SECRET`.
+    pub export_signing_key: Option<String>,
 }
 
 impl Config {
@@ -124,6 +141,36 @@ impl Config {
             },
             smtp_user: leer("SMTP_USER"),
             smtp_password: leer("SMTP_PASSWORD"),
+            exigir_correo_verificado: leer("AUTH_EXIGIR_CORREO_VERIFICADO")
+                .map(|valor| valor.eq_ignore_ascii_case("true"))
+                .unwrap_or(produccion),
+            mfa_encryption_key: leer("MFA_ENCRYPTION_KEY"),
+            servicios_purga: {
+                let storage_url = leer("STORAGE_SERVICE_URL")
+                    .unwrap_or_else(|| "http://storage-service:3010".to_string())
+                    .trim_end_matches('/')
+                    .to_string();
+                let configurados = leer("TENANT_PURGE_SERVICES")
+                    .map(|valor| ServicioPurga::parsear(&valor))
+                    .unwrap_or_default();
+                if configurados.is_empty() {
+                    vec![ServicioPurga {
+                        nombre: "storage".to_string(),
+                        url: storage_url,
+                    }]
+                } else {
+                    configurados
+                }
+            },
+            auditoria_retencion_dias: leer("AUDITORIA_RETENCION_DIAS")
+                .and_then(|valor| valor.parse::<i64>().ok())
+                .filter(|dias| *dias >= 0)
+                .unwrap_or(365),
+            auditoria_retencion_modo: leer("AUDITORIA_RETENCION_MODO")
+                .map(|valor| valor.to_lowercase())
+                .filter(|valor| valor == "anonimizar" || valor == "eliminar")
+                .unwrap_or_else(|| "anonimizar".to_string()),
+            export_signing_key: leer("EXPORT_SIGNING_KEY"),
         })
     }
 
@@ -134,6 +181,9 @@ impl Config {
         }
         if self.email_mode != "log" && self.email_mode != "smtp" {
             return Err(ConfigError::Invalida("EMAIL_MODE", self.email_mode.clone()));
+        }
+        if let Err(mensaje) = self.clave_mfa() {
+            return Err(ConfigError::Invalida("MFA_ENCRYPTION_KEY", mensaje));
         }
         if self.email_mode == "smtp" {
             if self.smtp_host.is_none() {
@@ -150,6 +200,33 @@ impl Config {
             }
         }
         Ok(())
+    }
+
+    /// Clave AES-256-GCM para secretos MFA. En producción debe venir en
+    /// `MFA_ENCRYPTION_KEY` (base64 de 32 bytes); en desarrollo se deriva del
+    /// JWT para no romper el arranque local.
+    pub fn clave_mfa(&self) -> Result<[u8; 32], String> {
+        if let Some(valor) = &self.mfa_encryption_key {
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(valor.trim())
+                .map_err(|_| "MFA_ENCRYPTION_KEY debe ser base64.".to_string())?;
+            if bytes.len() != 32 {
+                return Err("MFA_ENCRYPTION_KEY debe decodificar a 32 bytes.".to_string());
+            }
+            let mut clave = [0u8; 32];
+            clave.copy_from_slice(&bytes);
+            return Ok(clave);
+        }
+        if self.produccion {
+            return Err("MFA_ENCRYPTION_KEY es obligatoria en produccion.".to_string());
+        }
+        let mut hasher = Sha256::new();
+        hasher.update(self.jwt_secret.as_bytes());
+        hasher.update(b"mfa-dev");
+        let digest = hasher.finalize();
+        let mut clave = [0u8; 32];
+        clave.copy_from_slice(&digest);
+        Ok(clave)
     }
 
     /// Convierte `JWT_ACCESS_TTL`/`JWT_REFRESH_TTL` (`900s`, `15m`, `7d`) a
@@ -202,6 +279,23 @@ mod tests {
         assert_eq!(config.admin_email, ADMIN_EMAIL_DEFAULT);
         assert_eq!(config.jwt_access_ttl, "900s");
         assert!(!config.produccion);
+        assert!(!config.exigir_correo_verificado);
+    }
+
+    #[test]
+    fn debe_exigir_correo_verificado_en_produccion_o_por_flag() {
+        let produccion = Config::from_pairs([
+            ("NODE_ENV", "production"),
+            ("JWT_SECRET", "s3creto"),
+            ("ADMIN_EMAIL", "admin@test.dev"),
+            ("ADMIN_PASSWORD", "AdminSeguro2026!"),
+        ])
+        .expect("config");
+        assert!(produccion.exigir_correo_verificado);
+
+        let explicito =
+            Config::from_pairs([("AUTH_EXIGIR_CORREO_VERIFICADO", "true")]).expect("config");
+        assert!(explicito.exigir_correo_verificado);
     }
 
     #[test]

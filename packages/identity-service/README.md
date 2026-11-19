@@ -51,7 +51,13 @@ capacidades, tenants, temas o partes).
 | `JWT_REFRESH_TTL` | No | `7d` | Idem |
 | `ADMIN_EMAIL` | **Sí en producción** | admin de desarrollo | Seed idempotente |
 | `ADMIN_PASSWORD` | **Sí en producción** | admin de desarrollo | Seed idempotente |
-| `FRONTEND_URL` | No | `http://localhost:5173` | Enlaces de invitación/reset |
+| `AUTH_EXIGIR_CORREO_VERIFICADO` | No | `true` en producción, `false` en dev | Exige correo verificado; el registro no entrega tokens |
+| `MFA_ENCRYPTION_KEY` | Prod | — | Base64 de 32 bytes para AES-256-GCM del secreto TOTP |
+| `AUDITORIA_RETENCION_DIAS` | No | `365` | Días de retención de auditoría (`0` = conservar) |
+| `TENANT_PURGE_SERVICES` | No | `storage=<url>` | Servicios para purga y exportación tenant |
+| `EXPORT_SIGNING_KEY` | No | `JWT_SECRET` | Clave HMAC-SHA256 para firmar exportaciones |
+| `AUDITORIA_RETENCION_MODO` | No | `anonimizar` | `anonimizar` conserva el rastro; `eliminar` borra |
+| `FRONTEND_URL` | No | `http://localhost:5173` | Enlaces de invitación/reset/verificación |
 | `STORAGE_SERVICE_URL` | No | `http://storage-service:3010` | Validar medios |
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Validar tiendas |
 | `INTERNAL_API_KEY` | Recomendada | — | Protege `/internal/**` y llamadas salientes |
@@ -88,7 +94,8 @@ src/
     ├── capacidades.rs          capacidades por empresa
     ├── configuracion_operativa.rs  modelos/items/fulfillment efectivos
     ├── configuracion_sitio.rs  branding de plataforma
-    ├── empresas.rs             alta, perfil, slug, pack, vendedores
+    ├── empresas.rs             alta, perfil, slug, pack, vendedores,
+    │                            estado, exportación y eliminación del tenant
     ├── extensiones.rs          JSON Schema versionado por empresa
     ├── features.rs             mapa capacidad → features del manifiesto
     ├── media.rs                fondos imagen/video + posiciones
@@ -120,6 +127,26 @@ internos son objetos concretos (`Storage`, `Stores`).
 - Contraseñas con **bcrypt coste 10**; nunca se devuelve el hash.
 - Login compara con `bcrypt::verify`; error genérico para no filtrar si el
   correo existe.
+- Política de contraseñas: 12–128 caracteres, mayúscula, minúscula, número,
+  símbolo, sin correo/nombre y sin contraseñas comunes.
+- Lockout por cuenta: 5 intentos fallidos bloquean 15 minutos (`423
+  CUENTA_BLOQUEADA`); el éxito resetea el contador.
+- Login, refresh, cambio de negocio y aceptación de invitación exigen que la
+  empresa del usuario esté `activa`; si está `suspendida` o `inactiva`
+  responden `403`.
+- Verificación de correo: `POST /auth/verificar-correo` y
+  `POST /auth/reenviar-verificacion`. Con `AUTH_EXIGIR_CORREO_VERIFICADO=true`
+  (default en producción) login/refresh exigen `correo_verificado_en`.
+- MFA opcional TOTP: `POST /auth/mfa/iniciar`, `/confirmar` y `/desactivar`.
+  El login acepta `codigo_mfa` (TOTP o código de recuperación). Los códigos de
+  recuperación se muestran una vez y se guardan hasheados.
+- Sesiones/dispositivos: `GET /auth/sesiones` y
+  `DELETE /auth/sesiones/{id}`; se guarda `user_agent`, `ip` (desde
+  `X-Client-IP` del gateway) y último uso.
+- El secreto TOTP se guarda cifrado con AES-256-GCM (`v1:...`) usando
+  `MFA_ENCRYPTION_KEY`; los secretos legacy se migran al confirmar.
+- Reset administrativo: `POST /api/v2/usuarios/{id}/mfa/reset`
+  (`super_admin`/`admin`) limpia el MFA y revoca sesiones.
 - `POST /auth/refresh` valida firma, `tipo = refresh`, `jti` y que la sesión
   siga activa en `identity.sesiones`. Rota el refresh y devuelve un par nuevo.
 - `POST /auth/logout` marca `revocada_en`; el refresh deja de servir.
@@ -183,6 +210,25 @@ internos son objetos concretos (`Storage`, `Stores`).
 - `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en
   `identity.empresa_slugs` y los anteriores responden `301`.
 - `PATCH /empresas/{id}/pack` cambia/actualiza el pack versionado.
+- `PATCH /empresas/{id}/estado` (solo `super_admin`/`admin`) cambia el tenant
+  entre `activa`, `suspendida` e `inactiva`. Suspender/cerrar revoca las
+  sesiones de todos sus usuarios; el login, refresh y las API keys se rechazan
+  mientras no esté `activa`. La reactivación queda para un administrador.
+- `POST /empresas/{id}/exportacion` crea un job asíncrono que recolecta identity
+  y hace fan-out a `TENANT_PURGE_SERVICES`; el archivo
+  `core-engine.tenant-export.v2` se firma con HMAC-SHA256.
+- `GET /empresas/{id}/exportacion/{job}` consulta el estado y
+  `GET /exportaciones/{job}/descarga` baja el archivo firmado.
+- `GET /empresas/{id}/exportacion` mantiene la exportación síncrona de identity
+  (empresa, asignaciones, usuarios sin hash, negocios, partes, contactos,
+  direcciones, relaciones, capacidades, extensiones, slugs y auditoría). El
+  campo `alcance.pendiente` lista los servicios cuyos datos aún no se incluyen.
+- `POST /empresas/{id}/eliminacion` cierra el tenant y crea una solicitud con
+  retención (`retencion_dias`, default 30). `GET` consulta el estado y
+  `DELETE` cancela la solicitud antes de que venza.
+- `POST /empresas/{id}/eliminacion/purgar` (solo `super_admin`) funciona cuando
+  venció la retención: anonimiza la identidad del tenant, conserva filas ancla
+  para no romper referencias y marca la solicitud como `purgada`.
 - `POST /empresas/{id}/vendedores` crea un vendedor con participación
   predeterminada (regla RN-04).
 
@@ -302,9 +348,9 @@ Un esquema inválido devuelve `ESQUEMA_EXTENSION_INVALIDO`; datos inválidos,
 
 | Área | Rutas |
 |---|---|
-| Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,vincular-personal,token}`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
+| Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,verificar-correo,reenviar-verificacion,vincular-personal,token}`, `POST /auth/mfa/{iniciar,confirmar,desactivar}`, `GET/DELETE /auth/sesiones[/{id}]`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
 | Usuarios | `GET /usuarios`, `GET /usuarios/{id}`, `PATCH /usuarios/{id}/avatar` |
-| Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug}`, `POST /empresas/{id}/vendedores` |
+| Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug,estado}`, `GET /empresas/{id}/exportacion`, `GET/POST/DELETE /empresas/{id}/eliminacion`, `POST /empresas/{id}/eliminacion/purgar`, `POST /empresas/{id}/vendedores` |
 | Capacidades | `GET/PATCH /empresas/{empresaId}/capacidades[/{capacidad}]`, idem por negocio, `GET /empresas/{empresaId}/features`, `GET /empresas/{empresaId}/negocios/{negocioId}/features` |
 | Packs | `GET/POST /packs`, `GET/POST /packs/verticales`, `GET/POST /packs/modelos-operacion`, `GET /packs/{codigo}/{version}` |
 | Negocios | `GET/POST /empresas/{empresaId}/negocios`, `POST .../negocios/{id}/plantillas`, `PATCH .../negocios/{id}/estado`, `GET /negocios/plantillas`, `POST /empresas/{id}/personal/{usuarioId}/transferir` |

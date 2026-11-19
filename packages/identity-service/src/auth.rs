@@ -33,6 +33,71 @@ pub const ROLES_LOGISTICA: [&str; 6] = [
 ];
 
 pub const BCRYPT_COST: u32 = 10;
+const CONTRASENA_MIN: usize = 12;
+const CONTRASENA_MAX: usize = 128;
+const CONTRASENAS_PROHIBIDAS: [&str; 9] = [
+    "password",
+    "contrasena",
+    "contraseña",
+    "123456",
+    "qwerty",
+    "letmein",
+    "bienvenido",
+    "welcome",
+    "coreengine",
+];
+
+/// Política de contraseñas del servicio. Se aplica en registro, alta de
+/// usuarios, cambio de contraseña y restablecimiento.
+pub fn validar_contrasena(contrasena: &str, correo: &str, nombre: &str) -> Result<(), ApiError> {
+    let longitud = contrasena.chars().count();
+    if !(CONTRASENA_MIN..=CONTRASENA_MAX).contains(&longitud) {
+        return Err(ApiError::dominio(
+            "CONTRASENA_DEBIL",
+            format!(
+                "La contrasena debe tener entre {CONTRASENA_MIN} y {CONTRASENA_MAX} caracteres."
+            ),
+        ));
+    }
+    let tiene_mayuscula = contrasena.chars().any(char::is_uppercase);
+    let tiene_minuscula = contrasena.chars().any(char::is_lowercase);
+    let tiene_digito = contrasena.chars().any(|c| c.is_ascii_digit());
+    let tiene_simbolo = contrasena
+        .chars()
+        .any(|c| !c.is_ascii_alphanumeric() && !c.is_whitespace());
+    if !(tiene_mayuscula && tiene_minuscula && tiene_digito && tiene_simbolo) {
+        return Err(ApiError::dominio(
+            "CONTRASENA_DEBIL",
+            "La contrasena debe incluir mayuscula, minuscula, numero y simbolo.",
+        ));
+    }
+    let minuscula = contrasena.to_lowercase();
+    let correo = correo.trim().to_lowercase();
+    let local = correo.split('@').next().unwrap_or("");
+    if local.chars().count() >= 3 && minuscula.contains(local) {
+        return Err(ApiError::dominio(
+            "CONTRASENA_DEBIL",
+            "La contrasena no puede contener tu correo.",
+        ));
+    }
+    let nombre = nombre.trim().to_lowercase();
+    if nombre.chars().count() >= 3 && minuscula.contains(&nombre) {
+        return Err(ApiError::dominio(
+            "CONTRASENA_DEBIL",
+            "La contrasena no puede contener tu nombre.",
+        ));
+    }
+    if CONTRASENAS_PROHIBIDAS
+        .iter()
+        .any(|prohibida| minuscula.contains(prohibida))
+    {
+        return Err(ApiError::dominio(
+            "CONTRASENA_DEBIL",
+            "Esa contrasena es demasiado comun.",
+        ));
+    }
+    Ok(())
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TokenPayload {
@@ -381,6 +446,15 @@ mod tests {
         let token = crear_access_token(&usuario(), SECRETO, 900).expect("token");
         let error = verificar_token(&token, "otro").expect_err("invalido");
         assert_eq!(error.codigo, "NO_AUTORIZADO");
+    }
+
+    #[test]
+    fn debe_rechazar_contrasenas_debiles_o_comunes() {
+        assert!(validar_contrasena("Corta1!", "ana@test.dev", "Ana").is_err());
+        assert!(validar_contrasena("password1234!A", "ana@test.dev", "Ana").is_err());
+        assert!(validar_contrasena("AnaClave2026!", "ana@test.dev", "Ana").is_err());
+        assert!(validar_contrasena("Claveana2026!", "ana@test.dev", "Otra").is_err());
+        assert!(validar_contrasena("ClaveSegura2026!", "ana@test.dev", "Ana").is_ok());
     }
 
     #[test]

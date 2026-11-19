@@ -5,6 +5,7 @@
 
 use identity_service::auth::{verificar_token, Sesion};
 use identity_service::config::Config;
+use identity_service::crypto::CifradoSecreto;
 use identity_service::db::Db;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -83,6 +84,8 @@ struct Contexto {
     usuarios: Arc<Usuarios>,
     reset: PasswordReset,
     email: Arc<EmailFake>,
+    db: Arc<Db>,
+    sesiones: Arc<Sesiones>,
 }
 
 async fn preparar() -> Option<Contexto> {
@@ -100,7 +103,13 @@ async fn preparar() -> Option<Contexto> {
     ])
     .expect("config");
     let storage = Arc::new(Storage::nueva("http://storage.test", None));
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), storage));
+    let cifrado =
+        Arc::new(CifradoSecreto::nueva(config.clave_mfa().expect("clave mfa")).expect("cifrado"));
+    let usuarios = Arc::new(Usuarios::nueva(
+        Arc::clone(&db),
+        storage,
+        Arc::clone(&cifrado),
+    ));
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
     let auth = Auth::nueva(Arc::clone(&usuarios), Arc::clone(&sesiones), &config);
     let email = Arc::new(EmailFake::default());
@@ -117,6 +126,8 @@ async fn preparar() -> Option<Contexto> {
         usuarios,
         reset,
         email,
+        db: Arc::clone(&db),
+        sesiones,
     })
 }
 
@@ -124,7 +135,7 @@ fn datos(correo: &str) -> CrearUsuario {
     CrearUsuario {
         nombre: "Ana Pérez".into(),
         correo: correo.into(),
-        contrasena: "secreto123".into(),
+        contrasena: "ClaveSegura2026!".into(),
         rol: "comprador".into(),
         tenant_id: None,
         personal_id: None,
@@ -149,7 +160,11 @@ async fn debe_registrar_login_refrescar_y_revocar_la_sesion() {
     assert_eq!(payload.email, correo);
     assert_eq!(sesion.expira_en, 900);
 
-    let login = ctx.auth.login(&correo, "secreto123").await.expect("login");
+    let login = ctx
+        .auth
+        .login(&correo, "ClaveSegura2026!")
+        .await
+        .expect("login");
     assert_eq!(login.usuario.id, sesion.usuario.id);
 
     let refrescada = ctx
@@ -212,17 +227,17 @@ async fn debe_cambiar_la_contrasena_y_revocar_las_sesiones() {
 
     let error = ctx
         .usuarios
-        .cambiar_contrasena(&sesion.usuario.id, "incorrecta", "nueva1234")
+        .cambiar_contrasena(&sesion.usuario.id, "incorrecta", "NuevaClave2026!")
         .await
         .expect_err("actual");
     assert_eq!(error.codigo, "NO_AUTORIZADO");
 
     ctx.usuarios
-        .cambiar_contrasena(&sesion.usuario.id, "secreto123", "nueva1234")
+        .cambiar_contrasena(&sesion.usuario.id, "ClaveSegura2026!", "NuevaClave2026!")
         .await
         .expect("cambio");
-    assert!(ctx.auth.login(&correo, "secreto123").await.is_err());
-    assert!(ctx.auth.login(&correo, "nueva1234").await.is_ok());
+    assert!(ctx.auth.login(&correo, "ClaveSegura2026!").await.is_err());
+    assert!(ctx.auth.login(&correo, "NuevaClave2026!").await.is_ok());
 }
 
 #[tokio::test]
@@ -245,14 +260,14 @@ async fn debe_restablecer_la_contrasena_con_un_token_de_un_solo_uso() {
         .to_string();
 
     ctx.reset
-        .confirmar(&token, "reset1234")
+        .confirmar(&token, "ResetClave2026!")
         .await
         .expect("confirmar");
-    assert!(ctx.auth.login(&correo, "reset1234").await.is_ok());
+    assert!(ctx.auth.login(&correo, "ResetClave2026!").await.is_ok());
 
     let error = ctx
         .reset
-        .confirmar(&token, "otra1234")
+        .confirmar(&token, "OtraClave2026!")
         .await
         .expect_err("usado");
     assert_eq!(error.status, axum::http::StatusCode::GONE);
@@ -303,3 +318,114 @@ async fn debe_listar_con_filtros_y_sanear_el_hash() {
 }
 
 fn _assert_sesion_serializa(_: &Sesion) {}
+
+#[tokio::test]
+async fn debe_cifrar_el_secreto_mfa_y_permitir_reset_administrativo() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "MFA cifrado".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "comprador".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("usuario");
+    let iniciado = ctx
+        .usuarios
+        .iniciar_mfa(&usuario.id)
+        .await
+        .expect("iniciar mfa");
+    let secreto = iniciado["secreto"].as_str().expect("secreto").to_string();
+    let almacenado: String =
+        sqlx::query_scalar("SELECT mfa_secreto FROM identity.usuarios WHERE id = $1::uuid")
+            .bind(&usuario.id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("secreto");
+    assert!(almacenado.starts_with("v1:"));
+    assert_ne!(almacenado, secreto);
+    assert!(!almacenado.contains(&secreto));
+
+    let ahora = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("reloj")
+        .as_secs();
+    let codigo = identity_service::dominio::totp::codigo(&secreto, ahora).expect("codigo");
+    ctx.usuarios
+        .confirmar_mfa(&usuario.id, &codigo)
+        .await
+        .expect("confirmar mfa");
+    let habilitado: bool =
+        sqlx::query_scalar("SELECT mfa_habilitado FROM identity.usuarios WHERE id = $1::uuid")
+            .bind(&usuario.id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("habilitado");
+    assert!(habilitado);
+
+    ctx.usuarios.reset_mfa(&usuario.id).await.expect("reset");
+    let estado: (Option<String>, bool) = sqlx::query_as(
+        "SELECT mfa_secreto, mfa_habilitado FROM identity.usuarios WHERE id = $1::uuid",
+    )
+    .bind(&usuario.id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("estado");
+    assert_eq!(estado.0, None);
+    assert!(!estado.1);
+    let codigos: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM identity.mfa_codigos_recuperacion WHERE usuario_id = $1::uuid",
+    )
+    .bind(&usuario.id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("codigos");
+    assert_eq!(codigos, 0);
+}
+
+#[tokio::test]
+async fn debe_registrar_la_ip_de_la_sesion() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Sesion IP".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "comprador".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("usuario");
+    let jti = Uuid::new_v4().to_string();
+    ctx.sesiones
+        .crear(
+            &usuario.id,
+            &jti,
+            chrono::Utc::now() + chrono::Duration::seconds(600),
+            None,
+            Some("agente-test"),
+            Some("203.0.113.7"),
+        )
+        .await
+        .expect("sesion");
+    let sesiones = ctx
+        .sesiones
+        .listar_activas(&usuario.id)
+        .await
+        .expect("listar");
+    let sesion = sesiones
+        .iter()
+        .find(|valor| valor["user_agent"] == "agente-test")
+        .expect("sesion");
+    assert_eq!(sesion["ip"], "203.0.113.7");
+}
