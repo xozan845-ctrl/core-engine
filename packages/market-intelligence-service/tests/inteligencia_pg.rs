@@ -355,3 +355,67 @@ async fn debe_rechazar_una_venta_invalida_en_el_consumidor_y_auditarla() {
         1
     );
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Db::conectar(&url).await.expect("db");
+    let req = market_intelligence_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = market_intelligence_service::lifecycle::exportar(db.pool(), &req)
+        .await
+        .expect("exportar");
+    assert!(datos["hechos_venta"].is_array());
+    market_intelligence_service::lifecycle::purgar(db.pool(), &req)
+        .await
+        .expect("purgar");
+}
+
+#[tokio::test]
+async fn debe_servir_los_endpoints_internos_de_ciclo_de_vida() {
+    use axum::extract::State;
+    use axum::http::{HeaderMap, HeaderValue};
+    use axum::Json;
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Db::conectar(&url).await.expect("db");
+    let config = market_intelligence_service::config::Config::from_pairs([
+        ("SERVICIO", "market-intelligence-service"),
+        ("INTERNAL_API_KEY", "clave-interna"),
+    ])
+    .expect("config");
+    let estado = market_intelligence_service::state::AppState::nueva(
+        config,
+        market_intelligence_service::metrics::Metrics::nueva("market-intelligence-service"),
+    )
+    .con_db(Arc::new(db));
+    assert!(estado.db().is_ok());
+    let mut headers = HeaderMap::new();
+    headers.insert("x-internal-key", HeaderValue::from_static("clave-interna"));
+    let empresa_id = Uuid::new_v4().to_string();
+    let req = || market_intelligence_service::lifecycle::TenantRequest {
+        empresa_id: empresa_id.clone(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let _ = market_intelligence_service::http::interno::exportar_tenant(
+        State(estado.clone()),
+        headers.clone(),
+        Json(req()),
+    )
+    .await
+    .expect("exportar http");
+    let _ = market_intelligence_service::http::interno::purgar_tenant(
+        State(estado),
+        headers,
+        Json(req()),
+    )
+    .await
+    .expect("purgar http");
+}

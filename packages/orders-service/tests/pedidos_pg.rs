@@ -1559,6 +1559,27 @@ async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
             .await
             .expect("eventos");
     assert_eq!(eventos, 1);
+
+    // Reintentos idempotentes: cubren las rutas administrativas de recuperación.
+    let reembolso_retry = devoluciones
+        .reembolsar_devolucion(&creada.id, &admin)
+        .await
+        .expect("reintento reembolso");
+    assert_eq!(reembolso_retry.reembolso_estado, "reembolsado");
+    let nota_retry = devoluciones
+        .emitir_nota_credito(&creada.id, &admin)
+        .await
+        .expect("reintento nota");
+    assert_eq!(nota_retry.nota_credito_estado, "emitida");
+}
+
+#[tokio::test]
+async fn debe_limpiar_la_idempotencia_vencida() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let idempotencia = orders_service::idempotencia::Idempotencia::nueva(Arc::clone(&db));
+    let eliminadas = idempotencia.limpiar().await.expect("limpiar");
+    assert_eq!(eliminadas, 0);
 }
 
 #[tokio::test]
@@ -1754,6 +1775,21 @@ async fn debe_gestionar_devoluciones_parciales_por_http() {
     .await
     .expect("estado");
     assert_eq!(recibida, "recibida");
+
+    for accion in ["reembolsar", "nota-credito"] {
+        let mut request = Request::post(format!(
+            "/api/v2/admin/devoluciones/{devolucion_id}/{accion}"
+        ));
+        for (clave, valor) in headers_admin() {
+            request = request.header(clave, valor);
+        }
+        let response = router
+            .clone()
+            .oneshot(request.body(Body::empty()).expect("request"))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+    }
 
     let mut request = Request::post(format!(
         "/api/v2/admin/devoluciones/{devolucion_id}/rechazar"

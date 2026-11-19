@@ -722,3 +722,70 @@ async fn debe_consumir_la_devolucion_recibida_y_compensar_por_evento() {
     db.pool().close().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let Some((_db, pool)) = preparar().await else {
+        return;
+    };
+    sqlx::raw_sql(
+        "CREATE SCHEMA IF NOT EXISTS orders;
+         CREATE TABLE IF NOT EXISTS orders.orden_vista (
+           id uuid PRIMARY KEY, negocio_id uuid, vendedor_id uuid
+         );",
+    )
+    .execute(&pool)
+    .await
+    .expect("ordenes minimas");
+    let req = commissions_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = commissions_service::lifecycle::exportar(&pool, &req)
+        .await
+        .expect("exportar");
+    assert!(datos["comisiones"].is_array());
+    commissions_service::lifecycle::purgar(&pool, &req)
+        .await
+        .expect("purgar");
+}
+
+#[tokio::test]
+async fn debe_servir_los_endpoints_internos_de_ciclo_de_vida() {
+    use axum::extract::State;
+    use axum::http::{HeaderMap, HeaderValue};
+    use axum::Json;
+    let Some((db, _pool)) = preparar().await else {
+        return;
+    };
+    let config = commissions_service::config::Config::from_pairs([
+        ("SERVICIO", "commissions-service"),
+        ("INTERNAL_API_KEY", "clave-interna"),
+    ])
+    .expect("config");
+    let estado = commissions_service::state::AppState::nueva(
+        config,
+        commissions_service::metrics::Metrics::nueva("commissions-service"),
+    )
+    .con_db(Arc::clone(&db));
+    assert!(estado.db().is_ok());
+    let mut headers = HeaderMap::new();
+    headers.insert("x-internal-key", HeaderValue::from_static("clave-interna"));
+    let empresa_id = Uuid::new_v4().to_string();
+    let req = || commissions_service::lifecycle::TenantRequest {
+        empresa_id: empresa_id.clone(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let _ = commissions_service::http::interno::exportar_tenant(
+        State(estado.clone()),
+        headers.clone(),
+        Json(req()),
+    )
+    .await
+    .expect("exportar http");
+    let _ = commissions_service::http::interno::purgar_tenant(State(estado), headers, Json(req()))
+        .await
+        .expect("purgar http");
+}
