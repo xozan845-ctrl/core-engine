@@ -63,6 +63,10 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/auth/token$", &["POST"], None),
             p(r"^/api/v2/auth/restablecer-contrasena$", &["POST"], None),
             p(r"^/api/v2/auth/restablecer-contrasena/confirmar$", &["POST"], None),
+            p(r"^/api/v2/auth/verificar-correo$", &["POST"], None),
+            p(r"^/api/v2/auth/reenviar-verificacion$", &["POST"], None),
+            p(r"^/api/v2/auth/mfa(/|$)", &["POST"], Some(todos.clone())),
+            p(r"^/api/v2/auth/sesiones(/|$)", &["GET", "DELETE"], Some(todos.clone())),
             p(r"^/api/v2/packs(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/packs$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/packs/(modelos-operacion|verticales)(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
@@ -90,6 +94,12 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/empresas/[^/]+/extensiones(/|$)", &["GET", "POST", "PATCH", "PUT", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR, COORDINADOR, SUPERVISOR, OPERATIVO])),
             p(r"^/api/v2/empresas/[^/]+/logistica$", &["PATCH"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/empresas/[^/]+/perfil$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/admin/proveedores-pago(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/empresas/[^/]+/configuracion-pagos$", &["GET", "PUT"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/empresas/[^/]+/estado$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/empresas/[^/]+/exportacion$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/empresas/[^/]+/eliminacion/purgar$", &["POST"], Some(vec![SUPER_ADMIN])),
+            p(r"^/api/v2/empresas/[^/]+/eliminacion$", &["GET", "POST", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/empresas/[^/]+/tipo$", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/empresas/[^/]+/vendedores$", &["POST", "GET"], Some(vec![EMPRESARIO])),
             // La capacidad fina por negocio se valida en identity-service.
@@ -207,6 +217,11 @@ mod tests {
         let negocios =
             encontrar_politica("/api/v2/empresas/e-1/negocios", "POST").expect("negocios");
         assert_eq!(negocios.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let estado = encontrar_politica("/api/v2/empresas/e-1/estado", "PATCH").expect("estado");
+        assert_eq!(estado.roles, Some(vec![SUPER_ADMIN, ADMIN]));
+        let purgar =
+            encontrar_politica("/api/v2/empresas/e-1/eliminacion/purgar", "POST").expect("purgar");
+        assert_eq!(purgar.roles, Some(vec![SUPER_ADMIN]));
         let capacidades =
             encontrar_politica("/api/v2/empresas/e-1/negocios/n-1/capacidades", "PATCH")
                 .expect("capacidades negocio");
