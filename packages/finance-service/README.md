@@ -137,7 +137,13 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
   activa (compatibilidad legacy); ya no depende del orden alfabético.
 - **Comprobantes**: la moneda y el IVA salen de la jurisdicción de la serie; el
   IVA se calcula **por línea** con el precio, cantidad y descuento de la orden
-  (no sobre un total ciego). La serie por negocio sigue mandando.
+  (no sobre un total ciego). La serie por negocio sigue mandando. Si la orden
+  trae snapshot `impuesto_cents`/`total_linea_cents`, finance lo reutiliza para
+  que el total del comprobante coincida con checkout (ADR-0038).
+- **Impuesto configurable por tenant**: `impuesto_activo` (default `false`) y
+  `precios_con_impuesto` (default `true`) se guardan en
+  `finance.configuracion_fiscal`; orders los consume por el endpoint interno
+  `GET /internal/finance/configuracion-fiscal`.
 - **Regímenes fiscales** por jurisdicción (RAMPRA, cuota fija, etc.).
 - **Sujetos tributarios** por usuario (RUC, razón social, régimen, estado).
 - **Declaraciones**: `IVA`, `IR` y `CUOTA_FIJA` informativa.
@@ -365,12 +371,22 @@ cargo test
 
 - La capacidad `facturacion_electronica` habilita la función por negocio.
 - `PUT /finanzas/configuracion-fiscal` acepta `facturacion_electronica`,
-  `formato_pdf`, `proveedor_electronico` (`simulado|http`) y
-  `ambiente_electronico` (`pruebas|produccion`).
+  `formato_pdf`, `proveedor_electronico` (`simulado|http`),
+  `ambiente_electronico` (`pruebas|produccion`), `impuesto_activo` y
+  `precios_con_impuesto`.
 - Con el flag activo, `emitir` llama al proveedor y guarda
   `electronica_estado`/`electronica_referencia`; un fallo deja el comprobante
   con estado `error` sin perder numeración.
 - `GET /finanzas/comprobantes/{id}/pdf` descarga el PDF si `formato_pdf=true`;
-  sin el flag responde `PDF_NO_ACTIVADO`.
+  sin el flag responde `PDF_NO_ACTIVADO`. El PDF incluye emisor, cliente,
+  líneas con base/IVA/total y totales; se persiste en
+  `finance.comprobante_pdf` en la primera descarga. Con
+  `PDF_ALMACENAMIENTO=storage` el PDF se sube a `storage-service` y solo se
+  guarda `objeto_id`; si storage falla, cae a `bytea`.
+- Las notas de crédito parciales se emiten por
+  `POST /internal/finance/notas-credito`, usan la serie `NC001` y pasan por el
+  mismo proveedor electrónico configurado para facturas.
+- `POST /internal/{servicio}/tenant/purgar` anonimiza `datos_cliente`, borra PDFs y
+  configuración fiscal; conserva comprobantes y asientos por retención legal.
 - El proveedor HTTP se configura con `FACTURACION_PROVEEDOR_URL` y
   `FACTURACION_PROVEEDOR_KEY`; DGI concreta se conecta detrás de esa URL.

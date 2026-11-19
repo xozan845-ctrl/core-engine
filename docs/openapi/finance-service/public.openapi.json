@@ -946,6 +946,18 @@
                         },
                         "ambiente_electronico": {
                           "type": "string"
+                        },
+                        "tasa_iva": {
+                          "type": "number"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "impuesto_activo": {
+                          "type": "boolean"
+                        },
+                        "precios_con_impuesto": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1014,6 +1026,12 @@
                       "pruebas",
                       "produccion"
                     ]
+                  },
+                  "impuesto_activo": {
+                    "type": "boolean"
+                  },
+                  "precios_con_impuesto": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -1049,6 +1067,30 @@
                         },
                         "jurisdiccion": {
                           "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                        },
+                        "facturacion_electronica": {
+                          "type": "boolean"
+                        },
+                        "formato_pdf": {
+                          "type": "boolean"
+                        },
+                        "proveedor_electronico": {
+                          "type": "string"
+                        },
+                        "ambiente_electronico": {
+                          "type": "string"
+                        },
+                        "tasa_iva": {
+                          "type": "number"
+                        },
+                        "moneda": {
+                          "type": "string"
+                        },
+                        "impuesto_activo": {
+                          "type": "boolean"
+                        },
+                        "precios_con_impuesto": {
+                          "type": "boolean"
                         }
                       },
                       "required": [

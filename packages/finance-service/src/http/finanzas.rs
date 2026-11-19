@@ -539,6 +539,10 @@ pub struct ConfiguracionFiscalRequest {
     pub proveedor_electronico: Option<String>,
     #[serde(default)]
     pub ambiente_electronico: Option<String>,
+    #[serde(default)]
+    pub impuesto_activo: Option<bool>,
+    #[serde(default)]
+    pub precios_con_impuesto: Option<bool>,
 }
 
 fn empresa_fiscal(
@@ -592,6 +596,10 @@ pub async fn configuracion_fiscal_obtener(
         "formato_pdf": config.formato_pdf,
         "proveedor_electronico": config.proveedor_electronico,
         "ambiente_electronico": config.ambiente_electronico,
+        "tasa_iva": config.jurisdiccion.tasa_iva,
+        "moneda": config.jurisdiccion.moneda,
+        "impuesto_activo": config.impuesto_activo,
+        "precios_con_impuesto": config.precios_con_impuesto,
     })))
 }
 
@@ -631,6 +639,8 @@ pub async fn configuracion_fiscal_guardar(
             dto.formato_pdf.unwrap_or(false),
             dto.proveedor_electronico.as_deref().unwrap_or("simulado"),
             dto.ambiente_electronico.as_deref().unwrap_or("pruebas"),
+            dto.impuesto_activo.unwrap_or(false),
+            dto.precios_con_impuesto.unwrap_or(true),
         )
         .await?;
     Ok(Json(json!({
@@ -641,6 +651,10 @@ pub async fn configuracion_fiscal_guardar(
         "formato_pdf": config.formato_pdf,
         "proveedor_electronico": config.proveedor_electronico,
         "ambiente_electronico": config.ambiente_electronico,
+        "tasa_iva": config.jurisdiccion.tasa_iva,
+        "moneda": config.jurisdiccion.moneda,
+        "impuesto_activo": config.impuesto_activo,
+        "precios_con_impuesto": config.precios_con_impuesto,
     })))
 }
 
