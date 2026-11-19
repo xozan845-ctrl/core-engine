@@ -1054,6 +1054,41 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn debe_solicitar_la_nota_de_credito_al_servicio_de_finanzas() {
+        use axum::routing::post;
+        use axum::{Json, Router};
+        let app = Router::new().route(
+            "/internal/finance/notas-credito",
+            post(|| async {
+                Json(serde_json::json!({
+                    "id": "77777777-7777-4777-8777-777777777777"
+                }))
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let direccion = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+        let config = Config::from_pairs([
+            (
+                "FINANCE_SERVICE_URL",
+                format!("http://{direccion}").as_str(),
+            ),
+            ("INTERNAL_API_KEY", "clave"),
+            ("JWT_SECRET", "secreto"),
+        ])
+        .expect("config");
+        let clientes = Clientes::nueva(&config);
+        let id = clientes
+            .nota_credito(&serde_json::json!({ "orden_id": "o-1" }))
+            .await;
+        assert_eq!(id.as_deref(), Some("77777777-7777-4777-8777-777777777777"));
+    }
+
     #[test]
     fn debe_mantener_el_marketplace_por_defecto_en_la_configuracion() {
         assert!(verdadero());
