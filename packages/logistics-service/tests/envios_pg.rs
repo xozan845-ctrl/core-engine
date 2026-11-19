@@ -397,3 +397,22 @@ async fn debe_rechazar_la_asignacion_de_un_envio_ya_fijado() {
         .expect_err("asignacion fija");
     assert_eq!(error.codigo, "ASIGNACION_FIJA");
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let Some(url) = url() else { return };
+    provisionar(&url).await;
+    let pool = sqlx::PgPool::connect(&url).await.expect("postgres");
+    let req = logistics_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = logistics_service::lifecycle::exportar(&pool, &req)
+        .await
+        .expect("exportar");
+    assert!(datos["envios"].is_array());
+    logistics_service::lifecycle::purgar(&pool, &req)
+        .await
+        .expect("purgar");
+}

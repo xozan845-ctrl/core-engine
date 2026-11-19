@@ -27,7 +27,7 @@ pub async fn exportar_tenant(
     exigir_clave(&state, &headers)?;
     let datos = crate::lifecycle::exportar(state.db()?.pool(), &dto)
         .await
-        .map_err(|_| ApiError::interno())?;
+        .map_err(error_interno)?;
     Ok(Json(json!({
         "servicio": "commissions",
         "estado": "completado",
@@ -43,10 +43,14 @@ pub async fn purgar_tenant(
     exigir_clave(&state, &headers)?;
     let detalle = crate::lifecycle::purgar(state.db()?.pool(), &dto)
         .await
-        .map_err(|_| ApiError::interno())?;
+        .map_err(error_interno)?;
     Ok(Json(json!({
         "servicio": "commissions",
         "estado": "completado",
         "detalle": detalle,
     })))
+}
+
+fn error_interno(_: sqlx::Error) -> ApiError {
+    ApiError::interno()
 }
