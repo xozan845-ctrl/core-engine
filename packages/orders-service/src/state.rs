@@ -166,6 +166,7 @@ impl AppState {
             Arc::clone(self.db()?),
             Arc::clone(self.vistas()?),
             Arc::clone(self.clientes()?),
+            Arc::clone(self.pagos()?),
             crate::outbox::Outbox::nueva(&self.config.outbox_tabla),
         ))
     }

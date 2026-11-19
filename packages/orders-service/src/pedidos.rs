@@ -159,7 +159,13 @@ impl Pedidos {
         } else {
             0
         };
-        let total = total_bruto.saturating_sub(cupon_visible);
+        let con_totales = items.iter().any(|item| item.total_linea_cents > 0);
+        let total = if con_totales {
+            self.total_de(&items)
+        } else {
+            total_bruto.saturating_sub(cupon_visible)
+        };
+        let impuesto = items.iter().map(|item| item.impuesto_cents).sum();
         let comision = if orden.total_cents <= 0 {
             0
         } else {
@@ -169,6 +175,7 @@ impl Pedidos {
             vendedor_id: items[0].vendedor_id.clone(),
             tienda_id: items[0].tienda_id.clone(),
             total_cents: total,
+            impuesto_cents: impuesto,
             comision_cents: comision,
             descuento_cupon_cents: cupon_visible,
             items,
@@ -180,9 +187,13 @@ impl Pedidos {
         items
             .iter()
             .map(|item| {
-                item.precio_unitario_cents
-                    .saturating_mul(item.cantidad)
-                    .saturating_sub(item.descuento_cents)
+                if item.total_linea_cents > 0 {
+                    item.total_linea_cents
+                } else {
+                    item.precio_unitario_cents
+                        .saturating_mul(item.cantidad)
+                        .saturating_sub(item.descuento_cents)
+                }
             })
             .sum()
     }
@@ -191,6 +202,11 @@ impl Pedidos {
         items
             .iter()
             .map(|item| {
+                if let Some(total) = item.get("total_linea_cents").and_then(Value::as_i64) {
+                    if total > 0 {
+                        return total;
+                    }
+                }
                 item.get("precio_unitario_cents")
                     .and_then(Value::as_i64)
                     .unwrap_or(0)
@@ -218,6 +234,9 @@ mod tests {
             cantidad,
             precio_unitario_cents: precio,
             descuento_cents: 0,
+            impuesto_cents: 0,
+            tasa_impuesto_bps: 0,
+            total_linea_cents: 0,
             promocion_id: None,
             vendedor_id: Some(vendedor.into()),
             tienda_id: "t-1".into(),
@@ -243,6 +262,7 @@ mod tests {
             negocio_id: None,
             estado: "pagada".into(),
             total_cents: 300,
+            impuesto_cents: 0,
             comision_cents: 36,
             descuento_cupon_cents: 0,
             cupon_codigo: None,
