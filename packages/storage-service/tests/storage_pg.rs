@@ -387,6 +387,12 @@ async fn debe_subir_y_leer_contenido_directo() {
         .execute(&pool)
         .await
         .expect("migracion storage");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/09a_storage_publico.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion storage publico");
     pool.close().await;
 
     let config = Arc::new(Config::from_pairs([("SERVICIO", "storage-service")]).expect("config"));
@@ -450,6 +456,12 @@ async fn debe_servir_los_endpoints_internos_de_pdf_y_ciclo_de_vida() {
         .execute(&pool)
         .await
         .expect("migracion storage");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/09a_storage_publico.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion storage publico");
     pool.close().await;
 
     let config = Config::from_pairs([
