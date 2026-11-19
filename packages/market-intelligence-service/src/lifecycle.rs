@@ -28,17 +28,10 @@ fn usuarios(req: &TenantRequest) -> Vec<Uuid> {
 }
 
 pub async fn exportar(pool: &PgPool, req: &TenantRequest) -> Result<Value, sqlx::Error> {
-    let empresa = empresa(req).map_err(sqlx::Error::Protocol)?;
+    let _empresa = empresa(req).map_err(sqlx::Error::Protocol)?;
     let mut datos = Map::new();
-    let metricas: Value = sqlx::query_scalar(
-        "SELECT COALESCE(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
-           FROM intelligence.metricas_producto t
-          WHERE t.sku IN (SELECT codigo FROM item.items WHERE empresa_id = $1)",
-    )
-    .bind(empresa)
-    .fetch_one(pool)
-    .await?;
-    datos.insert("metricas_producto".into(), metricas);
+    // `metricas_producto` es un agregado global por SKU sin tenant.
+    datos.insert("metricas_producto".into(), json!([]));
     for (nombre, tabla) in [
         ("hechos_venta", "intelligence.hechos_venta"),
         ("puntos_calor", "intelligence.puntos_calor"),
