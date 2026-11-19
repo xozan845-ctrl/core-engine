@@ -1705,3 +1705,51 @@ CREATE POLICY favoritos_admin ON stores.favoritos
 DROP POLICY IF EXISTS favoritos_app ON stores.favoritos;
 CREATE POLICY favoritos_app ON stores.favoritos
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders.idempotencia_http (ADR-0033) ────────────────────────────────────
+ALTER TABLE orders.idempotencia_http ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS idempotencia_http_app ON orders.idempotencia_http;
+CREATE POLICY idempotencia_http_app ON orders.idempotencia_http
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.solicitudes_eliminacion_tenant (ADR-0035) ─────────────────────
+ALTER TABLE identity.solicitudes_eliminacion_tenant ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS solicitudes_eliminacion_app
+  ON identity.solicitudes_eliminacion_tenant;
+CREATE POLICY solicitudes_eliminacion_app
+  ON identity.solicitudes_eliminacion_tenant
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders proveedores/configuración de pago (ADR-0037) ───────────────────
+ALTER TABLE orders.proveedores_pago ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS proveedores_pago_app ON orders.proveedores_pago;
+CREATE POLICY proveedores_pago_app ON orders.proveedores_pago
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.configuracion_pagos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS configuracion_pagos_app ON orders.configuracion_pagos;
+CREATE POLICY configuracion_pagos_app ON orders.configuracion_pagos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.exportacion_jobs (ADR-0042) ──────────────────────────────────
+ALTER TABLE identity.exportacion_jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS exportacion_jobs_app ON identity.exportacion_jobs;
+CREATE POLICY exportacion_jobs_app ON identity.exportacion_jobs
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── finance.comprobante_pdf (ADR-0040) ────────────────────────────────────
+ALTER TABLE finance.comprobante_pdf ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comprobante_pdf_app ON finance.comprobante_pdf;
+CREATE POLICY comprobante_pdf_app ON finance.comprobante_pdf
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity auth hardening (ADR-0036) ────────────────────────────────────
+ALTER TABLE identity.correo_verificacion_tokens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS correo_verificacion_app ON identity.correo_verificacion_tokens;
+CREATE POLICY correo_verificacion_app ON identity.correo_verificacion_tokens
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE identity.mfa_codigos_recuperacion ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mfa_codigos_app ON identity.mfa_codigos_recuperacion;
+CREATE POLICY mfa_codigos_app ON identity.mfa_codigos_recuperacion
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);

@@ -51,6 +51,366 @@
         ]
       }
     },
+    "/internal/analytics/tenant/exportar": {
+      "post": {
+        "operationId": "analytics_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/analytics/tenant/purgar": {
+      "post": {
+        "operationId": "analytics_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/commissions/tenant/exportar": {
+      "post": {
+        "operationId": "commissions_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/commissions/tenant/purgar": {
+      "post": {
+        "operationId": "commissions_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/field/tenant/exportar": {
+      "post": {
+        "operationId": "field_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/field/tenant/purgar": {
+      "post": {
+        "operationId": "field_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
     "/internal/finance/sujetos/{usuarioId}": {
       "get": {
         "operationId": "InternoController_sujeto",
@@ -83,6 +443,167 @@
           }
         ],
         "summary": "Situación fiscal de un usuario (para identity)",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/configuracion-fiscal": {
+      "get": {
+        "operationId": "InternoController_configuracionFiscal",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuración fiscal efectiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "empresa_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "negocio_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "jurisdiccion": {
+                      "type": "string"
+                    },
+                    "moneda": {
+                      "type": "string"
+                    },
+                    "tasa_iva": {
+                      "type": "number"
+                    },
+                    "impuesto_activo": {
+                      "type": "boolean"
+                    },
+                    "precios_con_impuesto": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Configuración fiscal efectiva para checkout",
+        "tags": [
+          "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/notas-credito": {
+      "post": {
+        "operationId": "InternoController_notaCredito",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orden_id",
+                  "devolucion_id",
+                  "empresa_id",
+                  "base_cents",
+                  "iva_cents",
+                  "total_cents"
+                ],
+                "properties": {
+                  "orden_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "devolucion_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "parte_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "base_cents": {
+                    "type": "integer"
+                  },
+                  "iva_cents": {
+                    "type": "integer"
+                  },
+                  "total_cents": {
+                    "type": "integer"
+                  },
+                  "moneda": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nota de crédito emitida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Emitir nota de crédito parcial (servicio→servicio)",
         "tags": [
           "Finanzas (interno)"
         ]
@@ -251,6 +772,126 @@
         "summary": "Declaraciones del periodo (reportes)",
         "tags": [
           "Finanzas (interno)"
+        ]
+      }
+    },
+    "/internal/finance/tenant/purgar": {
+      "post": {
+        "operationId": "finance_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/finance/tenant/exportar": {
+      "post": {
+        "operationId": "finance_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     },
@@ -912,6 +1553,126 @@
         ]
       }
     },
+    "/internal/inventory/tenant/exportar": {
+      "post": {
+        "operationId": "inventory_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/inventory/tenant/purgar": {
+      "post": {
+        "operationId": "inventory_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
     "/internal/v2/items/lote": {
       "get": {
         "operationId": "InternalV2Controller_lote",
@@ -987,6 +1748,486 @@
             }
           }
         }
+      }
+    },
+    "/internal/item/tenant/exportar": {
+      "post": {
+        "operationId": "item_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/item/tenant/purgar": {
+      "post": {
+        "operationId": "item_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/logistics/tenant/exportar": {
+      "post": {
+        "operationId": "logistics_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/logistics/tenant/purgar": {
+      "post": {
+        "operationId": "logistics_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/intelligence/tenant/exportar": {
+      "post": {
+        "operationId": "intelligence_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/intelligence/tenant/purgar": {
+      "post": {
+        "operationId": "intelligence_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/notifications/tenant/exportar": {
+      "post": {
+        "operationId": "notifications_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/notifications/tenant/purgar": {
+      "post": {
+        "operationId": "notifications_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
       }
     },
     "/internal/pagos/webhook": {
@@ -1238,6 +2479,126 @@
         "summary": "Historia inmutable de eventos de una orden",
         "tags": [
           "Pedidos (interno)"
+        ]
+      }
+    },
+    "/internal/orders/tenant/purgar": {
+      "post": {
+        "operationId": "orders_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/orders/tenant/exportar": {
+      "post": {
+        "operationId": "orders_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     },
@@ -1599,6 +2960,126 @@
         }
       }
     },
+    "/internal/pricing/tenant/exportar": {
+      "post": {
+        "operationId": "pricing_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/pricing/tenant/purgar": {
+      "post": {
+        "operationId": "pricing_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
     "/internal/scheduling/disponibilidad": {
       "post": {
         "operationId": "InternalSchedulingController_disponibilidad",
@@ -1633,6 +3114,126 @@
         "summary": "Verificar disponibilidad de un recurso en un rango",
         "tags": [
           "Scheduling (interno)"
+        ]
+      }
+    },
+    "/internal/scheduling/tenant/exportar": {
+      "post": {
+        "operationId": "scheduling_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/scheduling/tenant/purgar": {
+      "post": {
+        "operationId": "scheduling_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     },
@@ -1753,6 +3354,126 @@
         "summary": "Metadata de un objeto del tenant (servicio→servicio)",
         "tags": [
           "Almacenamiento (interno)"
+        ]
+      }
+    },
+    "/internal/storage/tenant/purgar": {
+      "post": {
+        "operationId": "storage_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/storage/tenant/exportar": {
+      "post": {
+        "operationId": "storage_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     },
@@ -2092,6 +3813,126 @@
         "summary": "Compensar asignación de vendedor (servicio→servicio)",
         "tags": [
           "Tiendas (interno)"
+        ]
+      }
+    },
+    "/internal/stores/tenant/exportar": {
+      "post": {
+        "operationId": "stores_tenant_exportar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos del tenant exportados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Exportar datos del tenant",
+        "tags": [
+          "Tenant"
+        ]
+      }
+    },
+    "/internal/stores/tenant/purgar": {
+      "post": {
+        "operationId": "stores_tenant_purgar",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "empresa_id"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "negocio_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purga aplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "internalKey": []
+          }
+        ],
+        "summary": "Purgar/anonimizar datos del tenant",
+        "tags": [
+          "Tenant"
         ]
       }
     }
@@ -3623,6 +5464,18 @@
             "description": "Descuento aplicado por promoción en centavos",
             "example": 0
           },
+          "impuesto_cents": {
+            "type": "integer",
+            "description": "IVA de la línea en centavos"
+          },
+          "tasa_impuesto_bps": {
+            "type": "integer",
+            "description": "Tasa de IVA en puntos base"
+          },
+          "total_linea_cents": {
+            "type": "integer",
+            "description": "Total final de la línea"
+          },
           "promocion_id": {
             "type": "string",
             "description": "Promoción aplicada a la línea",
@@ -3736,6 +5589,10 @@
             "type": "number",
             "description": "Total en centavos",
             "example": 230000
+          },
+          "impuesto_cents": {
+            "type": "integer",
+            "description": "IVA total de la orden en centavos"
           },
           "comision_cents": {
             "type": "number",
