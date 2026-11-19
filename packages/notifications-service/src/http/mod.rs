@@ -13,7 +13,7 @@ use axum::extract::{MatchedPath, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use std::time::Instant;
 use uuid::Uuid;
@@ -48,6 +48,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
         .route("/docs-internal-json", get(docs_internal_json))
+        .route(
+            "/internal/notifications/tenant/exportar",
+            post(exportar_tenant),
+        )
+        .route("/internal/notifications/tenant/purgar", post(purgar_tenant))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -59,6 +64,42 @@ pub(crate) fn aplicar_capas(router: Router, state: AppState) -> Router {
     router
         .layer(middleware::from_fn_with_state(state.clone(), metricas))
         .layer(middleware::from_fn_with_state(state, correlacion))
+}
+
+fn exigir_clave(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), StatusCode> {
+    let esperada = state.config.internal_api_key.as_deref().unwrap_or("");
+    let recibida = headers
+        .get("x-internal-key")
+        .and_then(|valor| valor.to_str().ok())
+        .unwrap_or("");
+    if esperada.is_empty() || recibida != esperada {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(())
+}
+
+async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    exigir_clave(&state, &headers)?;
+    Ok(Json(serde_json::json!({
+        "servicio": "notifications",
+        "estado": "completado",
+        "datos": { "no_aplica": true, "motivo": "El servicio no persiste datos de tenant." },
+    })))
+}
+
+async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    exigir_clave(&state, &headers)?;
+    Ok(Json(serde_json::json!({
+        "servicio": "notifications",
+        "estado": "completado",
+        "detalle": { "no_aplica": true },
+    })))
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {

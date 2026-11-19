@@ -2,6 +2,7 @@
 
 pub mod envelope;
 pub mod inteligencia;
+pub mod interno;
 
 use crate::auth::UsuarioContexto;
 use crate::campos;
@@ -92,6 +93,14 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/inteligencia/calidad",
             get(inteligencia::calidad_datos),
+        )
+        .route(
+            "/internal/intelligence/tenant/exportar",
+            post(interno::exportar_tenant),
+        )
+        .route(
+            "/internal/intelligence/tenant/purgar",
+            post(interno::purgar_tenant),
         )
         .fallback(no_encontrado)
         .with_state(state.clone());

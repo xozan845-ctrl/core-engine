@@ -261,11 +261,26 @@ impl Reservas {
         }))
     }
 
+    /// Libera la reserva completa de una orden. Devuelve `false` si la orden no
+    /// tiene reserva vigente (ya se liberó, falló la reserva o el evento llegó
+    /// antes que `order.created`), lo que hace la operación idempotente entre
+    /// distintos eventos de cancelación/devolución.
     pub async fn reintegrar_en_transaccion(
         tx: &mut Transaction<'_, Postgres>,
         order_id: &str,
         items: &Value,
-    ) -> Result<(), ApiError> {
+    ) -> Result<bool, ApiError> {
+        let reserva: Option<Uuid> = sqlx::query_scalar(
+            "SELECT order_id FROM inventory.reservas_ordenes
+              WHERE order_id = $1::uuid FOR UPDATE",
+        )
+        .bind(order_id)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(interno)?;
+        if reserva.is_none() {
+            return Ok(false);
+        }
         let lineas = lineas_de(items);
         for item in &lineas {
             let item_id: Option<Uuid> = sqlx::query_scalar(
@@ -348,7 +363,7 @@ impl Reservas {
             .execute(&mut **tx)
             .await
             .map_err(interno)?;
-        Ok(())
+        Ok(true)
     }
 
     /// Restock parcial por RMA. Idempotente por `devolucion_id`.

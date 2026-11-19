@@ -127,6 +127,14 @@ pub fn build_router(state: AppState) -> Router {
         // contrato v2: metadata sin precio ni stock
         .route("/internal/v2/items/lote", get(internal::lote_items_v2))
         .route("/internal/v2/items/{id}", get(internal::item_por_id_v2))
+        .route(
+            "/internal/item/tenant/exportar",
+            post(internal::exportar_tenant),
+        )
+        .route(
+            "/internal/item/tenant/purgar",
+            post(internal::purgar_tenant),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

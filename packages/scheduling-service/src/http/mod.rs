@@ -6,6 +6,7 @@
 
 pub mod agenda;
 pub mod envelope;
+pub mod interno;
 
 use crate::auth::UsuarioContexto;
 use crate::campos;
@@ -74,6 +75,14 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/scheduling/recordatorios",
             get(agenda::listar_recordatorios),
+        )
+        .route(
+            "/internal/scheduling/tenant/exportar",
+            post(interno::exportar_tenant),
+        )
+        .route(
+            "/internal/scheduling/tenant/purgar",
+            post(interno::purgar_tenant),
         )
         .route(
             "/internal/scheduling/disponibilidad",
