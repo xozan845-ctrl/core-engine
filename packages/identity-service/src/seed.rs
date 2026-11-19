@@ -39,14 +39,22 @@ async fn sembrar_admin(usuarios: &Usuarios, config: &Config) {
         })
         .await;
     match resultado {
-        Ok(admin) => logs::info(
-            "seed",
-            campos! {
-                "msg": "Administrador inicial creado",
-                "email": admin.correo,
-                "consejo": "cambie la contrasena en produccion",
-            },
-        ),
+        Ok(admin) => {
+            if let Err(error) = usuarios.marcar_correo_verificado(&admin.id).await {
+                logs::warn(
+                    "seed",
+                    campos! { "msg": "No se pudo verificar el correo del administrador", "err": error.mensaje },
+                );
+            }
+            logs::info(
+                "seed",
+                campos! {
+                    "msg": "Administrador inicial creado",
+                    "email": admin.correo,
+                    "consejo": "cambie la contrasena en produccion",
+                },
+            )
+        }
         Err(error) => logs::error(
             "seed",
             campos! { "msg": "No se pudo crear el administrador inicial", "err": error.mensaje },

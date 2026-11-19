@@ -5,16 +5,24 @@
 
 #[cfg(test)]
 use crate::auth::ROLES;
-use crate::auth::{es_rol, hash_contrasena, verificar_contrasena, UsuarioContexto};
+use crate::auth::{
+    es_rol, hash_contrasena, validar_contrasena, verificar_contrasena, UsuarioContexto,
+};
+use crate::crypto::CifradoSecreto;
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
 use crate::storage::Storage;
-use chrono::{DateTime, Utc};
+use axum::http::StatusCode;
+use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 use std::sync::Arc;
+
+const MAX_INTENTOS_LOGIN: i32 = 5;
+const BLOQUEO_LOGIN_MINUTOS: i64 = 15;
 
 const COLUMNAS: &str = "u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id,
        u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
@@ -85,11 +93,16 @@ pub struct FiltroUsuarios {
 pub struct Usuarios {
     db: Arc<Db>,
     storage: Arc<Storage>,
+    cifrado: Arc<CifradoSecreto>,
 }
 
 impl Usuarios {
-    pub fn nueva(db: Arc<Db>, storage: Arc<Storage>) -> Self {
-        Self { db, storage }
+    pub fn nueva(db: Arc<Db>, storage: Arc<Storage>, cifrado: Arc<CifradoSecreto>) -> Self {
+        Self {
+            db,
+            storage,
+            cifrado,
+        }
     }
 
     pub async fn encontrar_por_id(&self, id: &str) -> Result<Option<Usuario>, ApiError> {
@@ -169,6 +182,298 @@ impl Usuarios {
         .map_err(interno)
     }
 
+    /// Estado del tenant al que pertenece el usuario. `None` si el id no es
+    /// válido o la empresa no existe.
+    pub async fn estado_empresa(&self, empresa_id: &str) -> Result<Option<String>, ApiError> {
+        if uuid::Uuid::parse_str(empresa_id).is_err() {
+            return Ok(None);
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let estado: Option<String> =
+            sqlx::query_scalar("SELECT estado FROM identity.empresas WHERE id = $1::uuid")
+                .bind(empresa_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(estado)
+    }
+
+    pub async fn correo_verificado(&self, id: &str) -> Result<bool, ApiError> {
+        if !es_uuid(id) {
+            return Ok(false);
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila: Option<Option<DateTime<Utc>>> = sqlx::query_scalar(
+            "SELECT correo_verificado_en FROM identity.usuarios WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(fila.flatten().is_some())
+    }
+
+    pub async fn marcar_correo_verificado(&self, id: &str) -> Result<(), ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET correo_verificado_en = COALESCE(correo_verificado_en, NOW()),
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(())
+    }
+
+    pub async fn estado_seguridad(&self, id: &str) -> Result<Value, ApiError> {
+        if !es_uuid(id) {
+            return Ok(json!({}));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT (correo_verificado_en IS NOT NULL) AS correo_verificado,
+                    mfa_habilitado
+               FROM identity.usuarios WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        let Some(fila) = fila else {
+            return Ok(json!({}));
+        };
+        let correo_verificado: bool = fila.try_get("correo_verificado").map_err(interno)?;
+        let mfa_habilitado: bool = fila.try_get("mfa_habilitado").map_err(interno)?;
+        Ok(json!({
+            "correo_verificado": correo_verificado,
+            "mfa_habilitado": mfa_habilitado,
+        }))
+    }
+
+    pub async fn verificar_contrasena_actual(
+        &self,
+        id: &str,
+        contrasena: &str,
+    ) -> Result<bool, ApiError> {
+        if !es_uuid(id) {
+            return Ok(false);
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let hash: Option<String> =
+            sqlx::query_scalar("SELECT contrasena_hash FROM identity.usuarios WHERE id = $1::uuid")
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(hash.is_some_and(|hash| verificar_contrasena(contrasena, &hash)))
+    }
+
+    pub async fn iniciar_mfa(&self, id: &str) -> Result<Value, ApiError> {
+        let usuario = self
+            .encontrar_por_id(id)
+            .await?
+            .ok_or_else(|| ApiError::no_encontrado("Usuario", id))?;
+        let habilitado: Option<bool> =
+            sqlx::query_scalar("SELECT mfa_habilitado FROM identity.usuarios WHERE id = $1::uuid")
+                .bind(id)
+                .fetch_optional(self.db.pool())
+                .await
+                .map_err(interno)?;
+        if habilitado == Some(true) {
+            return Err(ApiError::conflicto(
+                "MFA ya esta activo; desactivalo antes de reiniciarlo.",
+            ));
+        }
+        let secreto = crate::dominio::totp::generar_secreto();
+        let secreto_cifrado = self.cifrado.cifrar(&secreto)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET mfa_secreto = $2, mfa_habilitado = false, actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .bind(&secreto_cifrado)
+        .execute(self.db.pool())
+        .await
+        .map_err(interno)?;
+        Ok(json!({
+            "secreto": secreto,
+            "otpauth_url": crate::dominio::totp::uri(&secreto, &usuario.correo),
+            "mfa_habilitado": false,
+        }))
+    }
+
+    pub async fn confirmar_mfa(&self, id: &str, codigo: &str) -> Result<Value, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila =
+            sqlx::query("SELECT mfa_secreto FROM identity.usuarios WHERE id = $1::uuid FOR UPDATE")
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(interno)?;
+        let Some(fila) = fila else {
+            return Err(ApiError::no_encontrado("Usuario", id));
+        };
+        let secreto: Option<String> = fila.try_get("mfa_secreto").map_err(interno)?;
+        let Some(secreto_cifrado) = secreto else {
+            return Err(ApiError::dominio(
+                "MFA_NO_INICIADO",
+                "Primero inicia la configuracion de MFA.",
+            ));
+        };
+        let secreto = self.cifrado.descifrar(&secreto_cifrado)?;
+        if !crate::dominio::totp::verificar(&secreto, codigo, Utc::now().timestamp() as u64) {
+            return Err(ApiError::dominio(
+                "MFA_INVALIDO",
+                "El codigo MFA no es valido.",
+            ));
+        }
+        // Migra un secreto legacy en claro a la representación cifrada.
+        let secreto_cifrado = self.cifrado.cifrar(&secreto)?;
+        let codigos: Vec<String> = (0..8)
+            .map(|_| crate::dominio::totp::codigo_recuperacion())
+            .collect();
+        sqlx::query("DELETE FROM identity.mfa_codigos_recuperacion WHERE usuario_id = $1::uuid")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+        for codigo in &codigos {
+            sqlx::query(
+                "INSERT INTO identity.mfa_codigos_recuperacion (usuario_id, codigo_hash)
+                 VALUES ($1::uuid, $2)",
+            )
+            .bind(id)
+            .bind(hash_codigo(codigo))
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+        }
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET mfa_habilitado = true,
+                    mfa_secreto = $2,
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .bind(&secreto_cifrado)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({
+            "mfa_habilitado": true,
+            "codigos_recuperacion": codigos,
+        }))
+    }
+
+    pub async fn desactivar_mfa(&self, id: &str, contrasena: &str) -> Result<(), ApiError> {
+        if !self.verificar_contrasena_actual(id, contrasena).await? {
+            return Err(ApiError::no_autorizado(
+                "La contrasena actual es incorrecta.",
+            ));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET mfa_habilitado = false, mfa_secreto = NULL, actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        sqlx::query("DELETE FROM identity.mfa_codigos_recuperacion WHERE usuario_id = $1::uuid")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(())
+    }
+
+    /// Reset administrativo de MFA: no exige contraseña ni código. El llamador
+    /// debe exigir rol de administrador y revocar sesiones.
+    pub async fn reset_mfa(&self, id: &str) -> Result<(), ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let actualizado = sqlx::query(
+            "UPDATE identity.usuarios
+                SET mfa_habilitado = false, mfa_secreto = NULL, actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if actualizado.rows_affected() == 0 {
+            return Err(ApiError::no_encontrado("Usuario", id));
+        }
+        sqlx::query("DELETE FROM identity.mfa_codigos_recuperacion WHERE usuario_id = $1::uuid")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(())
+    }
+
+    /// `true` si el usuario tiene MFA activo y el código TOTP o de recuperación
+    /// es válido.
+    pub async fn verificar_mfa(&self, id: &str, codigo: &str) -> Result<bool, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(
+            "SELECT mfa_habilitado, mfa_secreto
+               FROM identity.usuarios WHERE id = $1::uuid FOR UPDATE",
+        )
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(fila) = fila else {
+            tx.commit().await.map_err(interno)?;
+            return Ok(false);
+        };
+        let habilitado: bool = fila.try_get("mfa_habilitado").map_err(interno)?;
+        let secreto_cifrado: Option<String> = fila.try_get("mfa_secreto").map_err(interno)?;
+        let Some(secreto_cifrado) = secreto_cifrado else {
+            tx.commit().await.map_err(interno)?;
+            return Ok(false);
+        };
+        if !habilitado {
+            tx.commit().await.map_err(interno)?;
+            return Ok(false);
+        }
+        let secreto = self.cifrado.descifrar(&secreto_cifrado)?;
+        if crate::dominio::totp::verificar(&secreto, codigo, Utc::now().timestamp() as u64) {
+            tx.commit().await.map_err(interno)?;
+            return Ok(true);
+        }
+        let consumido: Option<uuid::Uuid> = sqlx::query_scalar(
+            "UPDATE identity.mfa_codigos_recuperacion
+                SET usado_en = NOW()
+              WHERE usuario_id = $1::uuid
+                AND codigo_hash = $2
+                AND usado_en IS NULL
+              RETURNING id",
+        )
+        .bind(id)
+        .bind(hash_codigo(codigo))
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(consumido.is_some())
+    }
+
     pub async fn crear(&self, datos: CrearUsuario) -> Result<Usuario, ApiError> {
         let correo = datos.correo.trim().to_lowercase();
         if !correo_valido(&correo) {
@@ -177,12 +482,7 @@ impl Usuarios {
                 "El correo no tiene un formato valido.",
             ));
         }
-        if datos.contrasena.chars().count() < 8 {
-            return Err(ApiError::dominio(
-                "CONTRASENA_DEBIL",
-                "La contrasena debe tener al menos 8 caracteres.",
-            ));
-        }
+        validar_contrasena(&datos.contrasena, &correo, &datos.nombre)?;
         if !es_rol(&datos.rol) {
             return Err(ApiError::dominio(
                 "ROL_INVALIDO",
@@ -227,13 +527,87 @@ impl Usuarios {
         correo: &str,
         contrasena: &str,
     ) -> Result<Usuario, ApiError> {
-        let Some(fila) = self.encontrar_por_correo(correo).await? else {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let fila = sqlx::query(&format!(
+            "SELECT {COLUMNAS}, u.contrasena_hash, u.intentos_fallidos,
+                    u.bloqueado_hasta
+               FROM identity.usuarios u
+              WHERE LOWER(u.correo) = LOWER($1)
+              FOR UPDATE"
+        ))
+        .bind(correo.trim())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let Some(fila) = fila else {
+            tx.commit().await.map_err(interno)?;
             return Err(credenciales_invalidas());
         };
-        if !verificar_contrasena(contrasena, &fila.contrasena_hash) {
+        let usuario_id: uuid::Uuid = fila.try_get("id").map_err(interno)?;
+        let bloqueado_hasta: Option<DateTime<Utc>> =
+            fila.try_get("bloqueado_hasta").map_err(interno)?;
+        if bloqueado_hasta.is_some_and(|hasta| hasta > Utc::now()) {
+            tx.commit().await.map_err(interno)?;
+            return Err(ApiError::nueva(
+                "CUENTA_BLOQUEADA",
+                "La cuenta esta bloqueada temporalmente por intentos fallidos.",
+                StatusCode::LOCKED,
+            ));
+        }
+        let hash: String = fila.try_get("contrasena_hash").map_err(interno)?;
+        if !verificar_contrasena(contrasena, &hash) {
+            let intentos: i32 = fila.try_get("intentos_fallidos").map_err(interno)?;
+            let nuevos = intentos.saturating_add(1);
+            if nuevos >= MAX_INTENTOS_LOGIN {
+                let hasta = Utc::now() + Duration::minutes(BLOQUEO_LOGIN_MINUTOS);
+                sqlx::query(
+                    "UPDATE identity.usuarios
+                        SET intentos_fallidos = $2,
+                            bloqueado_hasta = $3,
+                            actualizado_en = NOW()
+                      WHERE id = $1::uuid",
+                )
+                .bind(usuario_id)
+                .bind(nuevos)
+                .bind(hasta)
+                .execute(&mut *tx)
+                .await
+                .map_err(interno)?;
+                tx.commit().await.map_err(interno)?;
+                return Err(ApiError::nueva(
+                    "CUENTA_BLOQUEADA",
+                    "La cuenta esta bloqueada temporalmente por intentos fallidos.",
+                    StatusCode::LOCKED,
+                ));
+            }
+            sqlx::query(
+                "UPDATE identity.usuarios
+                    SET intentos_fallidos = $2, actualizado_en = NOW()
+                  WHERE id = $1::uuid",
+            )
+            .bind(usuario_id)
+            .bind(nuevos)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?;
+            tx.commit().await.map_err(interno)?;
             return Err(credenciales_invalidas());
         }
-        Ok(fila.usuario)
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET intentos_fallidos = 0,
+                    bloqueado_hasta = NULL,
+                    ultimo_login_en = NOW(),
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(usuario_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let usuario = sanear(&fila).map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        Ok(usuario)
     }
 
     pub async fn existe_admin(&self) -> Result<bool, ApiError> {
@@ -319,20 +693,23 @@ impl Usuarios {
                 "La contrasena actual es incorrecta.",
             ));
         }
-        if nueva.chars().count() < 8 {
-            return Err(ApiError::dominio(
-                "CONTRASENA_DEBIL",
-                "La nueva contrasena debe tener al menos 8 caracteres.",
-            ));
-        }
+        validar_contrasena(nueva, &usuario.correo, &usuario.nombre)?;
         let hash = hash_contrasena(nueva)?;
         let mut tx = self.db.transaccion().await.map_err(interno)?;
-        sqlx::query("UPDATE identity.usuarios SET contrasena_hash = $1 WHERE id = $2::uuid")
-            .bind(hash)
-            .bind(id)
-            .execute(&mut *tx)
-            .await
-            .map_err(interno)?;
+        sqlx::query(
+            "UPDATE identity.usuarios
+                SET contrasena_hash = $1,
+                    password_actualizado_en = NOW(),
+                    intentos_fallidos = 0,
+                    bloqueado_hasta = NULL,
+                    actualizado_en = NOW()
+              WHERE id = $2::uuid",
+        )
+        .bind(hash)
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
         Ok(())
     }
@@ -522,6 +899,13 @@ fn es_uuid(valor: &str) -> bool {
 
 fn es_violacion_unicidad(error: &sqlx::Error) -> bool {
     matches!(error, sqlx::Error::Database(db) if db.code().as_deref() == Some("23505"))
+}
+
+fn hash_codigo(codigo: &str) -> String {
+    format!(
+        "{:x}",
+        Sha256::digest(codigo.trim().to_uppercase().as_bytes())
+    )
 }
 
 fn credenciales_invalidas() -> ApiError {

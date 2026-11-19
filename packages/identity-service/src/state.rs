@@ -16,6 +16,7 @@ use crate::dominio::password_reset::PasswordReset;
 use crate::dominio::personal::Personal;
 use crate::dominio::registros::Registros;
 use crate::dominio::usuarios::Usuarios;
+use crate::dominio::verificacion::VerificacionEmail;
 use crate::metrics::Metrics;
 use std::sync::Arc;
 use std::time::Instant;
@@ -37,6 +38,7 @@ pub struct Servicios {
     pub registros: Arc<Registros>,
     pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
+    pub verificacion: Arc<VerificacionEmail>,
 }
 
 #[derive(Clone)]
