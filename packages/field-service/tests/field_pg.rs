@@ -414,3 +414,21 @@ async fn debe_validar_la_parte_contra_identity() {
     db.cerrar().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let Some(url) = url() else { return };
+    let (db, _pool) = preparar(&url).await;
+    let req = field_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = field_service::lifecycle::exportar(db.pool(), &req)
+        .await
+        .expect("exportar");
+    assert!(datos["rutas"].is_array());
+    field_service::lifecycle::purgar(db.pool(), &req)
+        .await
+        .expect("purgar");
+}
