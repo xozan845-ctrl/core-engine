@@ -4,8 +4,8 @@
 
 use crate::carrito::{Carrito, ItemCarrito};
 use crate::clients::{
-    ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, CreditoEstado, CuponExterno,
-    OfertaExterna, PreciosExternos, PromocionLinea,
+    ClientesPort, ConfiguracionExterna, ConfiguracionFiscal, ConfiguracionOperativa, CreditoEstado,
+    CuponExterno, OfertaExterna, PreciosExternos, PromocionLinea,
 };
 use crate::db::{iso_ms, Db};
 use crate::errors::ApiError;
@@ -28,7 +28,9 @@ use uuid::Uuid;
 
 pub const ORDER_CREATED: &str = "order.created";
 pub const ORDER_STATUS_UPDATED: &str = "order.status.updated";
+pub const ORDER_CANCELLED: &str = "order.cancelled";
 pub const PAYMENT_PROCESADO: &str = "payment.procesado";
+pub const DEVOLUCION_SOLICITADA: &str = "devolucion.solicitada";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LineaEntrada {
@@ -259,6 +261,9 @@ impl Checkout {
                 cantidad: linea.cantidad,
                 precio_unitario_cents: precio_unitario,
                 descuento_cents: descuento,
+                impuesto_cents: 0,
+                tasa_impuesto_bps: 0,
+                total_linea_cents: 0,
                 promocion_id: promocion.map(|promo| promo.id.clone()),
                 vendedor_id: oferta.vendedor_id.clone(),
                 tienda_id: oferta.tienda_id.clone(),
@@ -381,7 +386,6 @@ impl Checkout {
             {
                 CuponExterno::Ok(validado) => {
                     let descuento = validado.descuento_cents.clamp(0, total_bruto);
-                    total -= descuento;
                     cupon_aplicado = Some((empresa, validado.codigo, descuento));
                 }
                 CuponExterno::Invalido { codigo, mensaje } => {
@@ -410,8 +414,12 @@ impl Checkout {
                 return Err(ApiError::servicio_no_disponible("pricing-service"));
             };
             descuento_cupon = validado.descuento_cents.clamp(0, total_bruto);
-            total = total_bruto - descuento_cupon;
         }
+
+        let (total_con_impuestos, impuesto_total) = self
+            .calcular_impuestos(&mut items, descuento_cupon, total_bruto)
+            .await?;
+        total = total_con_impuestos;
 
         if metodo_pago == "credito" {
             let empresa_id = items
@@ -538,6 +546,7 @@ impl Checkout {
             "cliente_parte_id": comando.cliente_parte_id,
             "items": items,
             "total_cents": total,
+            "impuesto_cents": impuesto_total,
             "comision_cents": comision,
             "descuento_cupon_cents": descuento_cupon,
             "cupon_codigo": cupon_codigo,
@@ -560,6 +569,7 @@ impl Checkout {
                 "cliente_parte_id": comando.cliente_parte_id,
                 "items": items,
                 "total_cents": total,
+                "impuesto_cents": impuesto_total,
                 "moneda": moneda_orden,
                 "moneda_pago": moneda_pago,
                 "total_pagado_cents": total_pagado_cents,
@@ -592,17 +602,6 @@ impl Checkout {
             return Err(error);
         }
         let empresa_pago = empresa_unica(&items);
-        self.pagos
-            .registrar(
-                &order_id,
-                empresa_pago.as_deref(),
-                &metodo,
-                total_pagado_cents,
-                &moneda_pago,
-            )
-            .await?;
-
-        let primer_item = items.first();
         let negocio_id = {
             let unicos: HashSet<&str> = items
                 .iter()
@@ -614,6 +613,18 @@ impl Checkout {
                 None
             }
         };
+        self.pagos
+            .registrar(
+                &order_id,
+                empresa_pago.as_deref(),
+                negocio_id.as_deref(),
+                &metodo,
+                total_pagado_cents,
+                &moneda_pago,
+            )
+            .await?;
+
+        let primer_item = items.first();
         Ok(OrderView {
             id: order_id,
             vendedor_id: primer_item.and_then(|i| i.vendedor_id.clone()),
@@ -623,6 +634,7 @@ impl Checkout {
             negocio_id,
             estado: "creada".to_string(),
             total_cents: total,
+            impuesto_cents: impuesto_total,
             comision_cents: comision,
             descuento_cupon_cents: descuento_cupon,
             cupon_codigo: cupon_codigo.clone(),
@@ -728,6 +740,9 @@ impl Checkout {
             .await?;
         let actor_final = actor.unwrap_or("sistema");
         let ocurrido_en = iso_ms(Utc::now());
+        let liberar_stock = estado_nuevo == "cancelada";
+        let estaba_pagada = estado_pagado(&estado.estado);
+        let motivo_cancelacion = motivo.unwrap_or("cancelacion");
 
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         OrderEventStore
@@ -758,14 +773,66 @@ impl Checkout {
             },
         });
         self.insertar_outbox(&mut tx, &evento).await?;
-        if let Some((tipo, data)) = evento_adicional {
-            let extra = json!({
+        if liberar_stock {
+            // Un pago manual que seguía pendiente ya no puede confirmarse:
+            // se rechaza en la misma transacción que la cancelación.
+            sqlx::query(
+                "UPDATE orders.pagos
+                    SET estado = 'rechazado',
+                        motivo_rechazo = COALESCE(NULLIF(motivo_rechazo, ''), $2),
+                        actualizado_en = NOW()
+                  WHERE order_id = $1::uuid AND estado = 'pendiente'",
+            )
+            .bind(order_id)
+            .bind(motivo_cancelacion)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+
+            // Cualquier cancelación libera la reserva de stock. El evento es
+            // exclusivo para inventario: no implica un asiento de devolución
+            // si la orden nunca llegó a estar pagada.
+            let cancelacion = json!({
                 "event_id": Uuid::new_v4().to_string(),
-                "tipo": tipo,
+                "tipo": ORDER_CANCELLED,
                 "ocurrido_en": ocurrido_en,
-                "data": data,
+                "data": {
+                    "order_id": order_id,
+                    "items": items_para_liberacion(&estado.items),
+                    "motivo": motivo_cancelacion,
+                },
             });
-            self.insertar_outbox(&mut tx, &extra).await?;
+            self.insertar_outbox(&mut tx, &cancelacion).await?;
+
+            // Si la orden ya estaba pagada, además corresponde revertir la
+            // venta (finanzas y comisiones).
+            if estaba_pagada {
+                let devolucion = json!({
+                    "event_id": Uuid::new_v4().to_string(),
+                    "tipo": DEVOLUCION_SOLICITADA,
+                    "ocurrido_en": ocurrido_en,
+                    "data": {
+                        "order_id": order_id,
+                        "items": items_para_liberacion(&estado.items),
+                        "motivo": motivo_cancelacion,
+                    },
+                });
+                self.insertar_outbox(&mut tx, &devolucion).await?;
+            }
+        }
+        if let Some((tipo, data)) = evento_adicional {
+            // Evita duplicar los eventos que ya emite la cancelación.
+            let ya_emitido = (tipo == ORDER_CANCELLED && liberar_stock)
+                || (tipo == DEVOLUCION_SOLICITADA && liberar_stock && estaba_pagada);
+            if !ya_emitido {
+                let extra = json!({
+                    "event_id": Uuid::new_v4().to_string(),
+                    "tipo": tipo,
+                    "ocurrido_en": ocurrido_en,
+                    "data": data,
+                });
+                self.insertar_outbox(&mut tx, &extra).await?;
+            }
         }
         tx.commit().await.map_err(error_db)?;
 
@@ -1030,6 +1097,85 @@ impl Checkout {
             configuraciones.insert(empresa.clone(), config);
         }
         Ok(configuraciones)
+    }
+
+    /// Aplica IVA por línea con la configuración fiscal efectiva del tenant.
+    /// Devuelve `(total de la orden, impuesto total)`. El descuento de cupón se
+    /// reparte proporcionalmente para que el desglose por línea sea coherente.
+    async fn calcular_impuestos(
+        &self,
+        items: &mut [ItemOrden],
+        descuento_cupon: i64,
+        total_bruto: i64,
+    ) -> Result<(i64, i64), ApiError> {
+        let mut configs: HashMap<(String, Option<String>), Option<ConfiguracionFiscal>> =
+            HashMap::new();
+        for item in items.iter() {
+            let clave = (item.empresa_id.clone(), item.negocio_id.clone());
+            if let std::collections::hash_map::Entry::Vacant(entrada) = configs.entry(clave) {
+                let config = self
+                    .clientes
+                    .configuracion_fiscal(&item.empresa_id, item.negocio_id.as_deref())
+                    .await;
+                entrada.insert(config);
+            }
+        }
+
+        let ultimo = items.len().saturating_sub(1);
+        let mut cupon_restante = descuento_cupon.max(0);
+        let mut impuesto_total = 0i64;
+        let mut total = 0i64;
+        for (indice, item) in items.iter_mut().enumerate() {
+            let neto = item
+                .precio_unitario_cents
+                .saturating_mul(item.cantidad)
+                .saturating_sub(item.descuento_cents)
+                .max(0);
+            let cupon_linea = if total_bruto > 0 && cupon_restante > 0 {
+                let calculado = if indice == ultimo {
+                    cupon_restante
+                } else {
+                    ((descuento_cupon as f64 * neto as f64) / total_bruto as f64).round() as i64
+                };
+                calculado.clamp(0, neto.min(cupon_restante))
+            } else {
+                0
+            };
+            cupon_restante = (cupon_restante - cupon_linea).max(0);
+            let neto_final = (neto - cupon_linea).max(0);
+            let config = configs
+                .get(&(item.empresa_id.clone(), item.negocio_id.clone()))
+                .and_then(|config| config.as_ref());
+            let activo = config
+                .map(|config| config.impuesto_activo && config.tasa_iva > 0.0)
+                .unwrap_or(false);
+            let tasa = config.map(|config| config.tasa_iva).unwrap_or(0.0);
+            let tasa_bps = (tasa * 10_000.0).round().max(0.0) as i64;
+            let (impuesto, total_linea) = if activo {
+                if config
+                    .map(|config| config.precios_con_impuesto)
+                    .unwrap_or(true)
+                {
+                    let base = if tasa > 0.0 {
+                        ((neto_final as f64) / (1.0 + tasa)).round().max(0.0) as i64
+                    } else {
+                        neto_final
+                    };
+                    ((neto_final - base).max(0), neto_final)
+                } else {
+                    let impuesto = ((neto_final as f64) * tasa).round().max(0.0) as i64;
+                    (impuesto, neto_final + impuesto)
+                }
+            } else {
+                (0, neto_final)
+            };
+            item.impuesto_cents = impuesto;
+            item.tasa_impuesto_bps = if activo { tasa_bps } else { 0 };
+            item.total_linea_cents = total_linea;
+            impuesto_total = impuesto_total.saturating_add(impuesto);
+            total = total.saturating_add(total_linea);
+        }
+        Ok((total, impuesto_total))
     }
 
     async fn verificar_stock(&self, items: &[ItemOrden]) -> Result<(), ApiError> {
@@ -1368,6 +1514,32 @@ fn normalizar_moneda(valor: &str) -> Result<String, ApiError> {
     Ok(codigo)
 }
 
+/// Estados en los que la venta ya se considera pagada y, por tanto, una
+/// cancelación debe revertir finanzas y comisiones además de liberar stock.
+fn estado_pagado(estado: &str) -> bool {
+    matches!(
+        estado,
+        "pagada" | "en_preparacion" | "enviada" | "entregada"
+    )
+}
+
+/// Líneas que comprometieron stock. La entrega digital no reserva inventario.
+fn items_para_liberacion(items: &[ItemOrden]) -> Vec<Value> {
+    items
+        .iter()
+        .filter(|item| item.fulfillment.as_deref() != Some("digital"))
+        .map(|item| {
+            json!({
+                "empresa_id": &item.empresa_id,
+                "sku": &item.sku,
+                "cantidad": item.cantidad,
+                "item_id": &item.item_id,
+                "ubicacion_id": &item.ubicacion_id,
+            })
+        })
+        .collect()
+}
+
 /// Empresa del pago cuando todas las líneas pertenecen a la misma; si no,
 /// `None` (orden multi-empresa).
 fn empresa_unica(items: &[ItemOrden]) -> Option<String> {
@@ -1585,5 +1757,59 @@ mod tests {
         );
         assert!(validar_fulfillment(Some("onsite"), "reserva", "producto", &permitidos()).is_err());
         assert!(validar_fulfillment(Some("otro"), "compra", "producto", &permitidos()).is_err());
+    }
+
+    fn item(fulfillment: Option<&str>, ubicacion_id: Option<&str>) -> ItemOrden {
+        ItemOrden {
+            oferta_id: "o-1".into(),
+            sku: "SKU-1".into(),
+            producto_nombre: "Producto".into(),
+            cantidad: 2,
+            precio_unitario_cents: 10_000,
+            descuento_cents: 0,
+            impuesto_cents: 0,
+            tasa_impuesto_bps: 0,
+            total_linea_cents: 0,
+            promocion_id: None,
+            vendedor_id: None,
+            tienda_id: "11111111-1111-1111-1111-111111111111".into(),
+            empresa_id: "22222222-2222-2222-2222-222222222222".into(),
+            negocio_id: None,
+            participacion_porcentaje: None,
+            comision: true,
+            ubicacion_id: ubicacion_id.map(str::to_string),
+            item_type: "producto".into(),
+            item_id: "33333333-3333-3333-3333-333333333333".into(),
+            fulfillment: fulfillment.map(str::to_string),
+            fulfillment_config: None,
+        }
+    }
+
+    #[test]
+    fn debe_liberar_solo_las_lineas_que_comprometieron_stock() {
+        let items = vec![
+            item(
+                Some("delivery"),
+                Some("44444444-4444-4444-4444-444444444444"),
+            ),
+            item(Some("digital"), None),
+        ];
+        let liberables = items_para_liberacion(&items);
+        assert_eq!(liberables.len(), 1);
+        assert_eq!(liberables[0]["sku"], "SKU-1");
+        assert_eq!(
+            liberables[0]["ubicacion_id"],
+            "44444444-4444-4444-4444-444444444444"
+        );
+    }
+
+    #[test]
+    fn debe_distinguir_una_orden_pagada_de_una_impaga() {
+        for estado in ["pagada", "en_preparacion", "enviada", "entregada"] {
+            assert!(estado_pagado(estado), "{estado}");
+        }
+        for estado in ["creada", "cancelada", "devuelta", "aceptada"] {
+            assert!(!estado_pagado(estado), "{estado}");
+        }
     }
 }
