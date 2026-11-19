@@ -89,6 +89,19 @@ pub fn build_router(state: AppState) -> Router {
             "/internal/storage/objetos/{id}",
             get(storage::interno_objeto),
         )
+        .route(
+            "/internal/storage/tenant/purgar",
+            post(storage::interno_purgar_tenant),
+        )
+        .route(
+            "/internal/storage/tenant/exportar",
+            post(storage::interno_exportar_tenant),
+        )
+        .route("/internal/storage/objetos", post(storage::interno_subir))
+        .route(
+            "/internal/storage/objetos/{id}/contenido",
+            get(storage::interno_contenido),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
