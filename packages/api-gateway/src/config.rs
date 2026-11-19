@@ -18,6 +18,10 @@ pub struct Config {
     pub entorno: String,
     pub proxy_timeout_ms: u64,
     pub ready_cache_ms: u64,
+    /// Si el gateway está detrás de un proxy de confianza, usa
+    /// `X-Forwarded-For` para resolver la IP del cliente. Si no, ignora esa
+    /// cabecera para evitar spoofing.
+    pub confiar_en_forwarded: bool,
     pub identity_url: String,
     pub storage_url: String,
     pub item_url: String,
@@ -70,6 +74,9 @@ impl Config {
         };
         let proxy_timeout_ms = entero_positivo(leer("PROXY_UPSTREAM_TIMEOUT_MS"), 30_000)?;
         let ready_cache_ms = entero_positivo(leer("READY_CACHE_MS"), 5_000)?;
+        let confiar_en_forwarded = leer("TRUST_FORWARDED_FOR")
+            .map(|valor| valor.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
         Ok(Self {
             puerto,
             servicio: leer("SERVICIO").unwrap_or_else(|| NOMBRE_SERVICIO.to_string()),
@@ -93,6 +100,7 @@ impl Config {
             entorno: leer("ENTORNO").unwrap_or_default(),
             proxy_timeout_ms,
             ready_cache_ms,
+            confiar_en_forwarded,
             identity_url: url_servicio(&leer, "IDENTITY_SERVICE_URL", "identity", 3001),
             storage_url: url_servicio(&leer, "STORAGE_SERVICE_URL", "storage", 3010),
             item_url: url_servicio(&leer, "ITEM_SERVICE_URL", "item", 3015),
