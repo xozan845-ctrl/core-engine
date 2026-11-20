@@ -244,8 +244,8 @@ mod tests {
         let mut sin_politica = Vec::new();
         for (ruta, operaciones) in spec["paths"].as_object().expect("paths") {
             for metodo in operaciones.as_object().expect("metodos").keys() {
-                let politica = encontrar_politica(ruta, metodo.to_uppercase().as_str())
-                    .expect("politica");
+                let politica =
+                    encontrar_politica(ruta, metodo.to_uppercase().as_str()).expect("politica");
                 if matches!(&politica.roles, Some(roles) if roles.is_empty()) {
                     sin_politica.push(format!("{} {}", metodo.to_uppercase(), ruta));
                 }
