@@ -400,7 +400,7 @@ async fn debe_entregar_y_firmar_un_webhook_sin_duplicar() {
     let Some(url) = url() else { return };
     let (db, pool) = preparar(&url).await;
     let servidor = servidor_webhook(vec![StatusCode::OK]).await;
-    let webhooks = Webhooks::nueva(Arc::clone(&db), 2000, false);
+    let webhooks = Webhooks::nueva_para_tests(Arc::clone(&db), 2000, false);
     let empresa = Uuid::new_v4().to_string();
     let creado = webhooks
         .crear(
@@ -454,7 +454,7 @@ async fn debe_reintentar_una_entrega_fallida() {
     let Some(url) = url() else { return };
     let (db, pool) = preparar(&url).await;
     let servidor = servidor_webhook(vec![StatusCode::INTERNAL_SERVER_ERROR, StatusCode::OK]).await;
-    let webhooks = Webhooks::nueva(Arc::clone(&db), 2000, false);
+    let webhooks = Webhooks::nueva_para_tests(Arc::clone(&db), 2000, false);
     let empresa = Uuid::new_v4().to_string();
     webhooks
         .crear(
@@ -508,7 +508,7 @@ async fn debe_gestionar_webhooks_por_la_api_admin() {
     let Some(url) = url() else { return };
     let (db, _pool) = preparar(&url).await;
     let servidor = servidor_webhook(vec![StatusCode::OK]).await;
-    let webhooks = Arc::new(Webhooks::nueva(Arc::clone(&db), 2000, false));
+    let webhooks = Arc::new(Webhooks::nueva_para_tests(Arc::clone(&db), 2000, false));
     let estado = AppState {
         config: Arc::new(Config::from_pairs(Vec::<(&str, &str)>::new()).expect("config")),
         metrics: Arc::new(Metrics::nueva("notifications-service")),
@@ -599,7 +599,7 @@ async fn debe_exportar_y_purgar_plantillas_y_webhooks_del_tenant() {
         )
         .await
         .expect("plantilla");
-    let webhooks = Arc::new(Webhooks::nueva(Arc::clone(&db), 2000, false));
+    let webhooks = Arc::new(Webhooks::nueva_para_tests(Arc::clone(&db), 2000, false));
     webhooks
         .crear(
             &empresa,
