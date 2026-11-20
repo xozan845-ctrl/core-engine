@@ -160,12 +160,14 @@ Validaciones:
 - `tipo` ∈ `analitica`, `cohortes`.
 - `formato` ∈ `json`, `csv`.
 - `frecuencia` ∈ `diaria`, `semanal`, `mensual`.
-- `destino` de 3–200 caracteres (correo, webhook o etiqueta de frontend).
+- `destino` de 3–200 caracteres. Si empieza con `http(s)://`, el servicio envía
+  el contenido al webhook y guarda `entrega_estado`/`entrega_error`; si no, la
+  entrega queda a cargo de otro consumidor.
 
 El worker cada **5 minutos** ejecuta hasta 20 reportes vencidos
 (`proxima_ejecucion <= NOW()`), persiste el resultado en
-`reporte_ejecuciones` y recalcula la próxima fecha. La **entrega** no la hace
-este servicio: otro consumidor lee el resultado.
+`reporte_ejecuciones` y recalcula la próxima fecha. Los webhooks se entregan al
+terminar; los demás destinos quedan para otro consumidor.
 
 `POST /internal/analytics/reportes/ejecutar?limite=N` (1–100, default 20)
 permite forzar la ejecución desde operación.

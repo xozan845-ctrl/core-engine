@@ -313,3 +313,188 @@ async fn debe_guardar_y_ejecutar_reportes() {
         1
     );
 }
+
+#[tokio::test]
+async fn debe_netear_devoluciones_y_cancelaciones_en_ventas_y_comisiones() {
+    let _guard = DB_LOCK.lock().await;
+    let Some((db, pool)) = preparar().await else {
+        return;
+    };
+    let empresa = Uuid::new_v4();
+    let negocio = Uuid::new_v4();
+    let tienda = Uuid::new_v4();
+    let comprador = Uuid::new_v4();
+    let oferta = Uuid::new_v4();
+    let order_id = Uuid::new_v4();
+    let orden = OrdenInterna {
+        comprador_id: Some(comprador.to_string()),
+        creado_en: Some("2026-06-01T10:00:00Z".to_string()),
+        items: vec![item(empresa, negocio, tienda, &oferta.to_string(), 2)],
+    };
+    let consumidor = AnalyticsConsumer::nuevo(
+        Arc::clone(&db),
+        Arc::new(OrdenFija {
+            orden: orden.clone(),
+        }),
+    );
+    consumidor
+        .manejar(json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": "order.completado",
+            "data": { "order_id": order_id.to_string() }
+        }))
+        .await
+        .expect("venta");
+    consumidor
+        .manejar(json!({
+            "event_id": Uuid::new_v4().to_string(),
+            "tipo": "comision.acreditada",
+            "data": {
+                "order_id": order_id.to_string(),
+                "linea_clave": oferta.to_string(),
+                "empresa_id": empresa.to_string(),
+                "negocio_id": negocio.to_string(),
+                "tienda_id": tienda.to_string(),
+                "vendedor_id": Uuid::new_v4().to_string(),
+                "monto_cents": 120,
+                "monto_vendedor_cents": 1080,
+                "monto_empresario_cents": 800,
+                "participacion_porcentaje": 60
+            }
+        }))
+        .await
+        .expect("comision");
+
+    let devolucion = json!({
+        "event_id": Uuid::new_v4().to_string(),
+        "tipo": "devolucion.recibida",
+        "data": {
+            "order_id": order_id.to_string(),
+            "devolucion_id": Uuid::new_v4().to_string(),
+            "items": [{
+                "linea_clave": oferta.to_string(),
+                "sku": "SKU-1",
+                "cantidad": 1,
+                "monto_cents": 1000
+            }]
+        }
+    });
+    consumidor
+        .manejar(devolucion.clone())
+        .await
+        .expect("devolucion");
+    consumidor
+        .manejar(devolucion)
+        .await
+        .expect("devolucion idempotente");
+
+    let resumen =
+        analytics_service::analitica::resumen_negocios(&db, &empresa.to_string(), None, None, None)
+            .await
+            .expect("resumen");
+    assert_eq!(resumen["totales"]["ventas_cents"], 1000);
+    assert_eq!(resumen["totales"]["comisiones_cents"], 60);
+
+    let ajustes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM analytics.hechos_venta
+          WHERE order_id = $1 AND tipo = 'devolucion'",
+    )
+    .bind(order_id)
+    .fetch_one(&pool)
+    .await
+    .expect("ajustes");
+    assert_eq!(ajustes, 1);
+
+    let neto: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(venta_cents), 0)::bigint FROM analytics.hechos_venta WHERE order_id = $1",
+    )
+    .bind(order_id)
+    .fetch_one(&pool)
+    .await
+    .expect("neto");
+    assert_eq!(
+        neto, 1000,
+        "la devolución debe dejar 1000 antes de cancelar"
+    );
+
+    // Cancelación completa: deja la orden en cero y es idempotente.
+    let cancelacion = json!({
+        "event_id": Uuid::new_v4().to_string(),
+        "tipo": "devolucion.solicitada",
+        "data": { "order_id": order_id.to_string(), "motivo": "cancelada" }
+    });
+    consumidor
+        .manejar(cancelacion.clone())
+        .await
+        .expect("cancelacion");
+    consumidor
+        .manejar(cancelacion)
+        .await
+        .expect("cancelacion idempotente");
+    let resumen =
+        analytics_service::analitica::resumen_negocios(&db, &empresa.to_string(), None, None, None)
+            .await
+            .expect("resumen cancelado");
+    assert_eq!(resumen["totales"]["ventas_cents"], 0);
+    assert_eq!(resumen["totales"]["comisiones_cents"], 0);
+}
+
+#[tokio::test]
+async fn debe_entregar_los_reportes_por_webhook() {
+    use axum::{routing::post, Json, Router};
+    use std::sync::Arc as StdArc;
+    let _guard = DB_LOCK.lock().await;
+    let Some((db, pool)) = preparar().await else {
+        return;
+    };
+    let recibido = StdArc::new(tokio::sync::Mutex::new(Vec::<serde_json::Value>::new()));
+    let estado = StdArc::clone(&recibido);
+    let app = Router::new().route(
+        "/webhook",
+        post(move |Json(cuerpo): Json<serde_json::Value>| {
+            let estado = StdArc::clone(&estado);
+            async move {
+                estado.lock().await.push(cuerpo);
+                axum::http::StatusCode::OK
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("listener");
+    let direccion = listener.local_addr().expect("addr");
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app).await;
+    });
+    let empresa = Uuid::new_v4().to_string();
+    let reporte = analytics_service::reportes::crear(
+        &db,
+        &empresa,
+        &Uuid::new_v4().to_string(),
+        analytics_service::reportes::NuevoReporte {
+            nombre: "Webhook".to_string(),
+            tipo: "analitica".to_string(),
+            formato: "json".to_string(),
+            frecuencia: "diaria".to_string(),
+            destino: format!("http://{direccion}/webhook"),
+            proxima_ejecucion: chrono::Utc::now().to_rfc3339(),
+            negocio_id: None,
+        },
+    )
+    .await
+    .expect("reporte");
+    let id = reporte["id"].as_str().expect("id").to_string();
+    let ejecucion = analytics_service::reportes::ejecutar(&db, &empresa, &id)
+        .await
+        .expect("ejecutar");
+    assert_eq!(ejecucion["entrega_estado"], "entregado");
+    assert_eq!(recibido.lock().await.len(), 1);
+    let guardado: String = sqlx::query_scalar(
+        "SELECT entrega_estado FROM analytics.reporte_ejecuciones WHERE id = $1::uuid",
+    )
+    .bind(ejecucion["id"].as_str().expect("id"))
+    .fetch_one(&pool)
+    .await
+    .expect("estado");
+    assert_eq!(guardado, "entregado");
+}

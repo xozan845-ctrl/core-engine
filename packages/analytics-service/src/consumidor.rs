@@ -10,13 +10,15 @@ use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use crate::rabbit::Handler;
 use futures_util::future::BoxFuture;
 use serde_json::Value;
-use sqlx::{Postgres, Transaction};
+use sqlx::{Postgres, Row, Transaction};
 use std::sync::Arc;
 
 pub const COLA_ORDERS: &str = "analytics.orders";
 pub const COLA_COMISIONES: &str = "analytics.comisiones";
 pub const EVENTO_ORDER_COMPLETADO: &str = "order.completado";
 pub const EVENTO_COMISION_ACREDITADA: &str = "comision.acreditada";
+pub const EVENTO_DEVOLUCION_RECIBIDA: &str = "devolucion.recibida";
+pub const EVENTO_DEVOLUCION_SOLICITADA: &str = "devolucion.solicitada";
 pub const USUARIO_SISTEMA: &str = "00000000-0000-0000-0000-000000000000";
 
 pub struct AnalyticsConsumer {
@@ -33,7 +35,13 @@ impl AnalyticsConsumer {
         let Some(tipo) = evento.get("tipo").and_then(Value::as_str) else {
             return Ok(());
         };
-        if !matches!(tipo, EVENTO_ORDER_COMPLETADO | EVENTO_COMISION_ACREDITADA) {
+        if !matches!(
+            tipo,
+            EVENTO_ORDER_COMPLETADO
+                | EVENTO_COMISION_ACREDITADA
+                | EVENTO_DEVOLUCION_RECIBIDA
+                | EVENTO_DEVOLUCION_SOLICITADA
+        ) {
             return Ok(());
         }
         let Some(event_id) = evento.get("event_id").and_then(Value::as_str) else {
@@ -51,6 +59,8 @@ impl AnalyticsConsumer {
             match tipo {
                 EVENTO_ORDER_COMPLETADO => self.orden_completada(&evento, event_id).await,
                 EVENTO_COMISION_ACREDITADA => self.comision(&evento, event_id).await,
+                EVENTO_DEVOLUCION_RECIBIDA => self.devolucion_recibida(&evento, event_id).await,
+                EVENTO_DEVOLUCION_SOLICITADA => self.devolucion_solicitada(&evento, event_id).await,
                 _ => Ok(()),
             }
         })
@@ -171,6 +181,350 @@ impl AnalyticsConsumer {
         .await
         .map_err(error_db)?;
         self.marcar_procesado_tx(&mut tx, event_id, EVENTO_COMISION_ACREDITADA)
+            .await?;
+        tx.commit().await.map_err(error_db)?;
+        Ok(())
+    }
+
+    /// RMA confirmado: inserta ajustes negativos por línea usando el hecho
+    /// original y prorratea la comisión acreditada.
+    async fn devolucion_recibida(&self, evento: &Value, event_id: &str) -> Result<(), ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        if self.ya_procesado_tx(&mut tx, event_id).await? {
+            tx.commit().await.map_err(error_db)?;
+            return Ok(());
+        }
+        let data = datos(evento)?;
+        let order_id = texto(data, "order_id")?;
+        let devolucion_id = texto(data, "devolucion_id")?;
+        let items = data
+            .get("items")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for item in &items {
+            let linea = item
+                .get("linea_clave")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let cantidad = item.get("cantidad").and_then(Value::as_i64).unwrap_or(0);
+            if linea.is_empty() || cantidad <= 0 {
+                continue;
+            }
+            let original = sqlx::query(
+                "SELECT empresa_id, negocio_id, tienda_id, vendedor_id, comprador_id,
+                        cantidad, precio_unitario_cents, venta_cents, orden_creada_en
+                   FROM analytics.hechos_venta
+                  WHERE order_id = $1::uuid AND linea_clave = $2 AND tipo = 'venta'",
+            )
+            .bind(&order_id)
+            .bind(linea)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(error_db)?;
+            let Some(original) = original else {
+                continue;
+            };
+            let cantidad_original: i64 = original.try_get("cantidad").map_err(error_db)?;
+            let factor =
+                (cantidad.min(cantidad_original) as f64 / cantidad_original.max(1) as f64).min(1.0);
+            let venta: i64 = original.try_get("venta_cents").map_err(error_db)?;
+            let monto = -((venta as f64 * factor).round() as i64);
+            let clave = format!("devolucion:{devolucion_id}:{linea}");
+            sqlx::query(
+                "INSERT INTO analytics.hechos_venta
+                   (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                    comprador_id, cantidad, precio_unitario_cents, venta_cents,
+                    orden_creada_en, tipo)
+                 VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                         $7::uuid, $8, $9, $10, $11, 'devolucion')
+                 ON CONFLICT (order_id, linea_clave) DO NOTHING",
+            )
+            .bind(&order_id)
+            .bind(&clave)
+            .bind(
+                original
+                    .try_get::<uuid::Uuid, _>("empresa_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                original
+                    .try_get::<Option<uuid::Uuid>, _>("negocio_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                original
+                    .try_get::<Option<uuid::Uuid>, _>("tienda_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                original
+                    .try_get::<Option<uuid::Uuid>, _>("vendedor_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                original
+                    .try_get::<Option<uuid::Uuid>, _>("comprador_id")
+                    .map_err(error_db)?,
+            )
+            .bind(-cantidad.min(cantidad_original))
+            .bind(
+                original
+                    .try_get::<i64, _>("precio_unitario_cents")
+                    .map_err(error_db)?,
+            )
+            .bind(monto)
+            .bind(
+                original
+                    .try_get::<chrono::DateTime<chrono::Utc>, _>("orden_creada_en")
+                    .map_err(error_db)?,
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+
+            let comision = sqlx::query(
+                "SELECT empresa_id, negocio_id, tienda_id, vendedor_id,
+                        comision_cents, monto_vendedor_cents, monto_empresario_cents,
+                        participacion_porcentaje
+                   FROM analytics.comisiones
+                  WHERE order_id = $1::uuid AND linea_clave = $2 AND tipo = 'comision'",
+            )
+            .bind(&order_id)
+            .bind(linea)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(error_db)?;
+            if let Some(comision) = comision {
+                let comision_cents: i64 = comision.try_get("comision_cents").map_err(error_db)?;
+                let monto_vendedor: i64 =
+                    comision.try_get("monto_vendedor_cents").map_err(error_db)?;
+                let monto_empresario: i64 = comision
+                    .try_get("monto_empresario_cents")
+                    .map_err(error_db)?;
+                sqlx::query(
+                    "INSERT INTO analytics.comisiones
+                       (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                        comision_cents, monto_vendedor_cents, monto_empresario_cents,
+                        participacion_porcentaje, tipo)
+                     VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                             $7, $8, $9, $10, 'devolucion')
+                     ON CONFLICT (order_id, linea_clave) DO NOTHING",
+                )
+                .bind(&order_id)
+                .bind(&clave)
+                .bind(
+                    comision
+                        .try_get::<uuid::Uuid, _>("empresa_id")
+                        .map_err(error_db)?,
+                )
+                .bind(
+                    comision
+                        .try_get::<Option<uuid::Uuid>, _>("negocio_id")
+                        .map_err(error_db)?,
+                )
+                .bind(
+                    comision
+                        .try_get::<Option<uuid::Uuid>, _>("tienda_id")
+                        .map_err(error_db)?,
+                )
+                .bind(
+                    comision
+                        .try_get::<Option<uuid::Uuid>, _>("vendedor_id")
+                        .map_err(error_db)?,
+                )
+                .bind(-((comision_cents as f64 * factor).round() as i64))
+                .bind(-((monto_vendedor as f64 * factor).round() as i64))
+                .bind(-((monto_empresario as f64 * factor).round() as i64))
+                .bind(
+                    comision
+                        .try_get::<Option<i32>, _>("participacion_porcentaje")
+                        .map_err(error_db)?,
+                )
+                .execute(&mut *tx)
+                .await
+                .map_err(error_db)?;
+            }
+        }
+        self.marcar_procesado_tx(&mut tx, event_id, EVENTO_DEVOLUCION_RECIBIDA)
+            .await?;
+        tx.commit().await.map_err(error_db)?;
+        Ok(())
+    }
+
+    /// Cancelación/revocación completa: ajusta todos los hechos de la orden.
+    /// Si el evento trae `devolucion_id` es una solicitud de RMA y solo se
+    /// registra como procesada; el efecto financiero llega en `recibida`.
+    async fn devolucion_solicitada(&self, evento: &Value, event_id: &str) -> Result<(), ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        if self.ya_procesado_tx(&mut tx, event_id).await? {
+            tx.commit().await.map_err(error_db)?;
+            return Ok(());
+        }
+        let data = datos(evento)?;
+        let order_id = texto(data, "order_id")?;
+        if data.get("devolucion_id").is_some() {
+            self.marcar_procesado_tx(&mut tx, event_id, EVENTO_DEVOLUCION_SOLICITADA)
+                .await?;
+            tx.commit().await.map_err(error_db)?;
+            return Ok(());
+        }
+        let ventas = sqlx::query(
+            "SELECT empresa_id, negocio_id, tienda_id, vendedor_id, comprador_id,
+                    regexp_replace(linea_clave, '^(devolucion|cancelacion):[^:]+:', '') AS linea_clave,
+                    SUM(cantidad)::bigint AS cantidad,
+                    MAX(precio_unitario_cents)::bigint AS precio_unitario_cents,
+                    SUM(venta_cents)::bigint AS venta_cents,
+                    MIN(orden_creada_en) AS orden_creada_en
+               FROM analytics.hechos_venta
+              WHERE order_id = $1::uuid
+              GROUP BY empresa_id, negocio_id, tienda_id, vendedor_id, comprador_id,
+                       regexp_replace(linea_clave, '^(devolucion|cancelacion):[^:]+:', ''),
+                       precio_unitario_cents
+             HAVING SUM(venta_cents) > 0",
+        )
+        .bind(&order_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        for venta in &ventas {
+            let linea: String = venta.try_get("linea_clave").map_err(error_db)?;
+            eprintln!(
+                "CANCEL GROUP {} {:?}",
+                linea,
+                venta.try_get::<i64, _>("venta_cents")
+            );
+            let clave = format!("cancelacion:{order_id}:{linea}");
+            let cantidad: i64 = venta.try_get("cantidad").map_err(error_db)?;
+            let monto: i64 = venta.try_get("venta_cents").map_err(error_db)?;
+            sqlx::query(
+                "INSERT INTO analytics.hechos_venta
+                   (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                    comprador_id, cantidad, precio_unitario_cents, venta_cents,
+                    orden_creada_en, tipo)
+                 VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                         $7::uuid, $8, $9, $10, $11, 'cancelacion')
+                 ON CONFLICT (order_id, linea_clave) DO NOTHING",
+            )
+            .bind(&order_id)
+            .bind(&clave)
+            .bind(
+                venta
+                    .try_get::<uuid::Uuid, _>("empresa_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                venta
+                    .try_get::<Option<uuid::Uuid>, _>("negocio_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                venta
+                    .try_get::<Option<uuid::Uuid>, _>("tienda_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                venta
+                    .try_get::<Option<uuid::Uuid>, _>("vendedor_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                venta
+                    .try_get::<Option<uuid::Uuid>, _>("comprador_id")
+                    .map_err(error_db)?,
+            )
+            .bind(-cantidad)
+            .bind(
+                venta
+                    .try_get::<i64, _>("precio_unitario_cents")
+                    .map_err(error_db)?,
+            )
+            .bind(-monto)
+            .bind(
+                venta
+                    .try_get::<chrono::DateTime<chrono::Utc>, _>("orden_creada_en")
+                    .map_err(error_db)?,
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        }
+        let comisiones = sqlx::query(
+            "SELECT empresa_id, negocio_id, tienda_id, vendedor_id,
+                    regexp_replace(linea_clave, '^(devolucion|cancelacion):[^:]+:', '') AS linea_clave,
+                    SUM(comision_cents)::bigint AS comision_cents,
+                    SUM(monto_vendedor_cents)::bigint AS monto_vendedor_cents,
+                    SUM(monto_empresario_cents)::bigint AS monto_empresario_cents,
+                    MAX(participacion_porcentaje) AS participacion_porcentaje
+               FROM analytics.comisiones
+              WHERE order_id = $1::uuid
+              GROUP BY empresa_id, negocio_id, tienda_id, vendedor_id,
+                       regexp_replace(linea_clave, '^(devolucion|cancelacion):[^:]+:', '')
+             HAVING SUM(comision_cents) > 0",
+        )
+        .bind(&order_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        for comision in &comisiones {
+            let linea: String = comision.try_get("linea_clave").map_err(error_db)?;
+            let clave = format!("cancelacion:{order_id}:{linea}");
+            sqlx::query(
+                "INSERT INTO analytics.comisiones
+                   (order_id, linea_clave, empresa_id, negocio_id, tienda_id, vendedor_id,
+                    comision_cents, monto_vendedor_cents, monto_empresario_cents,
+                    participacion_porcentaje, tipo)
+                 VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6::uuid,
+                         $7, $8, $9, $10, 'cancelacion')
+                 ON CONFLICT (order_id, linea_clave) DO NOTHING",
+            )
+            .bind(&order_id)
+            .bind(&clave)
+            .bind(
+                comision
+                    .try_get::<uuid::Uuid, _>("empresa_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                comision
+                    .try_get::<Option<uuid::Uuid>, _>("negocio_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                comision
+                    .try_get::<Option<uuid::Uuid>, _>("tienda_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                comision
+                    .try_get::<Option<uuid::Uuid>, _>("vendedor_id")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                -comision
+                    .try_get::<i64, _>("comision_cents")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                -comision
+                    .try_get::<i64, _>("monto_vendedor_cents")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                -comision
+                    .try_get::<i64, _>("monto_empresario_cents")
+                    .map_err(error_db)?,
+            )
+            .bind(
+                comision
+                    .try_get::<Option<i32>, _>("participacion_porcentaje")
+                    .map_err(error_db)?,
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+        }
+        self.marcar_procesado_tx(&mut tx, event_id, EVENTO_DEVOLUCION_SOLICITADA)
             .await?;
         tx.commit().await.map_err(error_db)?;
         Ok(())
