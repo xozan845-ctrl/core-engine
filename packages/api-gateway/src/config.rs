@@ -36,6 +36,7 @@ pub struct Config {
     pub field_url: String,
     pub intelligence_url: String,
     pub analytics_url: String,
+    pub notifications_url: String,
 }
 
 impl Config {
@@ -118,6 +119,12 @@ impl Config {
                 "INTELLIGENCE_SERVICE_URL",
                 "market-intelligence",
                 3009,
+            ),
+            notifications_url: url_servicio(
+                &leer,
+                "NOTIFICATIONS_SERVICE_URL",
+                "notifications",
+                3012,
             ),
             analytics_url: url_servicio(&leer, "ANALYTICS_SERVICE_URL", "analytics", 3016),
         })
