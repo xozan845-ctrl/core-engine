@@ -15,6 +15,7 @@ use crate::dominio::partes::Partes;
 use crate::dominio::password_reset::PasswordReset;
 use crate::dominio::personal::Personal;
 use crate::dominio::registros::Registros;
+use crate::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
 use crate::dominio::usuarios::Usuarios;
 use crate::dominio::verificacion::VerificacionEmail;
 use crate::metrics::Metrics;
@@ -36,6 +37,7 @@ pub struct Servicios {
     pub personal: Arc<Personal>,
     pub partes: Arc<Partes>,
     pub registros: Arc<Registros>,
+    pub suscripciones: Arc<SuscripcionesPlataforma>,
     pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
     pub verificacion: Arc<VerificacionEmail>,

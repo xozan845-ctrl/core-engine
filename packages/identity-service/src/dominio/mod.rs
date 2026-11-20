@@ -18,6 +18,7 @@ pub mod personal;
 pub mod registros;
 pub mod sesiones;
 pub mod slug;
+pub mod suscripciones_plataforma;
 pub mod tema;
 pub mod totp;
 pub mod usuarios;

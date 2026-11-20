@@ -17,6 +17,7 @@ pub mod negocios;
 pub mod packs;
 pub mod partes;
 pub mod personal;
+pub mod plataforma;
 pub mod registros;
 pub mod usuarios;
 pub mod validacion;
@@ -341,6 +342,27 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades/{capacidad}",
             patch(capacidades::actualizar_negocio),
+        )
+        .route("/api/v2/plataforma/planes", get(plataforma::planes))
+        .route(
+            "/api/v2/plataforma/suscripciones/me",
+            get(plataforma::mi_suscripcion),
+        )
+        .route(
+            "/api/v2/plataforma/suscripciones",
+            post(plataforma::solicitar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones",
+            get(plataforma::listar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones/{id}/confirmar",
+            post(plataforma::confirmar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones/{id}/cancelar",
+            post(plataforma::cancelar),
         )
         .route("/api/v2/packs", get(packs::listar).post(packs::crear))
         .route(
