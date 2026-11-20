@@ -26,10 +26,25 @@ pub struct Webhooks {
     db: Arc<Db>,
     cliente: reqwest::Client,
     https_obligatorio: bool,
+    permitir_loopback: bool,
 }
 
 impl Webhooks {
     pub fn nueva(db: Arc<Db>, timeout_ms: u64, https_obligatorio: bool) -> Self {
+        Self::nueva_con(db, timeout_ms, https_obligatorio, false)
+    }
+
+    /// Solo para pruebas de integración con un servidor local.
+    pub fn nueva_para_tests(db: Arc<Db>, timeout_ms: u64, https_obligatorio: bool) -> Self {
+        Self::nueva_con(db, timeout_ms, https_obligatorio, true)
+    }
+
+    fn nueva_con(
+        db: Arc<Db>,
+        timeout_ms: u64,
+        https_obligatorio: bool,
+        permitir_loopback: bool,
+    ) -> Self {
         let cliente = reqwest::Client::builder()
             .timeout(Duration::from_millis(timeout_ms.max(1)))
             // Un webhook no debe poder redirigirse a la red interna.
@@ -40,6 +55,7 @@ impl Webhooks {
             db,
             cliente,
             https_obligatorio,
+            permitir_loopback,
         }
     }
 
@@ -396,11 +412,15 @@ impl Webhooks {
     }
 
     fn validar_url(&self, url: &str) -> Result<(), ErrorNotificacion> {
-        validar_url(url, self.https_obligatorio)
+        validar_url(url, self.https_obligatorio, self.permitir_loopback)
     }
 }
 
-fn validar_url(url: &str, https_obligatorio: bool) -> Result<(), ErrorNotificacion> {
+fn validar_url(
+    url: &str,
+    https_obligatorio: bool,
+    permitir_loopback: bool,
+) -> Result<(), ErrorNotificacion> {
     let url = url.trim();
     if !(8..=500).contains(&url.chars().count()) {
         return Err(ErrorNotificacion::Evento(
@@ -424,35 +444,37 @@ fn validar_url(url: &str, https_obligatorio: bool) -> Result<(), ErrorNotificaci
             "La URL del webhook no es válida.".to_string(),
         ));
     }
-    if let Some(host) = parsed.host_str() {
-        let host = host.trim_matches(['[', ']']);
-        if host.eq_ignore_ascii_case("localhost") {
-            return Err(ErrorNotificacion::Evento(
-                "El webhook no puede apuntar a loopback.".to_string(),
-            ));
-        }
-        if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-            let reservada = match ip {
-                std::net::IpAddr::V4(v4) => {
-                    v4.is_loopback()
-                        || v4.is_private()
-                        || v4.is_link_local()
-                        || v4.is_unspecified()
-                        || v4.is_multicast()
-                        || v4.is_broadcast()
-                }
-                std::net::IpAddr::V6(v6) => {
-                    v6.is_loopback()
-                        || v6.is_unspecified()
-                        || v6.is_multicast()
-                        || v6.is_unique_local()
-                        || v6.is_unicast_link_local()
-                }
-            };
-            if reservada {
+    if !permitir_loopback {
+        if let Some(host) = parsed.host_str() {
+            let host = host.trim_matches(['[', ']']);
+            if host.eq_ignore_ascii_case("localhost") {
                 return Err(ErrorNotificacion::Evento(
-                    "El webhook no puede apuntar a una IP privada o reservada.".to_string(),
+                    "El webhook no puede apuntar a loopback.".to_string(),
                 ));
+            }
+            if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+                let reservada = match ip {
+                    std::net::IpAddr::V4(v4) => {
+                        v4.is_loopback()
+                            || v4.is_private()
+                            || v4.is_link_local()
+                            || v4.is_unspecified()
+                            || v4.is_multicast()
+                            || v4.is_broadcast()
+                    }
+                    std::net::IpAddr::V6(v6) => {
+                        v6.is_loopback()
+                            || v6.is_unspecified()
+                            || v6.is_multicast()
+                            || v6.is_unique_local()
+                            || v6.is_unicast_link_local()
+                    }
+                };
+                if reservada {
+                    return Err(ErrorNotificacion::Evento(
+                        "El webhook no puede apuntar a una IP privada o reservada.".to_string(),
+                    ));
+                }
             }
         }
     }
@@ -599,15 +621,15 @@ mod tests {
 
     #[test]
     fn valida_esquema_host_y_https() {
-        assert!(validar_url("https://erp.example.com/hook", true).is_ok());
-        assert!(validar_url("http://erp.example.com/hook", true).is_err());
-        assert!(validar_url("http://127.0.0.1:8080/hook", false).is_err());
-        assert!(validar_url("https://169.254.169.254/latest/meta-data", false).is_err());
-        assert!(validar_url("https://[::1]/hook", false).is_err());
-        assert!(validar_url("https://localhost/hook", false).is_err());
-        assert!(validar_url("ftp://erp.example.com/hook", false).is_err());
-        assert!(validar_url("https://user:pass@erp.example.com", false).is_err());
-        assert!(validar_url("corto", false).is_err());
+        assert!(validar_url("https://erp.example.com/hook", true, false).is_ok());
+        assert!(validar_url("http://erp.example.com/hook", true, false).is_err());
+        assert!(validar_url("http://127.0.0.1:8080/hook", false, false).is_err());
+        assert!(validar_url("https://169.254.169.254/latest/meta-data", false, false).is_err());
+        assert!(validar_url("https://[::1]/hook", false, false).is_err());
+        assert!(validar_url("https://localhost/hook", false, false).is_err());
+        assert!(validar_url("ftp://erp.example.com/hook", false, false).is_err());
+        assert!(validar_url("https://user:pass@erp.example.com", false, false).is_err());
+        assert!(validar_url("corto", false, false).is_err());
     }
 
     #[test]
