@@ -475,6 +475,7 @@ impl Pagos {
         }
         let activo = datos.get("activo").and_then(Value::as_bool).unwrap_or(true);
         let config = configuracion_de(datos);
+        validar_config_tenant(&config)?;
         let mut tx = self
             .db
             .transaccion()
@@ -504,7 +505,7 @@ impl Pagos {
         validar_config_proveedor(
             &proveedor.tipo,
             activo,
-            &fusionar_config(&proveedor.config, &config),
+            &fusionar_config_tenant(&proveedor.config, &config),
         )?;
         let fila = if negocio_id.is_some() {
             sqlx::query(
@@ -620,7 +621,7 @@ impl Pagos {
             .filter(|config| config.proveedor_codigo == codigo)
             .map(|config| config.config)
             .unwrap_or_else(|| json!({}));
-        let config = fusionar_config(&proveedor.config, &tenant_config);
+        let config = fusionar_config_tenant(&proveedor.config, &tenant_config);
         let Some(url) = config
             .get("url")
             .and_then(Value::as_str)
@@ -660,7 +661,7 @@ impl Pagos {
         let mut base = config.config.clone();
         if let Ok(proveedores) = self.listar_proveedores().await {
             if let Some(proveedor) = proveedores.into_iter().find(|p| p.codigo == pago.proveedor) {
-                base = fusionar_config(&proveedor.config, &base);
+                base = fusionar_config_tenant(&proveedor.config, &base);
             }
         }
         Ok(base
@@ -1270,6 +1271,38 @@ fn fusionar_config(base: &Value, extra: &Value) -> Value {
     Value::Object(salida)
 }
 
+/// Claves que solo puede definir la plataforma (admin), nunca el tenant:
+/// permitir que el tenant las sobrescriba convierte la configuración de pagos
+/// en un SSRF con exfiltración de variables de entorno.
+const CONFIG_RESERVADA: [&str; 3] = ["url", "clave_env", "webhook_secreto_env"];
+
+/// Fusiona la config del proveedor con la del tenant, ignorando las claves
+/// reservadas en la parte del tenant.
+fn fusionar_config_tenant(base: &Value, extra: &Value) -> Value {
+    let mut salida = base.as_object().cloned().unwrap_or_default();
+    if let Some(extra) = extra.as_object() {
+        for (clave, valor) in extra {
+            if !CONFIG_RESERVADA.contains(&clave.as_str()) {
+                salida.insert(clave.clone(), valor.clone());
+            }
+        }
+    }
+    Value::Object(salida)
+}
+
+fn validar_config_tenant(config: &Value) -> Result<(), ApiError> {
+    if let Some(objeto) = config.as_object() {
+        for clave in CONFIG_RESERVADA {
+            if objeto.contains_key(clave) {
+                return Err(ApiError::validacion(json!([
+                    {"campo": format!("config.{clave}"), "restricciones": ["isReserved"]}
+                ])));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn configuracion_de(datos: &Value) -> Value {
     datos
         .get("config")
@@ -1407,6 +1440,36 @@ mod tests {
     fn debe_exigir_config_objeto() {
         assert_eq!(config_de(&json!({})).expect("config"), json!({}));
         assert!(config_de(&json!({"config": []})).is_err());
+    }
+
+    #[test]
+    fn debe_rechazar_url_y_claves_de_entorno_del_tenant() {
+        for clave in ["url", "clave_env", "webhook_secreto_env"] {
+            let config = json!({ clave: "https://attacker.tld" });
+            assert!(
+                validar_config_tenant(&config).is_err(),
+                "{clave} debe estar reservada"
+            );
+        }
+        assert!(validar_config_tenant(&json!({"timeout_ms": 5000})).is_ok());
+    }
+
+    #[test]
+    fn la_config_del_tenant_no_puede_sobrescribir_la_del_proveedor() {
+        let base = json!({
+            "url": "https://pasarela.example",
+            "clave_env": "PAGO_PROVEEDOR_KEY",
+            "timeout_ms": 5000
+        });
+        let tenant = json!({
+            "url": "https://attacker.tld",
+            "clave_env": "JWT_SECRET",
+            "timeout_ms": 9000
+        });
+        let fusionada = fusionar_config_tenant(&base, &tenant);
+        assert_eq!(fusionada["url"], "https://pasarela.example");
+        assert_eq!(fusionada["clave_env"], "PAGO_PROVEEDOR_KEY");
+        assert_eq!(fusionada["timeout_ms"], 9000);
     }
 
     #[tokio::test]
