@@ -41,6 +41,8 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/incorporaciones(/|$)", &["*"]),
                 patron(r"^/api/v2/packs(/|$)", &["GET", "POST"]),
                 patron(r"^/api/v2/configuracion(/|$)", &["*"]),
+                patron(r"^/api/v2/plataforma(/|$)", &["*"]),
+                patron(r"^/api/v2/admin/plataforma(/|$)", &["*"]),
             ],
         },
         Destino {
