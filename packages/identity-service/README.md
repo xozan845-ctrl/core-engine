@@ -68,6 +68,9 @@ capacidades, tenants, temas o partes).
 | `SMTP_HOST` | Sí con `smtp` | — | Servidor SMTP |
 | `SMTP_PORT` | No | `587` | Puerto |
 | `SMTP_USER` / `SMTP_PASSWORD` | Juntos | — | Autenticación SMTP |
+| `PLATAFORMA_PLAN_EMPRESARIO` | No | `empresario_plus` | Plan que habilita más de un negocio (ADR-0046) |
+| `PLATAFORMA_EMPRESAS_GRATIS` | No | `1` | Empresas incluidas sin cobro |
+| `PLATAFORMA_NEGOCIOS_GRATIS` | No | `1` | Negocios incluidos sin cobro |
 
 `EMAIL_MODE` distinto de `log`/`smtp` impide arrancar. Con `smtp`,
 `SMTP_HOST`, `EMAIL_FROM` y el par usuario/contraseña se validan al inicio.
@@ -246,6 +249,23 @@ internos son objetos concretos (`Storage`, `Stores`).
   `POST /empresas/{id}/personal/{usuarioId}/transferir`.
 - Cada negocio tiene sus capacidades (`identity.negocio_capacidades`), que se
   consultan/activan por separado de las de la empresa.
+
+### Suscripción de plataforma (expansión)
+
+- El primer negocio y la primera empresa son gratuitos por defecto; los cupos
+  se cambian con `PLATAFORMA_EMPRESAS_GRATIS`/`PLATAFORMA_NEGOCIOS_GRATIS`
+  (poner ambos en `0` para cobrar desde el primer empresario).
+- Para operar más de `PLATAFORMA_EMPRESAS_GRATIS` empresas o
+  `PLATAFORMA_NEGOCIOS_GRATIS` negocios se exige el plan `empresario_plus`
+  (USD 35/mes). Sin plan, la operación devuelve `402 SUSCRIPCION_REQUERIDA`.
+- La suscripción es por empresario y el cobro es manual en el MVP:
+  `POST /api/v2/plataforma/suscripciones` crea la solicitud `pendiente` y un
+  admin la confirma con
+  `POST /api/v2/admin/plataforma/suscripciones/{id}/confirmar`.
+- Consulta: `GET /api/v2/plataforma/suscripciones/me` y
+  `GET /api/v2/plataforma/planes`. Los tenants existentes reciben 30 días de
+  gracia (`origen='legacy'`).
+- Decisión y límites: [ADR-0046](../../docs/adr/0046-suscripcion-plataforma-expansion.md).
 
 ### Capacidades y manifiesto
 

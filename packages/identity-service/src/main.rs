@@ -18,6 +18,7 @@ use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
+use identity_service::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
 use identity_service::dominio::usuarios::Usuarios;
 use identity_service::dominio::verificacion::VerificacionEmail;
 use identity_service::email::{crear_email, Email};
@@ -150,7 +151,13 @@ async fn main() {
         3000,
     ));
     let extensiones = Arc::new(Extensiones::nueva(Arc::clone(&db)));
-    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
+    let suscripciones = Arc::new(SuscripcionesPlataforma::nueva(
+        Arc::clone(&db),
+        config.plataforma_plan_codigo.clone(),
+        config.plataforma_empresas_gratis,
+        config.plataforma_negocios_gratis,
+    ));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db), Arc::clone(&suscripciones)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let personal = Arc::new(Personal::nueva(
@@ -179,6 +186,7 @@ async fn main() {
             personal,
             partes,
             registros,
+            suscripciones,
             packs,
             password_reset,
             verificacion,

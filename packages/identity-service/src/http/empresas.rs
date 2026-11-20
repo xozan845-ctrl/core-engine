@@ -152,6 +152,11 @@ pub async fn crear(
     validar(PERFIL, &dto)?;
     let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
     actor.exigir_roles(&["empresario"], &[])?;
+    state
+        .servicios()?
+        .suscripciones
+        .exigir_empresa_extra(&actor)
+        .await?;
     let empresa = state
         .servicios()?
         .empresas
