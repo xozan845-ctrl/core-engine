@@ -348,6 +348,10 @@ curl -H "Authorization: Bearer $TOKEN" \
 Migración de tenants existentes, pilotos y rollback:
 [`docs/runbook-multi-vertical.md`](docs/runbook-multi-vertical.md).
 
+Backup, restore y recuperación:
+[`docs/runbook-backup-restore.md`](docs/runbook-backup-restore.md). Deuda de
+plataforma priorizada: [`docs/backlog-plataforma.md`](docs/backlog-plataforma.md).
+
 ## Arquitectura
 
 ```text
