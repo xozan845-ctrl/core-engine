@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::diagnostics;
 use crate::errors::ApiError;
 use crate::metrics::Metrics;
-use crate::rate_limit::{es_login, es_media_publica, ip_de, ResultadoLimite};
+use crate::rate_limit::{es_login, es_media_publica, es_onboarding, ip_de, ResultadoLimite};
 use crate::readiness;
 use crate::state::AppState;
 use axum::body::Body;
@@ -163,6 +163,8 @@ async fn borde(State(state): State<AppState>, mut request: Request, next: Next) 
             ("ready", 10)
         } else if es_login(metodo.as_str(), &ruta) {
             ("login", 10)
+        } else if es_onboarding(metodo.as_str(), &ruta) {
+            ("onboarding", 10)
         } else {
             ("global", 300)
         };
