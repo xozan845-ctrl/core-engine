@@ -42,6 +42,7 @@ para que las decisiones no se diluyan (R-DO-7).
 | 11 | **Factura/impuestos de la suscripción** | No se emite comprobante de plataforma | Requisito fiscal del SaaS | Serie/impuesto de plataforma separado de la facturación del tenant | El tenant descarga su comprobante de suscripción |
 | 12 | **Plugin/SDK de capacidades** | Capacidad nueva = migración + código + `features.rs` + guard (ADR-0001); `packs` compone y `extensiones` da esquemas JSON | Un tercero debe añadir una capacidad sin tocar el core | Contrato de plugin (WASM/sidecar), registro firmado, versión y sandbox | Un plugin se registra/activa por tenant sin recompilar el core |
 | 13 | **Rotación de refresh tokens** | Misma `jti` al renovar (`docs/decisiones.md`) | Requisito de seguridad de sesiones | Rotación con detección de reuso y cierre selectivo | Un refresh reutilizado revoca la familia |
+| 14 | **Cobro en el alta del rol empresario** | El plan se exige al crear la primera empresa/negocio según los cupos; el registro sigue siendo libre | El producto decida cobrar antes de crear la primera empresa | Paso de pago en el registro o en el primer `POST /empresas`, con suscripción `pendiente` y bloqueo de la creación hasta confirmar | Un empresario sin pago no crea su primera empresa; un comprador no se ve afectado |
 
 ## Qué no se hará ahora (y por qué)
 
