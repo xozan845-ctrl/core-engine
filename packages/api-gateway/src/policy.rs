@@ -170,6 +170,25 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/inteligencia/me/", &["GET"], Some(vec![VENDEDOR, ADMIN])),
             p(r"^/api/v2/inteligencia/", &["GET"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/inteligencia/ventas/registrar$", &["POST"], Some(vec![VENDEDOR, EMPRESARIO, SUPER_ADMIN, ADMIN])),
+            // Superficies que ya existían en los servicios pero no tenían
+            // política de borde.
+            p(r"^/api/v2/empresas/[^/]+/configuracion-pagos$", &["GET", "PUT"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/fidelizacion/mis-", &["GET", "POST"], Some(vec![COMPRADOR])),
+            p(r"^/api/v2/fidelizacion(/|$)", &["GET", "PUT", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/contratos(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/suscripciones(/|$)", &["GET", "POST"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/mesas(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR])),
+            p(r"^/api/v2/comandas(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR])),
+            p(r"^/api/v2/pedidos/[^/]+/entregas-digitales$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, COMPRADOR])),
+            p(r"^/api/v2/entregas-digitales/[^/]+$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, COMPRADOR])),
+            p(r"^/api/v2/orders/[^/]+/devoluciones$", &["GET", "POST"], Some(vec![COMPRADOR, EMPRESARIO, ADMIN])),
+            p(r"^/api/v2/admin/devoluciones(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/catalog/cupones(/|$)", &["GET", "POST", "PATCH", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/comprador/(resenas|favoritos)(/|$)", &["GET", "POST", "PATCH", "DELETE"], Some(vec![COMPRADOR])),
+            p(r"^/api/v2/tienda/items/[^/]+/resenas$", &["GET"], None),
+            p(r"^/api/v2/admin/resenas(/|$)", &["PATCH"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(r"^/api/v2/exportaciones/[^/]+/descarga$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/negocios/plantillas$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             // Deny-by-default.
             p(r"^/api/v2/", &["*"], Some(Vec::new())),
         ]
@@ -215,6 +234,28 @@ mod tests {
         let por_defecto = encontrar_politica("/api/v2/auth/login", "GET").expect("deny");
         assert_eq!(por_defecto.roles.as_ref().map(Vec::len), Some(0));
         assert!(encontrar_politica("/api/v2/orders", "POST").is_some());
+    }
+
+    #[test]
+    fn debe_denegar_por_defecto_y_asignar_roles() {
+        let spec: serde_json::Value =
+            serde_json::from_str(include_str!("../../../docs/api/core-engine.openapi.json"))
+                .expect("openapi publico");
+        let mut sin_politica = Vec::new();
+        for (ruta, operaciones) in spec["paths"].as_object().expect("paths") {
+            for metodo in operaciones.as_object().expect("metodos").keys() {
+                let politica = encontrar_politica(ruta, metodo.to_uppercase().as_str())
+                    .expect("politica");
+                if matches!(&politica.roles, Some(roles) if roles.is_empty()) {
+                    sin_politica.push(format!("{} {}", metodo.to_uppercase(), ruta));
+                }
+            }
+        }
+        assert!(
+            sin_politica.is_empty(),
+            "operaciones publicas sin politica de rol:\n{}",
+            sin_politica.join("\n")
+        );
     }
 
     #[test]
