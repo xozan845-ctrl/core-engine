@@ -106,20 +106,27 @@ fn ok(cuerpo: Value) -> Result<Response, ApiError> {
     Ok(Json(cuerpo).into_response())
 }
 
+/// Construye el alta pública. `tenant_id` y `personal_id` solo se asignan
+/// server-side (onboarding/aceptar invitación): un cliente anónimo no puede
+/// elegir la empresa ni el personal de otra cuenta.
+fn datos_registro_publico(dto: &Value) -> CrearUsuario {
+    CrearUsuario {
+        nombre: valor(dto, "nombre").unwrap_or_default(),
+        correo: valor(dto, "correo").unwrap_or_default(),
+        contrasena: valor(dto, "contrasena").unwrap_or_default(),
+        rol: valor(dto, "rol").unwrap_or_default(),
+        tenant_id: None,
+        personal_id: None,
+    }
+}
+
 /// POST /api/v2/auth/registro
 pub async fn registrar(
     State(state): State<AppState>,
     Cuerpo(dto): Cuerpo,
 ) -> Result<Response, ApiError> {
     validar(REGISTRO, &dto)?;
-    let datos = CrearUsuario {
-        nombre: valor(&dto, "nombre").unwrap_or_default(),
-        correo: valor(&dto, "correo").unwrap_or_default(),
-        contrasena: valor(&dto, "contrasena").unwrap_or_default(),
-        rol: valor(&dto, "rol").unwrap_or_default(),
-        tenant_id: valor(&dto, "tenant_id"),
-        personal_id: valor(&dto, "personal_id"),
-    };
+    let datos = datos_registro_publico(&dto);
     if state.config.exigir_correo_verificado {
         let usuario = state.servicios()?.auth.registrar_usuario(datos).await?;
         if let Err(error) = state
@@ -530,6 +537,21 @@ mod tests {
             error.cuerpo()["detalles"][0]["restricciones"],
             json!(["isIn"])
         );
+    }
+
+    #[test]
+    fn debe_ignorar_tenant_y_personal_en_el_registro_publico() {
+        let datos = datos_registro_publico(&json!({
+            "nombre": "Ana",
+            "correo": "ana@tienda.test",
+            "contrasena": "ClaveSegura2026!",
+            "rol": "empresario",
+            "tenant_id": "11111111-1111-4111-8111-111111111111",
+            "personal_id": "22222222-2222-4222-8222-222222222222"
+        }));
+        assert_eq!(datos.tenant_id, None);
+        assert_eq!(datos.personal_id, None);
+        assert_eq!(datos.rol, "empresario");
     }
 
     #[test]
