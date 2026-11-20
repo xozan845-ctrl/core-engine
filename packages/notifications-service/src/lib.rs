@@ -23,3 +23,4 @@ pub mod plantillas_db;
 pub mod rabbit;
 pub mod state;
 pub mod tipos;
+pub mod webhooks;
