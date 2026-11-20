@@ -6,6 +6,7 @@
 
 #![allow(dead_code)]
 
+pub mod auth;
 pub mod clientes;
 pub mod config;
 pub mod consumidor;
@@ -14,9 +15,11 @@ pub mod email;
 pub mod errors;
 pub mod http;
 pub mod logs;
+pub mod mensajeria;
 pub mod metrics;
 pub mod notificaciones;
 pub mod plantillas;
+pub mod plantillas_db;
 pub mod rabbit;
 pub mod state;
 pub mod tipos;

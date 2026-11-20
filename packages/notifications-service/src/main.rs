@@ -8,8 +8,10 @@ use notifications_service::db::Db;
 use notifications_service::email::crear_proveedor;
 use notifications_service::http::build_router;
 use notifications_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
+use notifications_service::mensajeria::{Sms, WhatsApp};
 use notifications_service::metrics::Metrics;
 use notifications_service::notificaciones::{Notificaciones, NotificacionesPort};
+use notifications_service::plantillas_db::Plantillas;
 use notifications_service::rabbit::{ColaConfig, Rabbit};
 use notifications_service::state::AppState;
 use std::sync::Arc;
@@ -90,8 +92,28 @@ async fn main() {
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let notificaciones: Arc<dyn NotificacionesPort> =
-        Arc::new(Notificaciones::nueva(clientes, email));
+    let plantillas = Arc::new(Plantillas::nueva(Arc::clone(&db)));
+    let mut notificaciones = Notificaciones::nueva(clientes, email)
+        .con_plantillas(Arc::clone(&plantillas))
+        .con_canales(config.canales.clone());
+    if let (Some(token), Some(phone_id)) = (
+        config.whatsapp_token.clone(),
+        config.whatsapp_phone_id.clone(),
+    ) {
+        notificaciones = notificaciones.con_whatsapp(Arc::new(WhatsApp::nueva(
+            phone_id,
+            token,
+            config.internal_request_timeout_ms,
+        )));
+    }
+    if let Some(url) = config.sms_url.clone() {
+        notificaciones = notificaciones.con_sms(Arc::new(Sms::nuevo(
+            url,
+            config.sms_key.clone(),
+            config.internal_request_timeout_ms,
+        )));
+    }
+    let notificaciones: Arc<dyn NotificacionesPort> = Arc::new(notificaciones);
     let consumidor = Arc::new(ConsumidorNotificaciones::nuevo(
         Arc::clone(&db),
         notificaciones,
@@ -107,6 +129,8 @@ async fn main() {
     let estado = AppState {
         config: Arc::new(config),
         metrics: Arc::clone(&metrics),
+        db: Some(Arc::clone(&db)),
+        plantillas: Some(plantillas),
     };
     let app = build_router(estado);
 

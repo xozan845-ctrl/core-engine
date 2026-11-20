@@ -60,6 +60,7 @@ fn mensaje(
     }
     vec![MensajeNotificacion {
         destinatario,
+        telefono: usuario.telefono.clone(),
         mensaje: EmailMessage {
             to: usuario.correo.clone(),
             subject: asunto.to_string(),
@@ -107,6 +108,65 @@ fn asunto_estado(estado: &str, corto: &str) -> String {
 fn texto_data<'a>(data: Option<&'a Value>, clave: &str) -> Option<&'a str> {
     data.and_then(|valor| valor.get(clave))
         .and_then(Value::as_str)
+}
+
+/// Variables disponibles en las plantillas editables.
+pub fn variables(
+    evento: &Value,
+    contexto: &ContextoPedido,
+    destinatario: Destinatario,
+) -> std::collections::BTreeMap<String, String> {
+    let data = evento.get("data");
+    let orden = &contexto.orden;
+    let buscar = |clave: &str| {
+        data.and_then(|valor| valor.get(clave))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
+    let mut variables = std::collections::BTreeMap::new();
+    variables.insert("pedido".into(), pedido_corto(&orden.id));
+    variables.insert("orden_id".into(), orden.id.clone());
+    variables.insert("estado".into(), estado_legible(&orden.estado).to_string());
+    variables.insert("total".into(), total_orden(contexto));
+    variables.insert("moneda".into(), orden.moneda.clone());
+    variables.insert("motivo".into(), buscar("motivo"));
+    variables.insert("guia".into(), buscar("guia"));
+    variables.insert(
+        "cliente".into(),
+        contexto
+            .comprador
+            .as_ref()
+            .map(|usuario| usuario.nombre.clone())
+            .unwrap_or_default(),
+    );
+    variables.insert(
+        "vendedor".into(),
+        contexto
+            .vendedor
+            .as_ref()
+            .map(|usuario| usuario.nombre.clone())
+            .unwrap_or_default(),
+    );
+    variables.insert(
+        "destinatario".into(),
+        match destinatario {
+            Destinatario::Comprador => "comprador",
+            Destinatario::Vendedor => "vendedor",
+        }
+        .to_string(),
+    );
+    variables
+}
+
+/// Reemplaza `{{clave}}` por su valor. Las variables desconocidas se dejan
+/// visibles para detectar plantillas mal escritas en pruebas.
+pub fn render(plantilla: &str, variables: &std::collections::BTreeMap<String, String>) -> String {
+    let mut salida = plantilla.to_string();
+    for (clave, valor) in variables {
+        salida = salida.replace(&format!("{{{{{clave}}}}}"), valor);
+    }
+    salida
 }
 
 /// Construye los mensajes del evento. Los eventos sin plantilla (p. ej.
@@ -260,6 +320,7 @@ mod tests {
             id: "11111111-1111-1111-1111-111111111111".to_string(),
             nombre: "Ana".to_string(),
             correo: "ana@core.test".to_string(),
+            telefono: None,
         }
     }
 
@@ -268,6 +329,7 @@ mod tests {
             id: "22222222-2222-2222-2222-222222222222".to_string(),
             nombre: "Luis".to_string(),
             correo: "luis@core.test".to_string(),
+            telefono: None,
         }
     }
 
@@ -423,5 +485,26 @@ mod tests {
             &contexto,
         );
         assert!(mensajes[0].mensaje.text.contains("US$ 1150.00"));
+    }
+}
+
+#[cfg(test)]
+mod render_tests {
+    use super::*;
+
+    #[test]
+    fn debe_renderizar_variables_de_plantilla() {
+        let variables = std::collections::BTreeMap::from([
+            ("pedido".to_string(), "ABC12345".to_string()),
+            ("total".to_string(), "C$ 100.00".to_string()),
+        ]);
+        assert_eq!(
+            render("Pedido {{pedido}} por {{total}}", &variables),
+            "Pedido ABC12345 por C$ 100.00"
+        );
+        assert_eq!(
+            render("Sin variables {{desconocida}}", &variables),
+            "Sin variables {{desconocida}}"
+        );
     }
 }
