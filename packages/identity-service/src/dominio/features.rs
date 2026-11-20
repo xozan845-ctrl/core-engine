@@ -64,6 +64,7 @@ pub const FEATURES_POR_CAPACIDAD: &[(&str, &[&str])] = &[
             "logistica.guias",
         ],
     ),
+    ("logistica_pod", &["logistica.prueba_entrega"]),
     (
         "operacion_campo",
         &[
