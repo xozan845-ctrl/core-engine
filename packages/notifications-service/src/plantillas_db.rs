@@ -77,6 +77,29 @@ impl Plantillas {
         Ok(Value::Array(datos))
     }
 
+    /// Exportación de tenant: solo las plantillas propias (las globales son plataforma).
+    pub async fn exportar(&self, empresa_id: &str) -> Result<Value, ErrorNotificacion> {
+        let fila = sqlx::query(
+            "SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.evento, p.canal), '[]'::jsonb) AS datos
+               FROM notifications.plantillas p
+              WHERE p.empresa_id = $1::uuid",
+        )
+        .bind(empresa_id)
+        .fetch_one(self.db.pool())
+        .await?;
+        fila.try_get("datos").map_err(Into::into)
+    }
+
+    /// Purga las plantillas propias del tenant (las globales se conservan).
+    pub async fn purgar(&self, empresa_id: &str) -> Result<u64, ErrorNotificacion> {
+        let resultado =
+            sqlx::query("DELETE FROM notifications.plantillas WHERE empresa_id = $1::uuid")
+                .bind(empresa_id)
+                .execute(self.db.pool())
+                .await?;
+        Ok(resultado.rows_affected())
+    }
+
     pub async fn guardar(
         &self,
         empresa_id: Option<&str>,
