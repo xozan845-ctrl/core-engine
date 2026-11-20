@@ -345,6 +345,10 @@ curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/v2/empresas/<empresaId>/capacidades
 ```
 
+Alternativa de una sola llamada para el frontend (idempotente y con token
+fresco): `POST /api/v2/onboarding` con `Idempotency-Key`; ver
+[`packages/identity-service/README.md`](packages/identity-service/README.md#onboarding-idempotente).
+
 Migración de tenants existentes, pilotos y rollback:
 [`docs/runbook-multi-vertical.md`](docs/runbook-multi-vertical.md).
 

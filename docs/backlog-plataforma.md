@@ -12,8 +12,19 @@ para que las decisiones no se diluyan (R-DO-7).
 | Backup/restore | Dump diario, retención, offsite manual y restore drill | [ADR-0044](./adr/0044-backup-restore-verificado.md), [runbook](./runbook-backup-restore.md) |
 | Webhooks salientes | Suscripciones por tenant, HMAC, reintentos, API admin | [ADR-0045](./adr/0045-webhooks-salientes.md) |
 | Cobro de plataforma | Plan `empresario_plus` USD 35/mes para >1 negocio, cobro manual | [ADR-0046](./adr/0046-suscripcion-plataforma-expansion.md) |
+| Onboarding | Alta autenticada e idempotente con estado y token fresco | [ADR-0047](./adr/0047-onboarding-idempotente.md) |
 
 ## Backlog priorizado
+
+### P0/P1 — Extensiones del onboarding
+
+| # | Tema | Estado actual | Disparador | Diseño mínimo | Aceptación |
+|---|---|---|---|---|---|
+| 15 | **Pre-provisión de bucket en onboarding** | `storage` se informa como `lazy`; el bucket nace en la primera subida | El frontend necesita mostrar cuota/estado antes de subir | Llamada best-effort a `GET /storage/bucket` dentro de un job asíncrono; no bloquear la empresa si falla | `storage.estado=completado` o `pendiente`, sin duplicar empresa |
+| 16 | **Invitaciones dentro del onboarding** | El actor es el admin; invitar personal es un flujo aparte | Alta self-serve con equipo desde el primer día | Crear invitaciones con el flujo existente, paso best-effort y estado por invitación | El job devuelve invitaciones `enviadas|fallidas` |
+| 17 | **Datos demo por pack** | `datos_demo=true` devuelve `DATOS_DEMO_NO_SOPORTADO` | Demos comerciales o piloto con datos precargados | Seed idempotente por pack, flag apagado por defecto y borrado explícito | Un tenant demo se crea y se limpia sin residuos |
+| 18 | **Dominio personalizado** | `dominio_deseado` con punto devuelve `DOMINIO_NO_SOPORTADO`; guía sin implementar | Un cliente exige `tienda.sudominio.com` | Implementar `docs/guia-dominios-personalizados.md` y un paso `dominio` en el job | Dominio `pendiente|verificando|activo` sin romper el alta |
+| 19 | **Retención de `provisioning_jobs`** | Sin limpieza automática | Crecimiento por altas | Worker diario que borra `completado/fallido` con más de N días | Tabla acotada y job consultable durante la ventana útil |
 
 ### P1 — Endurecimiento operativo y de integración
 

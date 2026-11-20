@@ -23,7 +23,7 @@ son transversales a los rubros; no hay `farmacia-service` ni `dental-service`.
 | Paquete | Puerto | Esquema(s) | Entornos | Rol |
 |---|---:|---|---|---|
 | [`api-gateway`](./api-gateway/README.md) | **8080** | — | dev/stage/prod | Único punto de entrada, JWT, políticas, proxy, rate limit, readiness |
-| [`identity-service`](./identity-service/README.md) | 3001 | `identity` | dev/stage/prod | Auth, sesiones, usuarios, empresas, negocios, personal, partes, capacidades, packs, extensiones, API keys |
+| [`identity-service`](./identity-service/README.md) | 3001 | `identity` | dev/stage/prod | Auth, sesiones, usuarios, empresas, negocios, personal, partes, capacidades, packs, extensiones, API keys, onboarding |
 | [`item-service`](./item-service/README.md) | 3015 | `item` | dev/stage/prod | Catálogo maestro: productos, servicios, alquileres, variantes, componentes, series, combos, importación |
 | [`inventory-service`](./inventory-service/README.md) | 3013 | `inventory` | dev/stage/prod | Stock, lotes FEFO, ubicaciones, movimientos, reservas y saga de stock |
 | [`pricing-service`](./pricing-service/README.md) | 3014 | `pricing` | dev/stage/prod | Listas de precio, escalas, tarifas por fecha, cotizaciones y promociones |

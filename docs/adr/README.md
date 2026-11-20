@@ -55,6 +55,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0044](./0044-backup-restore-verificado.md) | Aceptado (implementado; PITR en backlog) | Backup lógico diario, retención, copia offsite manual y restore drill |
 | [0045](./0045-webhooks-salientes.md) | Aceptado (implementado) | Webhooks salientes por tenant con HMAC, reintentos y API admin |
 | [0046](./0046-suscripcion-plataforma-expansion.md) | Aceptado (implementado con cobro manual) | Plan USD 35/mes para operar más de un negocio |
+| [0047](./0047-onboarding-idempotente.md) | Aceptado (implementado) | Onboarding autenticado, idempotente y con token/estado consolidado |
 
 ## Convención
 
