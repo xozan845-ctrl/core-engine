@@ -24,6 +24,7 @@ use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
+use identity_service::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
 use identity_service::dominio::totp;
 use identity_service::dominio::usuarios::{CrearUsuario, Usuarios};
 use identity_service::dominio::verificacion::VerificacionEmail;
@@ -139,7 +140,13 @@ async fn preparar() -> Option<Contexto> {
     ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
     let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
-    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
+    let suscripciones = Arc::new(SuscripcionesPlataforma::nueva(
+        Arc::clone(&db),
+        "empresario_plus".to_string(),
+        1,
+        1,
+    ));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db), Arc::clone(&suscripciones)));
     let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
@@ -182,6 +189,7 @@ async fn preparar() -> Option<Contexto> {
             personal,
             partes,
             registros,
+            suscripciones,
             packs: Arc::new(Packs::nueva(Arc::clone(&db))),
             password_reset,
             verificacion,
@@ -233,6 +241,37 @@ fn autorizacion(id: &str, rol: &str) -> Vec<(&'static str, String)> {
         ("x-user-rol", rol.to_string()),
         ("x-user-email", "actor@test.dev".to_string()),
     ]
+}
+
+async fn activar_suscripcion_plataforma(
+    app: &Router,
+    actor: &[(&'static str, String)],
+    empresa_id: &str,
+) {
+    let (status, solicitada) = enviar(
+        app,
+        "POST",
+        "/api/v2/plataforma/suscripciones",
+        json!({ "empresa_id": empresa_id }),
+        &headers(actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = solicitada["data"]["id"]
+        .as_str()
+        .expect("suscripcion")
+        .to_string();
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
+    let (status, confirmada) = enviar(
+        app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{id}/confirmar"),
+        json!({ "referencia": "prueba" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(confirmada["data"]["estado"], "activa");
 }
 
 fn headers<'a>(pares: &'a [(&'static str, String)]) -> Vec<(&'static str, &'a str)> {
@@ -3587,6 +3626,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
     let mut actor_pares = actor.clone();
     actor_pares.push(("x-tenant", empresa_id.clone()));
     let actor_headers = headers(&actor_pares);
+    activar_suscripcion_plataforma(&ctx.app, &actor, &empresa_id).await;
 
     // La empresa simple nace con su negocio principal, sin pasos extra.
     let (status, negocios) = enviar(
@@ -3945,6 +3985,7 @@ async fn debe_cambiar_y_conservar_el_negocio_activo_de_la_sesion() {
     let mut actor_pares = actor.clone();
     actor_pares.push(("x-tenant", empresa_id.clone()));
     let actor_headers = headers(&actor_pares);
+    activar_suscripcion_plataforma(&ctx.app, &actor, &empresa_id).await;
 
     let (status, segundo) = enviar(
         &ctx.app,
@@ -4241,4 +4282,176 @@ async fn debe_generar_exportacion_asincrona_firmada() {
     assert_eq!(archivo["empresa_id"], empresa_id);
     assert!(archivo["identidad"]["formato"].is_string());
     assert!(archivo["servicios"].is_array());
+}
+
+#[tokio::test]
+async fn debe_cobrar_el_plan_para_operar_mas_de_un_negocio() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario plan".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+
+    let crear_empresa = |sufijo: &str| {
+        json!({
+            "nombre": format!("Empresa {sufijo}"),
+            "slug": format!("plan-{sufijo}-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        })
+    };
+
+    let (status, primera) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("uno"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = primera["data"]["id"].as_str().expect("empresa").to_string();
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("dos"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
+    assert_eq!(error["detalles"]["precio_cents"], 3500);
+
+    let crear_negocio = json!({
+        "codigo": format!("sucursal_{}", &Uuid::new_v4().simple().to_string()[..8]),
+        "nombre": "Sucursal",
+        "vertical_id": "retail",
+        "pack_codigo": "pack_retail",
+    });
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        crear_negocio.clone(),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
+
+    let (status, planes) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/plataforma/planes",
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(planes["data"]["planes"][0]["codigo"], "empresario_plus");
+    assert_eq!(planes["data"]["planes"][0]["precio_cents"], 3500);
+    assert_eq!(planes["data"]["planes"][0]["moneda"], "USD");
+
+    let (status, solicitada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/plataforma/suscripciones",
+        json!({ "empresa_id": empresa_id }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(solicitada["data"]["estado"], "pendiente");
+    let suscripcion_id = solicitada["data"]["id"]
+        .as_str()
+        .expect("suscripcion")
+        .to_string();
+
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
+    let (status, confirmada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{suscripcion_id}/confirmar"),
+        json!({ "referencia": "transferencia-001" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(confirmada["data"]["estado"], "activa");
+    assert_eq!(confirmada["data"]["referencia"], "transferencia-001");
+    assert!(confirmada["data"]["fin_en"].is_string());
+
+    let (status, actual) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/plataforma/suscripciones/me",
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actual["data"]["suscripcion"]["vigente"], true);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        crear_negocio,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, segunda) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("dos"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(
+        segunda["data"]["creado_por"].as_str(),
+        Some(empresario.id.as_str())
+    );
+
+    let (status, cancelada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{suscripcion_id}/cancelar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cancelada["data"]["estado"], "cancelada");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("tres"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(
+        error["codigo"],
+        "SUSCRIPCION_REQUIERIDA".replace("REQUIERIDA", "REQUERIDA")
+    );
 }

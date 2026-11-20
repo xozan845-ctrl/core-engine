@@ -7,6 +7,7 @@
 use crate::auth::UsuarioContexto;
 use crate::db::Db;
 use crate::dominio::auditoria;
+use crate::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
 use crate::errors::ApiError;
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -23,11 +24,12 @@ pub struct CrearNegocio {
 
 pub struct Negocios {
     db: Arc<Db>,
+    suscripciones: Arc<SuscripcionesPlataforma>,
 }
 
 impl Negocios {
-    pub fn nuevo(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn nuevo(db: Arc<Db>, suscripciones: Arc<SuscripcionesPlataforma>) -> Self {
+        Self { db, suscripciones }
     }
 
     pub async fn listar(
@@ -109,6 +111,15 @@ impl Negocios {
         .map_err(interno)?;
         if existentes > 0 {
             self.assert_empresario_en_tx(&mut tx, actor, empresa_id)
+                .await?;
+        }
+        if !actor.es_admin_global() {
+            self.suscripciones
+                .exigir_expansion(
+                    &actor.user_id,
+                    existentes,
+                    self.suscripciones.negocios_gratis(),
+                )
                 .await?;
         }
 
