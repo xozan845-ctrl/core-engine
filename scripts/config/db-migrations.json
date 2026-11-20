@@ -137,11 +137,13 @@
   "99_impuesto_config.sql": "47ed2fd312b06e404a64900c6c42535f59b79a5450c277c584eaca1bb963af32",
   "99_logistica_pod.sql": "ae6ae8c79dd6d0925f71f085bd71f098b68a4bbc828e44911836bf885f94a3c9",
   "99_notificaciones_plantillas.sql": "f035dfbb4a8789b243b9c49ff5d6579cac6e050224a711e0185fb2a12ba343e7",
+  "99_notificaciones_webhooks.sql": "b7f969d27b09203befe57a6adcaf291d59c7d3983ebb58894c54ebbe5c666379",
   "99_orders_impuestos.sql": "7aea50e7ace675db4e97ce1dce331b364e519c0fbe13e88f105dc4bda3fc1da3",
   "99_pagos_configurables.sql": "8f5d75a6112af0a37676da0e0076775b5f154389c8c32d85478cb9999775868a",
   "99_resenas_wishlist.sql": "bd304020779542ef5fdec98cf6bcafe81e1806e8e9a8c9cfda0696b33343da81",
   "99_rma.sql": "53f86262f1e5e429ce1c748e3bcb5a49d1e3687f27633f7a02241cf10b047b65",
   "99_rma_reembolsos.sql": "616e46b03e87c898a3d35b7937ddd361739454d0b9a3a9f0b3252bcd4af1f5a6",
+  "99_suscripciones_plataforma.sql": "00c628edde1055a6f9f7bcdf6172e56aa1d71bbb85dc116c477da065307dab64",
   "99_tenant_eliminacion.sql": "67aa6b4b2f3f343d795604f5e5eafec346fcf48f84b3b751fd842386872e30a3",
   "99_usuario_telefono.sql": "11f12aa56c5e3e54d385f8ed3fc7518e6244f48b1ca62f58f4bd85808d574750",
   "99_wishlist_verificadas.sql": "1b37314815829a283c35c44a18280694f84ec2f315a3d5179ef5f45c98e508f9"

@@ -83,8 +83,8 @@ El gateway **no** aplica ese gating: solo autentica y enruta.
   (`5672`/`15672`), MinIO (`9000`/`9001`) y Mailpit (`1025`/`8025`).
 - En stage/producción solo se publican `gateway:8080` y `minio:9000` (loopback,
   host firmado de las URLs prefirmadas). La consola de MinIO nunca se publica.
-- El gateway **no** habla con `notifications` ni `analytics`; ambos trabajan por
-  eventos. Hoy tampoco tiene destino para `/api/v2/analytics/**`.
+- El gateway enruta las superficies admin de `notifications` y `analytics`; el
+  resto de su operación es por eventos.
 
 ### Cabeceras de confianza interna
 
@@ -267,7 +267,7 @@ No se envuelven: `/health`, `/metrics`, `/docs*`, `/internal/**`,
 | `finance` | finance | plan_cuentas, asientos, asiento_detalles, comprobantes, series, jurisdicciones, regímenes, sujetos, declaraciones, proyecciones, métricas, tipos_cambio, crédito_cuentas, workspace_registros |
 | `field` | field | personal, clientes, vehículos, rutas, paradas, pedidos, asistencia, incidencias, tracking, visitas, cumplimiento |
 | `storage` | storage | buckets, objetos |
-| `notifications` | notifications | eventos_procesados |
+| `notifications` | notifications | eventos_procesados, plantillas, webhooks, webhook_entregas |
 | `analytics` | analytics | hechos_venta, comisiones, reportes_programados, reporte_ejecuciones, eventos_procesados |
 | `commissions` | commissions | comisiones, pagos, liquidaciones, liquidaciones_empresas, compensaciones_devoluciones, eventos_procesados |
 | `intelligence` | intelligence | hechos_venta, rendimiento_vendedor, cobertura_zona, métricas_producto, puntos_calor, tendencias, feature_store, invalid_events, vistas materializadas |

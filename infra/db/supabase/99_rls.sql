@@ -1759,3 +1759,25 @@ ALTER TABLE identity.mfa_codigos_recuperacion ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS mfa_codigos_app ON identity.mfa_codigos_recuperacion;
 CREATE POLICY mfa_codigos_app ON identity.mfa_codigos_recuperacion
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.planes_plataforma y suscripciones (ADR-0046) ─────────────────
+ALTER TABLE identity.planes_plataforma ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS planes_plataforma_app ON identity.planes_plataforma;
+CREATE POLICY planes_plataforma_app ON identity.planes_plataforma
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE identity.suscripciones_plataforma ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripciones_plataforma_app ON identity.suscripciones_plataforma;
+CREATE POLICY suscripciones_plataforma_app ON identity.suscripciones_plataforma
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── notifications.webhooks y entregas (ADR-0045) ──────────────────────────
+ALTER TABLE notifications.webhooks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_webhooks_app ON notifications.webhooks;
+CREATE POLICY notifications_webhooks_app ON notifications.webhooks
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE notifications.webhook_entregas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_webhook_entregas_app ON notifications.webhook_entregas;
+CREATE POLICY notifications_webhook_entregas_app ON notifications.webhook_entregas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
