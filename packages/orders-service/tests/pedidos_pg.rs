@@ -2736,43 +2736,53 @@ async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
 }
 
 #[tokio::test]
-async fn debe_procesar_un_webhook_de_pago_con_secreto() {
+async fn debe_procesar_un_webhook_de_pago_con_firma_hmac() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
     use tower::ServiceExt;
+
+    fn firma(secreto: &str, timestamp: &str, cuerpo: &[u8]) -> String {
+        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes()).expect("hmac");
+        mac.update(timestamp.as_bytes());
+        mac.update(b".");
+        mac.update(cuerpo);
+        hex::encode(mac.finalize().into_bytes())
+    }
+
     let _guard = DB_LOCK.lock().await;
     let Some(db) = con_bd().await else { return };
     let router = router_completo(Arc::clone(&db), 10).await;
     let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let timestamp = chrono::Utc::now().timestamp().to_string();
+    let cuerpo = format!(r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#);
 
     let request = Request::post("/internal/pagos/webhook")
         .header("content-type", "application/json")
-        .header("x-webhook-secret", "incorrecto");
+        .header("x-internal-key", "clave-interna")
+        .header("x-webhook-timestamp", &timestamp)
+        .header("x-webhook-signature", "incorrecta");
     let response = router
         .clone()
         .oneshot(
             request
-                .body(Body::from(format!(
-                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
-                )))
+                .body(Body::from(cuerpo.clone()))
                 .expect("request"),
         )
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
+    let firma = firma("webhook-secreto", &timestamp, cuerpo.as_bytes());
     let request = Request::post("/internal/pagos/webhook")
         .header("content-type", "application/json")
-        .header("x-webhook-secret", "webhook-secreto");
+        .header("x-internal-key", "clave-interna")
+        .header("x-webhook-timestamp", &timestamp)
+        .header("x-webhook-signature", firma);
     let response = router
         .clone()
-        .oneshot(
-            request
-                .body(Body::from(format!(
-                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
-                )))
-                .expect("request"),
-        )
+        .oneshot(request.body(Body::from(cuerpo)).expect("request"))
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
