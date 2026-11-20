@@ -33,6 +33,16 @@ fi
 mv "$TEMPORAL" "$DESTINO"
 sha256sum "$DESTINO" > "${DESTINO}.sha256"
 
+# Roles y privilegios globales: sin ellos, `pg_restore --no-privileges` no
+# puede recrear las políticas RLS en un clúster limpio.
+GLOBALS="${BACKUP_DIR}/${BACKUP_PREFIJO}_globals_${TIMESTAMP}.sql"
+if [ -n "${DATABASE_URL:-}" ]; then
+  pg_dumpall --roles-only --no-role-passwords --database="$DATABASE_URL" --file="$GLOBALS"
+else
+  pg_dumpall --roles-only --no-role-passwords --file="$GLOBALS"
+fi
+sha256sum "$GLOBALS" > "${GLOBALS}.sha256"
+
 if [ "${BACKUP_RETENCION_DIAS}" -gt 0 ] 2>/dev/null; then
   find "$BACKUP_DIR" -type f \
     \( -name "${BACKUP_PREFIJO}_*.dump" -o -name "${BACKUP_PREFIJO}_*.dump.sha256" \) \
