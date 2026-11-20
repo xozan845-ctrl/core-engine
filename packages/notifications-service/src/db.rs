@@ -7,6 +7,16 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Conexiones máximas por servicio. El presupuesto total (servicios x pool)
+/// debe caber en `max_connections` de PostgreSQL o pasar por PgBouncer.
+fn pool_max() -> u32 {
+    std::env::var("DATABASE_POOL_MAX")
+        .ok()
+        .and_then(|valor| valor.parse::<u32>().ok())
+        .filter(|valor| *valor > 0)
+        .unwrap_or(4)
+}
+
 pub struct Db {
     pool: PgPool,
 }
@@ -14,7 +24,7 @@ pub struct Db {
 impl Db {
     pub async fn conectar(url: &str) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
-            .max_connections(10)
+            .max_connections(pool_max())
             .connect(url)
             .await?;
         sqlx::query("SELECT 1").execute(&pool).await?;
