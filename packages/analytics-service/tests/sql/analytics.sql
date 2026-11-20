@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS analytics.hechos_venta (
   precio_unitario_cents bigint NOT NULL,
   venta_cents           bigint NOT NULL,
   orden_creada_en       timestamptz NOT NULL,
+  tipo                  text NOT NULL DEFAULT 'venta',
   creado_en             timestamptz NOT NULL DEFAULT NOW(),
   UNIQUE (order_id, linea_clave)
 );
@@ -42,9 +43,15 @@ CREATE TABLE IF NOT EXISTS analytics.comisiones (
   monto_vendedor_cents     bigint NOT NULL DEFAULT 0,
   monto_empresario_cents   bigint NOT NULL DEFAULT 0,
   participacion_porcentaje integer,
+  tipo                     text NOT NULL DEFAULT 'comision',
   creado_en                timestamptz NOT NULL DEFAULT NOW(),
   UNIQUE (order_id, linea_clave)
 );
+
+ALTER TABLE analytics.hechos_venta
+  ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'venta';
+ALTER TABLE analytics.comisiones
+  ADD COLUMN IF NOT EXISTS tipo text NOT NULL DEFAULT 'comision';
 
 CREATE TABLE IF NOT EXISTS analytics.eventos_procesados (
   event_id     uuid PRIMARY KEY,
@@ -79,5 +86,17 @@ CREATE TABLE IF NOT EXISTS analytics.reporte_ejecuciones (
   estado       text NOT NULL,
   contenido    text NOT NULL DEFAULT '',
   error        text NOT NULL DEFAULT '',
+  destino      text,
+  entrega_estado text NOT NULL DEFAULT 'no_aplica',
+  entrega_error text NOT NULL DEFAULT '',
+  entregado_en timestamptz,
+  intentos_entrega integer NOT NULL DEFAULT 0,
   ejecutada_en timestamptz NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE analytics.reporte_ejecuciones
+  ADD COLUMN IF NOT EXISTS destino text,
+  ADD COLUMN IF NOT EXISTS entrega_estado text NOT NULL DEFAULT 'no_aplica',
+  ADD COLUMN IF NOT EXISTS entrega_error text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS entregado_en timestamptz,
+  ADD COLUMN IF NOT EXISTS intentos_entrega integer NOT NULL DEFAULT 0;
