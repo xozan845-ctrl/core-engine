@@ -65,6 +65,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/auth/restablecer-contrasena/confirmar$", &["POST"], None),
             p(r"^/api/v2/auth/verificar-correo$", &["POST"], None),
             p(r"^/api/v2/auth/reenviar-verificacion$", &["POST"], None),
+            p(r"^/api/v2/pagos/webhook$", &["POST"], None),
             p(r"^/api/v2/auth/mfa(/|$)", &["POST"], Some(todos.clone())),
             p(r"^/api/v2/auth/sesiones(/|$)", &["GET", "DELETE"], Some(todos.clone())),
             p(r"^/api/v2/packs(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
@@ -192,6 +193,10 @@ mod tests {
     fn debe_marcar_publicas_y_denegar_por_defecto() {
         assert!(encontrar_politica("/api/v2/auth/login", "POST")
             .expect("login")
+            .roles
+            .is_none());
+        assert!(encontrar_politica("/api/v2/pagos/webhook", "POST")
+            .expect("webhook")
             .roles
             .is_none());
         assert_eq!(
