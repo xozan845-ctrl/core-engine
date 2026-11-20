@@ -54,6 +54,12 @@ async fn preparar(url: &str) -> (Arc<Db>, PgPool) {
         .execute(&pool)
         .await
         .expect("migracion notifications");
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/99_notificaciones_plantillas.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion plantillas");
     let db = Arc::new(Db::conectar(url).await.expect("pool del servicio"));
     (db, pool)
 }
@@ -130,13 +136,7 @@ async fn no_debe_marcar_el_evento_si_el_envio_falla() {
 #[tokio::test]
 async fn debe_guardar_y_resolver_plantillas_globales_y_por_empresa() {
     let Some(url) = url() else { return };
-    let (db, pool) = preparar(&url).await;
-    sqlx::raw_sql(include_str!(
-        "../../../infra/db/init/99_notificaciones_plantillas.sql"
-    ))
-    .execute(&pool)
-    .await
-    .expect("migracion plantillas");
+    let (db, _pool) = preparar(&url).await;
     let plantillas = notifications_service::plantillas_db::Plantillas::nueva(Arc::clone(&db));
     let empresa = Uuid::new_v4().to_string();
     plantillas
