@@ -32,6 +32,14 @@ struct PurgaTenant {
     usuario_ids: Vec<String>,
 }
 
+fn purga_error(error: sqlx::Error) -> ApiError {
+    crate::logs::error(
+        "orders.purga",
+        crate::campos! { "msg": "purga fallida", "err": error.to_string() },
+    );
+    ApiError::interno()
+}
+
 /// POST /internal/orders/tenant/exportar — datos del tenant en orders.
 async fn exportar_tenant(
     State(state): State<AppState>,
@@ -128,18 +136,14 @@ async fn purgar_tenant(
         .collect();
     let db = state.db()?;
     let mut tx = db.transaccion_servicio().await.map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
+        purga_error(error)
     })?;
 
     sqlx::query("DELETE FROM orders.carritos WHERE comprador_id = ANY($1::uuid[])")
         .bind(&usuarios)
         .execute(&mut *tx)
         .await
-        .map_err(|error| {
-            eprintln!("purga-orders: {error}");
-            ApiError::interno()
-        })?;
+        .map_err(purga_error)?;
 
     for tabla in [
         "orders.fidelizacion_canjes",
@@ -156,10 +160,7 @@ async fn purgar_tenant(
             .bind(empresa)
             .execute(&mut *tx)
             .await
-            .map_err(|error| {
-                eprintln!("purga-orders: {error}");
-                ApiError::interno()
-            })?;
+            .map_err(purga_error)?;
     }
 
     sqlx::query(
@@ -171,10 +172,7 @@ async fn purgar_tenant(
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
 
     sqlx::query(
         "UPDATE orders.contratos
@@ -185,20 +183,14 @@ async fn purgar_tenant(
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
     sqlx::query(
         "UPDATE orders.contrato_eventos SET motivo = '', creado_por = NULL WHERE empresa_id = $1",
     )
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
     sqlx::query(
         "UPDATE orders.devoluciones SET motivo = '[eliminado]', creado_por = NULL WHERE empresa_id = $1",
     )
@@ -212,10 +204,7 @@ async fn purgar_tenant(
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
     sqlx::query(
         "UPDATE orders.entregas_digitales
             SET recurso_url = '', token = gen_random_uuid(), estado = 'revocado',
@@ -225,10 +214,7 @@ async fn purgar_tenant(
     .bind(empresa)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
 
     let anonimizadas = sqlx::query(
         "UPDATE orders.orden_vista
@@ -244,10 +230,7 @@ async fn purgar_tenant(
     .bind(&usuarios)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?
+    .map_err(purga_error)?
     .rows_affected();
 
     sqlx::query(
@@ -262,15 +245,9 @@ async fn purgar_tenant(
     .bind(&dto.negocio_ids)
     .execute(&mut *tx)
     .await
-    .map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    .map_err(purga_error)?;
 
-    tx.commit().await.map_err(|error| {
-        eprintln!("purga-orders: {error}");
-        ApiError::interno()
-    })?;
+    tx.commit().await.map_err(purga_error)?;
     super::ok(json!({
         "servicio": "orders",
         "estado": "completado",
