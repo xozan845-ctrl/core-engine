@@ -206,7 +206,7 @@ jobs:
         working-directory: ${{ matrix.dir }}
         run: |
           IGNORES=$(sed 's/^/--ignore /' "$GITHUB_WORKSPACE/scripts/config/cargo-audit-ignores.txt" | tr '\n' ' ')
-          cargo audit --locked $IGNORES
+          cargo audit $IGNORES
       - name: rustfmt
         working-directory: ${{ matrix.dir }}
         run: cargo fmt --check
