@@ -35,6 +35,10 @@ impl UsuarioContexto {
             Err(StatusCode::FORBIDDEN)
         }
     }
+
+    pub fn es_admin_global(&self) -> bool {
+        self.rol == "super_admin" || self.rol == "admin"
+    }
 }
 
 #[cfg(test)]
