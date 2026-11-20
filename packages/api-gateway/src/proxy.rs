@@ -41,6 +41,14 @@ fn patron(patron: &str, metodos: &[&'static str]) -> (Regex, Vec<&'static str>) 
 pub fn destinos(config: &Config) -> Vec<Destino> {
     vec![
         Destino {
+            nombre: "orders",
+            url: config.orders_url.clone(),
+            patrones: vec![patron(
+                r"^/api/v2/empresas/[^/]+/configuracion-pagos$",
+                &["*"],
+            )],
+        },
+        Destino {
             nombre: "identity",
             url: config.identity_url.clone(),
             patrones: vec![
@@ -53,6 +61,10 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/onboarding(/|$)", &["*"]),
                 patron(r"^/api/v2/plataforma(/|$)", &["*"]),
                 patron(r"^/api/v2/admin/plataforma(/|$)", &["*"]),
+                patron(r"^/api/v2/api-keys(/|$)", &["*"]),
+                patron(r"^/api/v2/exportaciones(/|$)", &["*"]),
+                patron(r"^/api/v2/negocios(/|$)", &["*"]),
+                patron(r"^/api/v2/admin/auditoria(/|$)", &["*"]),
             ],
         },
         Destino {
@@ -83,6 +95,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                     &["*"],
                 ),
                 patron(r"^/api/v2/catalog/promociones(/|$)", &["*"]),
+                patron(r"^/api/v2/catalog/cupones(/|$)", &["*"]),
             ],
         },
         Destino {
@@ -100,6 +113,9 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 ),
                 patron(r"^/api/v2/empresarios/me/tiendas$", &["GET"]),
                 patron(r"^/api/v2/tiendas/", &["*"]),
+                patron(r"^/api/v2/tienda(/|$)", &["*"]),
+                patron(r"^/api/v2/comprador(/|$)", &["*"]),
+                patron(r"^/api/v2/admin/resenas(/|$)", &["*"]),
             ],
         },
         Destino {
@@ -125,6 +141,17 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/orders(/|$)", &["*"]),
                 patron(r"^/api/v2/carrito(/|$)", &["*"]),
                 patron(r"^/api/v2/pagos/webhook$", &["POST"]),
+                patron(r"^/api/v2/contratos(/|$)", &["*"]),
+                patron(r"^/api/v2/suscripciones(/|$)", &["*"]),
+                patron(r"^/api/v2/mesas(/|$)", &["*"]),
+                patron(r"^/api/v2/comandas(/|$)", &["*"]),
+                patron(r"^/api/v2/fidelizacion(/|$)", &["*"]),
+                patron(r"^/api/v2/pedidos(/|$)", &["*"]),
+                patron(r"^/api/v2/entregas-digitales(/|$)", &["*"]),
+                patron(
+                    r"^/api/v2/admin/(pagos|metodos-pago|tipos-orden|fulfillments|devoluciones|proveedores-pago)(/|$)",
+                    &["*"],
+                ),
             ],
         },
         Destino {
@@ -135,6 +162,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/empresarios/me/(liquidaciones|ventas)", &["*"]),
                 patron(r"^/api/v2/admin/reportes", &["*"]),
                 patron(r"^/api/v2/admin/liquidaciones", &["*"]),
+                patron(r"^/api/v2/empresarios/me/reportes/negocios$", &["*"]),
             ],
         },
         Destino {
@@ -144,6 +172,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/finanzas(/|$)", &["*"]),
                 patron(r"^/api/v2/comercio(/|$)", &["*"]),
                 patron(r"^/api/v2/vendedores/me/fiscal", &["*"]),
+                patron(r"^/api/v2/admin/tipos-cambio(/|$)", &["*"]),
             ],
         },
         Destino {
@@ -465,6 +494,27 @@ mod tests {
         assert!(!cuerpo_excede(0));
         assert!(!cuerpo_excede(MAX_CUERPO_BYTES));
         assert!(cuerpo_excede(MAX_CUERPO_BYTES + 1));
+    }
+
+    #[test]
+    fn todas_las_operaciones_publicas_del_contrato_tienen_destino() {
+        let spec: serde_json::Value =
+            serde_json::from_str(include_str!("../../../docs/api/core-engine.openapi.json"))
+                .expect("openapi publico");
+        let destinos = destinos(&config());
+        let mut faltantes = Vec::new();
+        for (ruta, operaciones) in spec["paths"].as_object().expect("paths") {
+            for metodo in operaciones.as_object().expect("metodos").keys() {
+                if encontrar_destino(&destinos, ruta, metodo).is_none() {
+                    faltantes.push(format!("{} {}", metodo.to_uppercase(), ruta));
+                }
+            }
+        }
+        assert!(
+            faltantes.is_empty(),
+            "operaciones publicas sin destino en el gateway:\n{}",
+            faltantes.join("\n")
+        );
     }
 
     #[test]
