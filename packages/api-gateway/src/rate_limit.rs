@@ -97,6 +97,11 @@ pub fn es_login(metodo: &str, ruta: &str) -> bool {
     metodo == "POST" && matches!(ruta, "/api/v2/auth/login" | "/api/v2/auth/token")
 }
 
+/// El onboarding crea una empresa; se limita más que el tráfico global.
+pub fn es_onboarding(metodo: &str, ruta: &str) -> bool {
+    metodo == "POST" && ruta == "/api/v2/onboarding"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,5 +151,7 @@ mod tests {
         ));
         assert!(es_login("POST", "/api/v2/auth/login"));
         assert!(!es_login("POST", "/api/v2/auth/logout"));
+        assert!(es_onboarding("POST", "/api/v2/onboarding"));
+        assert!(!es_onboarding("GET", "/api/v2/onboarding"));
     }
 }
