@@ -389,10 +389,13 @@ impl AnalyticsConsumer {
         .map_err(error_db)?;
         for venta in &ventas {
             let linea: String = venta.try_get("linea_clave").map_err(error_db)?;
-            eprintln!(
-                "CANCEL GROUP {} {:?}",
-                linea,
-                venta.try_get::<i64, _>("venta_cents")
+            crate::logs::warn(
+                "analytics.consumidor",
+                crate::campos! {
+                    "msg": "cancel_group",
+                    "linea": linea,
+                    "venta_cents": venta.try_get::<i64, _>("venta_cents").unwrap_or(0),
+                },
             );
             let clave = format!("cancelacion:{order_id}:{linea}");
             let cantidad: i64 = venta.try_get("cantidad").map_err(error_db)?;
