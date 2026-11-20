@@ -74,6 +74,49 @@ fn validar_avanzar_estado(cuerpo: &Value) -> Result<(String, Option<String>), Ap
     Ok((estado, motivo))
 }
 
+#[allow(clippy::type_complexity)]
+fn validar_pod(
+    cuerpo: &Value,
+) -> Result<(String, Option<String>, Option<String>, Option<String>), ApiError> {
+    let mut errores = Vec::new();
+    let receptor = cuerpo
+        .get("receptor")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| (1..=120).contains(&valor.len()))
+        .map(str::to_string);
+    if receptor.is_none() {
+        errores.push(error_campo("receptor", &["isString", "length"]));
+    }
+    let mut uuid = |campo: &str| {
+        let valor = cuerpo
+            .get(campo)
+            .and_then(Value::as_str)
+            .filter(|valor| !valor.is_empty());
+        if let Some(valor) = valor {
+            if uuid::Uuid::parse_str(valor).is_err() {
+                errores.push(error_campo(campo, &["isUuid"]));
+                return None;
+            }
+        }
+        valor.map(str::to_string)
+    };
+    let foto = uuid("foto_objeto_id");
+    let firma = uuid("firma_objeto_id");
+    if foto.is_none() && firma.is_none() {
+        errores.push(error_campo("evidencia", &["required"]));
+    }
+    let notas = cuerpo
+        .get("notas")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .filter(|valor| !valor.is_empty());
+    if !errores.is_empty() {
+        return Err(ApiError::validacion(Value::Array(errores)));
+    }
+    Ok((receptor.expect("receptor validado"), foto, firma, notas))
+}
+
 fn validar_avanzar_envio(cuerpo: &Value) -> Result<(String, Option<String>), ApiError> {
     let mut errores = Vec::new();
     let estado = cuerpo.get("estado").and_then(Value::as_str);
@@ -179,6 +222,32 @@ pub async fn asignar(
     let envio = state
         .envios
         .asignar_proveedor(&id, &tenant, &tipo, Some(&usuario.user_id))
+        .await?;
+    Ok(Json(envio_json(&envio)))
+}
+
+/// `POST /api/v2/envios/{id}/prueba-entrega`: registra receptor y evidencia.
+pub async fn registrar_pod(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    usuario.exigir_roles(&ROLES_FLOTA, &["logistica.envios.actualizar"])?;
+    state.exigir_capacidades(&usuario, CAP_FULFILLMENT).await?;
+    let tenant = usuario.tenant()?.to_string();
+    let (receptor, foto, firma, notas) = validar_pod(&cuerpo)?;
+    let envio = state
+        .envios
+        .registrar_pod(
+            &id,
+            &tenant,
+            &receptor,
+            foto.as_deref(),
+            firma.as_deref(),
+            notas.as_deref(),
+        )
         .await?;
     Ok(Json(envio_json(&envio)))
 }

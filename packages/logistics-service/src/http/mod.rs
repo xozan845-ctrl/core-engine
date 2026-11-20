@@ -62,6 +62,10 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/api/v2/envios/{id}/estado", patch(envios::avanzar_envio))
         .route(
+            "/api/v2/envios/{id}/prueba-entrega",
+            post(envios::registrar_pod),
+        )
+        .route(
             "/internal/logistics/tenant/exportar",
             post(interno::exportar_tenant),
         )
