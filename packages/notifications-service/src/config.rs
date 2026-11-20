@@ -27,6 +27,12 @@ pub struct Config {
     pub whatsapp_phone_id: Option<String>,
     pub sms_url: Option<String>,
     pub sms_key: Option<String>,
+    /// Timeout de entrega de webhooks salientes.
+    pub webhook_timeout_ms: u64,
+    /// Intervalo del worker de reintentos de webhooks.
+    pub webhook_reintento_segundos: u64,
+    /// Exigir HTTPS en las URLs de webhook (producción).
+    pub webhook_https_obligatorio: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -164,6 +170,29 @@ impl Config {
             whatsapp_phone_id: leer("WHATSAPP_PHONE_ID"),
             sms_url: leer("SMS_URL"),
             sms_key: leer("SMS_KEY"),
+            webhook_timeout_ms: match leer("WEBHOOK_TIMEOUT_MS") {
+                Some(valor) => valor
+                    .parse::<u64>()
+                    .ok()
+                    .filter(|valor| *valor > 0)
+                    .unwrap_or(5000),
+                None => 5000,
+            },
+            webhook_reintento_segundos: match leer("WEBHOOK_REINTENTO_SEGUNDOS") {
+                Some(valor) => valor
+                    .parse::<u64>()
+                    .ok()
+                    .filter(|valor| *valor > 0)
+                    .unwrap_or(60),
+                None => 60,
+            },
+            webhook_https_obligatorio: leer("WEBHOOK_HTTPS_OBLIGATORIO")
+                .map(|valor| valor.eq_ignore_ascii_case("true"))
+                .unwrap_or_else(|| {
+                    leer("NODE_ENV")
+                        .map(|valor| valor.eq_ignore_ascii_case("production"))
+                        .unwrap_or(false)
+                }),
         })
     }
 
@@ -226,6 +255,30 @@ mod tests {
         assert_eq!(config.database_url, None);
         assert_eq!(config.email.modo, EmailMode::Log);
         assert_eq!(config.email.smtp_port, SMTP_PUERTO_DEFAULT);
+        assert_eq!(config.webhook_timeout_ms, 5000);
+        assert_eq!(config.webhook_reintento_segundos, 60);
+        assert!(!config.webhook_https_obligatorio);
+    }
+
+    #[test]
+    fn debe_configurar_webhooks_y_exigir_https_en_produccion() {
+        let config = Config::from_pairs([
+            ("WEBHOOK_TIMEOUT_MS", "1500"),
+            ("WEBHOOK_REINTENTO_SEGUNDOS", "30"),
+            ("NODE_ENV", "production"),
+        ])
+        .expect("config");
+        assert_eq!(config.webhook_timeout_ms, 1500);
+        assert_eq!(config.webhook_reintento_segundos, 30);
+        assert!(config.webhook_https_obligatorio);
+
+        let invalido = Config::from_pairs([
+            ("WEBHOOK_TIMEOUT_MS", "0"),
+            ("WEBHOOK_REINTENTO_SEGUNDOS", "no"),
+        ])
+        .expect("config");
+        assert_eq!(invalido.webhook_timeout_ms, 5000);
+        assert_eq!(invalido.webhook_reintento_segundos, 60);
     }
 
     #[test]
