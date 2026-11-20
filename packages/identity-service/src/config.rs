@@ -58,6 +58,11 @@ pub struct Config {
     pub auditoria_retencion_modo: String,
     /// Clave HMAC para firmar exportaciones; por defecto usa `JWT_SECRET`.
     pub export_signing_key: Option<String>,
+    /// Plan comercial que habilita operar más de un negocio (ADR-0046).
+    pub plataforma_plan_codigo: String,
+    /// Empresas/negocios incluidos sin cobro antes de exigir el plan.
+    pub plataforma_empresas_gratis: i64,
+    pub plataforma_negocios_gratis: i64,
 }
 
 impl Config {
@@ -171,6 +176,16 @@ impl Config {
                 .filter(|valor| valor == "anonimizar" || valor == "eliminar")
                 .unwrap_or_else(|| "anonimizar".to_string()),
             export_signing_key: leer("EXPORT_SIGNING_KEY"),
+            plataforma_plan_codigo: leer("PLATAFORMA_PLAN_EMPRESARIO")
+                .unwrap_or_else(|| "empresario_plus".to_string()),
+            plataforma_empresas_gratis: leer("PLATAFORMA_EMPRESAS_GRATIS")
+                .and_then(|valor| valor.parse::<i64>().ok())
+                .filter(|valor| *valor >= 0)
+                .unwrap_or(1),
+            plataforma_negocios_gratis: leer("PLATAFORMA_NEGOCIOS_GRATIS")
+                .and_then(|valor| valor.parse::<i64>().ok())
+                .filter(|valor| *valor >= 0)
+                .unwrap_or(1),
         })
     }
 
@@ -280,6 +295,24 @@ mod tests {
         assert_eq!(config.jwt_access_ttl, "900s");
         assert!(!config.produccion);
         assert!(!config.exigir_correo_verificado);
+        assert_eq!(config.plataforma_plan_codigo, "empresario_plus");
+        assert_eq!(config.plataforma_empresas_gratis, 1);
+        assert_eq!(config.plataforma_negocios_gratis, 1);
+    }
+
+    #[test]
+    fn debe_configurar_la_regla_de_expansion_de_plataforma() {
+        let config = Config::from_pairs([
+            ("PLATAFORMA_PLAN_EMPRESARIO", "empresario_plus"),
+            ("PLATAFORMA_EMPRESAS_GRATIS", "0"),
+            ("PLATAFORMA_NEGOCIOS_GRATIS", "2"),
+        ])
+        .expect("config");
+        assert_eq!(config.plataforma_empresas_gratis, 0);
+        assert_eq!(config.plataforma_negocios_gratis, 2);
+
+        let invalido = Config::from_pairs([("PLATAFORMA_NEGOCIOS_GRATIS", "-1")]).expect("config");
+        assert_eq!(invalido.plataforma_negocios_gratis, 1);
     }
 
     #[test]
