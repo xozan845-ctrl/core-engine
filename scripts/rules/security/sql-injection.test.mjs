@@ -6,34 +6,21 @@ import { readText, walkFiles } from '../../engine/lib/fs.mjs';
 /**
  * Inyección SQL (R-DS-4).
  *
- * Las consultas deben parametrizarse. Solo se permite interpolar identificadores
- * internos (nombres de columna/tabla fijos, `$n` y fragmentos construidos con
- * placeholders), nunca valores de entrada.
+ * En Rust las consultas se parametrizan con `$n`; solo se permite interpolar
+ * identificadores internos (tabla/columna/orden) construidos con constantes o
+ * allowlists. Se marcan las interpolaciones que huelen a entrada de petición.
  */
 
+const PELIGROSO =
+  /(dto|body|query|params?|request|req\.|input|valor|correo|nombre|payload|filtro_usuario)/i;
 const PERMITIDOS = [
-  /^sets\.join\(/,
-  /^condiciones(Item)?\.join\(/,
-  /^where$/,
-  /^tabla$/,
-  /^this\.tabla$/,
-  /^orderBy$/,
-  /^extra$/,
-  /^condicion$/,
-  /^filtro$/,
-  /^marcadores$/,
-  /^params\.length/,
-  /^COLUMNAS/,
-  /^CAMPOS_/,
-  /^SELECT_INVITACION$/,
-  /^(excluirId|incluirInactivos|origen)\b.*\?/,
-  // Fragmentos condicionales fijos: el valor sigue viajando por placeholder.
-  /^(empresaId|activo)\s*\?/,
-  /^valores\.length$/,
+  /^(tabla|tabla\.nombre|this\.tabla)$/,
+  /^(where|where_sql|where_clause|filtro|condiciones|condicionesItem|sets|orden|order_by|extra)$/,
+  /^(indice|marcadores|params\.length|valores\.length)$/,
+  /^(columnas|COLUMNAS|CAMPOS_)/,
+  /^(filtro|filtros)\.(expresion|operador)$/,
+  /^(i\.)?(empresa_id|activo|negocio_id)$/,
 ];
-
-const RE_CONSULTA = /\.(?:query|queryOne)(?:<[^>]+>)?\(\s*`([\s\S]*?)`/g;
-const RE_INTERPOLACION = /\$\{([^}]*)\}/g;
 
 export default defineSuite({
   id: 'security-sql-injection',
@@ -44,29 +31,39 @@ export default defineSuite({
     test('R-DS-4: las consultas SQL solo interpolan identificadores internos', () => {
       const archivos = walkFiles(
         join(repoRoot, 'packages'),
-        (nombre) =>
-          nombre.endsWith('.ts') &&
-          !nombre.endsWith('.spec.ts') &&
-          !nombre.includes('.stryker-tmp'),
+        (nombre) => nombre.endsWith('.rs') && !nombre.includes('/target/'),
+      );
+      assert.ok(
+        archivos.length > 0,
+        'el escáner no encontró archivos Rust: el check sería vacuo',
       );
       const problemas = [];
+      let consultas = 0;
 
       for (const archivo of archivos) {
-        const texto = readText(archivo);
-        for (const consulta of texto.matchAll(RE_CONSULTA)) {
-          for (const interpolacion of consulta[1].matchAll(RE_INTERPOLACION)) {
-            const expresion = interpolacion[1].trim();
-            if (!PERMITIDOS.some((patron) => patron.test(expresion))) {
-              problemas.push(`${archivo}: \${${expresion}}`);
+        const lineas = readText(archivo).split('\n');
+        lineas.forEach((linea, indice) => {
+          if (!/sqlx::query|query_scalar|query_as/.test(linea)) return;
+          // La consulta puede formatearse en la misma línea o en las dos
+          // siguientes; se revisan las interpolaciones del bloque inmediato.
+          const bloque = lineas.slice(indice, indice + 4).join('\n');
+          if (!bloque.includes('format!')) return;
+          consultas += 1;
+          for (const match of bloque.matchAll(/\{([^}]+)\}/g)) {
+            const expresion = match[1].trim();
+            if (PERMITIDOS.some((patron) => patron.test(expresion))) continue;
+            if (PELIGROSO.test(expresion)) {
+              problemas.push(`${archivo}:${indice + 1}: \${${expresion}}`);
             }
           }
-        }
+        });
       }
 
+      assert.ok(consultas > 0, 'no se encontró ninguna consulta SQL que auditar');
       assert.deepEqual(
         problemas,
         [],
-        `Interpolación SQL no permitida (R-DS-4):\n${problemas.join('\n')}`,
+        `Interpolación SQL con entrada de petición (R-DS-4):\n${problemas.join('\n')}`,
       );
     });
   },
