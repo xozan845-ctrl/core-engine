@@ -3,15 +3,25 @@
 //! CI las ejecuta con la BD efímera.
 
 use async_trait::async_trait;
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use axum::Router;
+use http_body_util::BodyExt;
+use notifications_service::config::Config;
 use notifications_service::consumidor::ConsumidorNotificaciones;
 use notifications_service::db::Db;
 use notifications_service::errors::ErrorNotificacion;
+use notifications_service::http::build_router;
+use notifications_service::metrics::Metrics;
 use notifications_service::notificaciones::NotificacionesPort;
+use notifications_service::plantillas_db::Plantillas;
+use notifications_service::state::AppState;
 use serde_json::{json, Value};
 use sqlx::PgPool;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::Mutex;
+use tower::ServiceExt;
 use uuid::Uuid;
 
 static MIGRACION: OnceLock<Mutex<()>> = OnceLock::new();
@@ -183,4 +193,147 @@ async fn debe_guardar_y_resolver_plantillas_globales_y_por_empresa() {
             .len(),
         2
     );
+}
+
+async fn enviar_admin(
+    app: &Router,
+    metodo: &str,
+    ruta: &str,
+    cuerpo: Option<Value>,
+    headers: &[(&str, &str)],
+) -> (StatusCode, Value) {
+    let mut constructor = Request::builder().method(metodo).uri(ruta);
+    for (clave, valor) in headers {
+        constructor = constructor.header(*clave, *valor);
+    }
+    let request = constructor
+        .header("content-type", "application/json")
+        .body(Body::from(
+            cuerpo.map(|valor| valor.to_string()).unwrap_or_default(),
+        ))
+        .expect("request");
+    let response = app.clone().oneshot(request).await.expect("response");
+    let status = response.status();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("cuerpo")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+fn admin<'a>(rol: &'a str, tenant: Option<&'a str>) -> Vec<(&'a str, &'a str)> {
+    let mut headers = vec![("x-user-id", "admin-1"), ("x-user-rol", rol)];
+    if let Some(tenant) = tenant {
+        headers.push(("x-tenant", tenant));
+    }
+    headers
+}
+
+#[tokio::test]
+async fn debe_exponer_la_api_admin_de_plantillas() {
+    let Some(url) = url() else { return };
+    let (db, _pool) = preparar(&url).await;
+    let plantillas = Arc::new(Plantillas::nueva(Arc::clone(&db)));
+    let config = Config::from_pairs(Vec::<(&str, &str)>::new()).expect("config");
+    let estado = AppState {
+        config: Arc::new(config),
+        metrics: Arc::new(Metrics::nueva("notifications-service")),
+        db: Some(Arc::clone(&db)),
+        plantillas: Some(Arc::clone(&plantillas)),
+    };
+    let app = build_router(estado);
+    let evento = format!("evento.{}", Uuid::new_v4());
+    let empresa = Uuid::new_v4().to_string();
+    let ruta = format!("/api/v2/admin/notifications/plantillas/{evento}/email");
+
+    let (status, _) = enviar_admin(
+        &app,
+        "GET",
+        "/api/v2/admin/notifications/plantillas",
+        None,
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    let (status, _) = enviar_admin(
+        &app,
+        "GET",
+        "/api/v2/admin/notifications/plantillas",
+        None,
+        &admin("comprador", None),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let (status, cuerpo) = enviar_admin(
+        &app,
+        "PUT",
+        &ruta,
+        Some(json!({ "cuerpo": "   " })),
+        &admin("admin", Some(&empresa)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(cuerpo.is_null());
+
+    let (status, cuerpo) = enviar_admin(
+        &app,
+        "PUT",
+        &ruta,
+        Some(json!({ "asunto": "Pedido {{pedido}}", "cuerpo": "Hola {{cliente}}" })),
+        &admin("admin", Some(&empresa)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cuerpo["data"]["evento"], evento);
+    assert_eq!(cuerpo["data"]["empresa_id"], empresa);
+    assert_eq!(cuerpo["data"]["canal"], "email");
+
+    let (status, listado) = enviar_admin(
+        &app,
+        "GET",
+        "/api/v2/admin/notifications/plantillas",
+        None,
+        &admin("admin", Some(&empresa)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let datos = listado["data"]["plantillas"].as_array().expect("array");
+    assert!(datos
+        .iter()
+        .any(|fila| fila["evento"] == evento && fila["empresa_id"] == empresa));
+
+    let (status, _) = enviar_admin(
+        &app,
+        "PUT",
+        &format!("/api/v2/admin/notifications/plantillas/{evento}/fax"),
+        Some(json!({ "cuerpo": "Hola" })),
+        &admin("admin", Some(&empresa)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let estado_sin_plantillas = AppState {
+        config: Arc::new(Config::from_pairs(Vec::<(&str, &str)>::new()).expect("config")),
+        metrics: Arc::new(Metrics::nueva("notifications-service")),
+        db: Some(Arc::clone(&db)),
+        plantillas: None,
+    };
+    let (status, _) = enviar_admin(
+        &build_router(estado_sin_plantillas),
+        "GET",
+        "/api/v2/admin/notifications/plantillas",
+        None,
+        &admin("admin", None),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+
+    db.cerrar().await;
 }
