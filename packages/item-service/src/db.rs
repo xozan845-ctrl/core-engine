@@ -38,6 +38,19 @@ impl Db {
         Ok(Self { pool })
     }
 
+    /// Transacción con claims de servicio (super_admin) para jobs de fondo que
+    /// no tienen un usuario en contexto y filtran explícitamente por tenant.
+    pub async fn transaccion_servicio(
+        &self,
+    ) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('request.jwt.claims', $1, true)")
+            .bind(serde_json::json!({ "rol": "super_admin" }).to_string())
+            .execute(&mut *tx)
+            .await?;
+        Ok(tx)
+    }
+
     pub fn pool(&self) -> &PgPool {
         &self.pool
     }
