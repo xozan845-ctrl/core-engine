@@ -58,9 +58,7 @@ fn empresa(actor: &UsuarioContexto, candidata: Option<&str>) -> Result<String, F
         .as_deref()
         .map(str::trim)
         .filter(|valor| !valor.is_empty());
-    let candidata = candidata
-        .map(str::trim)
-        .filter(|valor| !valor.is_empty());
+    let candidata = candidata.map(str::trim).filter(|valor| !valor.is_empty());
 
     let empresa = match (actor.es_admin_global(), candidata, tenant) {
         // Un admin global puede operar sobre cualquier tenant.
