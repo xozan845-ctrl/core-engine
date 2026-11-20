@@ -1596,6 +1596,8 @@ dependencies = [
  "axum",
  "chrono",
  "futures-util",
+ "hex",
+ "hmac",
  "http-body-util",
  "lapin",
  "regex",
