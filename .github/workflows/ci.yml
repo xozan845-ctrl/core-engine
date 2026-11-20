@@ -205,7 +205,7 @@ jobs:
       - name: cargo audit (deuda aceptada; falla ante avisos nuevos)
         working-directory: ${{ matrix.dir }}
         run: |
-          IGNORES=$(sed 's/^/--ignore /' "$GITHUB_WORKSPACE/scripts/config/cargo-audit-ignores.txt" | tr '\n' ' ')
+          IGNORES=$(grep -E '^(RUSTSEC|GHSA)-' "$GITHUB_WORKSPACE/scripts/config/cargo-audit-ignores.txt" | sed 's/^/--ignore /' | tr '\n' ' ')
           cargo audit $IGNORES
       - name: rustfmt
         working-directory: ${{ matrix.dir }}
