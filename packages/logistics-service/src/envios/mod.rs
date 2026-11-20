@@ -213,6 +213,15 @@ impl Envios {
                     "Una línea no tiene empresa asignada.",
                 ));
             }
+            // Solo delivery genera envío físico; pickup/onsite/digital los
+            // gestiona su propio flujo.
+            if item
+                .fulfillment
+                .as_deref()
+                .is_some_and(|valor| valor != "delivery")
+            {
+                continue;
+            }
             let subtotal = item.precio_unitario_cents.saturating_mul(item.cantidad);
             let clave = (item.empresa_id.clone(), item.negocio_id.clone());
             match montos.iter_mut().find(|(id, _)| id == &clave) {
