@@ -26,6 +26,24 @@ $PSQL -q -c "
     aplicado_en timestamptz NOT NULL DEFAULT NOW()
   );"
 
+# El rol de aplicación debe poder iniciar sesión; en bases creadas antes de
+# este runner podía quedar NOLOGIN (solo lo creaba 00_roles.sh).
+if [ -n "${CORE_ENGINE_APP_PASSWORD:-}" ]; then
+  APP_PWD="$(printf '%s' "$CORE_ENGINE_APP_PASSWORD" | sed "s/'/''/g")"
+  $PSQL -q -c "
+    DO \$\$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'core_engine_app') THEN
+        CREATE ROLE core_engine_app NOLOGIN;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+        CREATE ROLE authenticated NOLOGIN;
+      END IF;
+      GRANT authenticated TO core_engine_app;
+    END \$\$;"
+  printf "ALTER ROLE core_engine_app LOGIN PASSWORD '%s';\n" "$APP_PWD" | $PSQL -q
+fi
+
 if [ ! -d "$INIT_DIR" ]; then
   echo "migraciones: no existe $INIT_DIR" >&2
   exit 1
