@@ -126,3 +126,61 @@ async fn no_debe_marcar_el_evento_si_el_envio_falla() {
     db.cerrar().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_guardar_y_resolver_plantillas_globales_y_por_empresa() {
+    let Some(url) = url() else { return };
+    let (db, pool) = preparar(&url).await;
+    sqlx::raw_sql(include_str!(
+        "../../../infra/db/init/99_notificaciones_plantillas.sql"
+    ))
+    .execute(&pool)
+    .await
+    .expect("migracion plantillas");
+    let plantillas = notifications_service::plantillas_db::Plantillas::nueva(Arc::clone(&db));
+    let empresa = Uuid::new_v4().to_string();
+    plantillas
+        .guardar(
+            None,
+            "payment.procesado",
+            "email",
+            "Pago {{pedido}}",
+            "Global {{total}}",
+            true,
+        )
+        .await
+        .expect("global");
+    let global = plantillas
+        .obtener(Some(&empresa), "payment.procesado", "email")
+        .await
+        .expect("obtener")
+        .expect("global");
+    assert_eq!(global.cuerpo, "Global {{total}}");
+    plantillas
+        .guardar(
+            Some(&empresa),
+            "payment.procesado",
+            "email",
+            "Pago tenant",
+            "Tenant {{total}}",
+            true,
+        )
+        .await
+        .expect("tenant");
+    let tenant = plantillas
+        .obtener(Some(&empresa), "payment.procesado", "email")
+        .await
+        .expect("obtener")
+        .expect("tenant");
+    assert_eq!(tenant.cuerpo, "Tenant {{total}}");
+    assert_eq!(
+        plantillas
+            .listar(Some(&empresa))
+            .await
+            .expect("listar")
+            .as_array()
+            .expect("array")
+            .len(),
+        2
+    );
+}
