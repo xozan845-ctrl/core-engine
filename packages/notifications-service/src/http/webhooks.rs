@@ -53,18 +53,37 @@ fn exigir(actor: &UsuarioContexto, roles: &[&str]) -> Result<(), Falla> {
 }
 
 fn empresa(actor: &UsuarioContexto, candidata: Option<&str>) -> Result<String, Falla> {
-    let empresa = candidata
+    let tenant = actor
+        .tenant_id
+        .as_deref()
         .map(str::trim)
-        .filter(|valor| !valor.is_empty())
-        .map(str::to_string)
-        .or_else(|| actor.tenant_id.clone())
-        .ok_or_else(|| {
-            fallo(
+        .filter(|valor| !valor.is_empty());
+    let candidata = candidata
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+
+    let empresa = match (actor.es_admin_global(), candidata, tenant) {
+        // Un admin global puede operar sobre cualquier tenant.
+        (true, Some(valor), _) => valor.to_string(),
+        (true, None, Some(valor)) => valor.to_string(),
+        // Un rol de tenant solo puede operar su propio tenant.
+        (false, Some(valor), Some(propio)) if valor == propio => valor.to_string(),
+        (false, Some(_), _) => {
+            return Err(fallo(
+                StatusCode::FORBIDDEN,
+                "ACCESO_DENEGADO",
+                "No puedes gestionar webhooks de otra empresa.",
+            ))
+        }
+        (false, None, Some(valor)) => valor.to_string(),
+        _ => {
+            return Err(fallo(
                 StatusCode::BAD_REQUEST,
                 "EMPRESA_REQUERIDA",
                 "Indica empresa_id o usa el contexto del tenant.",
-            )
-        })?;
+            ))
+        }
+    };
     Uuid::parse_str(&empresa).map_err(|_| {
         fallo(
             StatusCode::BAD_REQUEST,
@@ -305,4 +324,43 @@ pub async fn reintentar(
         "POST",
         StatusCode::OK,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn actor(rol: &str, tenant: Option<&str>) -> UsuarioContexto {
+        UsuarioContexto {
+            user_id: "u-1".into(),
+            rol: rol.into(),
+            tenant_id: tenant.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn un_rol_de_tenant_no_puede_operar_otra_empresa() {
+        let propio = "11111111-1111-4111-8111-111111111111";
+        let ajeno = "22222222-2222-4222-8222-222222222222";
+        assert_eq!(
+            empresa(&actor("empresario", Some(propio)), None).expect("propio"),
+            propio
+        );
+        assert_eq!(
+            empresa(&actor("empresario", Some(propio)), Some(propio)).expect("mismo"),
+            propio
+        );
+        let error = empresa(&actor("empresario", Some(propio)), Some(ajeno))
+            .expect_err("debe rechazar otra empresa");
+        assert_eq!(error.0, StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn un_admin_global_puede_operar_cualquier_empresa() {
+        let ajeno = "22222222-2222-4222-8222-222222222222";
+        assert_eq!(
+            empresa(&actor("admin", None), Some(ajeno)).expect("admin"),
+            ajeno
+        );
+    }
 }
