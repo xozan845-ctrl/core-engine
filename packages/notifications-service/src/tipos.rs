@@ -32,6 +32,8 @@ pub struct UsuarioExterno {
     pub id: String,
     pub nombre: String,
     pub correo: String,
+    #[serde(default)]
+    pub telefono: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,6 +55,7 @@ impl Destinatario {
 pub struct MensajeNotificacion {
     pub destinatario: Destinatario,
     pub mensaje: crate::email::EmailMessage,
+    pub telefono: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

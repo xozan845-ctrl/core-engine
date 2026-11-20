@@ -129,9 +129,14 @@ En dev/E2E se usa Mailpit (`1025`/`8025`) para capturar los correos.
 | `GET /docs` | Swagger UI |
 | `GET /docs-json` | Contrato público |
 | `GET /docs-internal-json` | Contrato interno |
+| `GET /api/v2/admin/notifications/plantillas` | Plantillas efectivas |
+| `PUT /api/v2/admin/notifications/plantillas/{evento}/{canal}` | Crear/editar plantilla |
 
-No hay endpoints de negocio ni rutas internas. El contrato OpenAPI existe para
-cumplir el gate de documentación, no porque haya operaciones.
+Las plantillas viven en `notifications.plantillas` (globales o por empresa).
+Canales opcionales: `NOTIFICACIONES_CANALES=email,whatsapp,sms`, con
+`WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` y `SMS_URL`/`SMS_KEY`. Variables de
+plantilla: `{{pedido}}`, `{{total}}`, `{{estado}}`, `{{motivo}}`, `{{guia}}`,
+`{{cliente}}`, `{{vendedor}}`.
 
 ---
 

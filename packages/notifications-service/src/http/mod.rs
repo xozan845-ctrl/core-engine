@@ -4,16 +4,17 @@
 //! `/docs` (contrato OpenAPI versionado). Los errores y la salud no llevan
 //! envelope `{data, meta}`.
 
+use crate::auth::UsuarioContexto;
 use crate::campos;
 use crate::config::Config;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use crate::metrics::Metrics;
 use crate::state::AppState;
-use axum::extract::{MatchedPath, Request, State};
+use axum::extract::{MatchedPath, Path, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use std::time::Instant;
 use uuid::Uuid;
@@ -48,6 +49,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
         .route("/docs-internal-json", get(docs_internal_json))
+        .route(
+            "/api/v2/admin/notifications/plantillas",
+            get(listar_plantillas),
+        )
+        .route(
+            "/api/v2/admin/notifications/plantillas/{evento}/{canal}",
+            put(guardar_plantilla),
+        )
         .route(
             "/internal/notifications/tenant/exportar",
             post(exportar_tenant),
@@ -100,6 +109,93 @@ async fn purgar_tenant(
         "estado": "completado",
         "detalle": { "no_aplica": true },
     })))
+}
+
+fn envelope(data: serde_json::Value, path: &str, method: &str) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "data": data,
+        "meta": {
+            "timestamp": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            "path": path,
+            "method": method,
+            "statusCode": 200,
+        }
+    }))
+}
+
+async fn listar_plantillas(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = UsuarioContexto::desde_headers(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"])?;
+    let datos = state
+        .plantillas()?
+        .listar(actor.tenant_id.as_deref())
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(envelope(
+        serde_json::json!({ "plantillas": datos }),
+        "/api/v2/admin/notifications/plantillas",
+        "GET",
+    ))
+}
+
+async fn guardar_plantilla(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path((evento, canal)): Path<(String, String)>,
+    Json(cuerpo): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = UsuarioContexto::desde_headers(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"])?;
+    let texto = cuerpo
+        .get("cuerpo")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|valor| (1..=4000).contains(&valor.len()))
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let asunto = cuerpo
+        .get("asunto")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if asunto.chars().count() > 200 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let activo = cuerpo
+        .get("activo")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true);
+    let empresa_id = cuerpo
+        .get("empresa_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .or_else(|| actor.tenant_id.clone());
+    let plantilla = state
+        .plantillas()?
+        .guardar(
+            empresa_id.as_deref(),
+            &evento,
+            &canal,
+            asunto,
+            texto,
+            activo,
+        )
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    Ok(envelope(
+        serde_json::json!({
+            "empresa_id": plantilla.empresa_id,
+            "evento": plantilla.evento,
+            "canal": plantilla.canal,
+            "asunto": plantilla.asunto,
+            "cuerpo": plantilla.cuerpo,
+            "activo": plantilla.activo,
+        }),
+        &format!("/api/v2/admin/notifications/plantillas/{evento}/{canal}"),
+        "PUT",
+    ))
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
