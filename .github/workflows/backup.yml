@@ -1,0 +1,96 @@
+name: Database Backup
+
+# Backup lógico + verificación de restore (ADR-0044).
+#
+# Requiere el secret `BACKUP_DATABASE_URL` con un usuario de solo lectura y
+# acceso de red desde el runner. Si la base de producción es privada, ejecuta
+# este workflow en un runner self-hosted dentro de la red o usa el sidecar
+# `db-backup` del compose y sincroniza el volumen fuera del host.
+#
+# Se deja como `workflow_dispatch` para no generar runs rojos mientras el
+# secret no esté configurado. Cuando exista, añade también:
+#   schedule:
+#     - cron: '0 3 * * *'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: dump + checksum
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_DIR: backups
+          BACKUP_RETENCION_DIAS: 0
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Configura el secret BACKUP_DATABASE_URL antes de ejecutar el backup."
+            exit 1
+          fi
+          sh infra/db/backup.sh
+          ls -lh backups
+
+      - name: Upload offsite artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backups
+          retention-days: 30
+          if-no-files-found: error
+
+  restore-verify:
+    name: restore drill
+    needs: backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Download backup
+        uses: actions/download-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backups
+
+      - name: Restore and verify
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: test_only
+          PGDATABASE: postgres
+        run: |
+          sh infra/db/restore-verify.sh "$(ls backups/*.dump | head -1)"
