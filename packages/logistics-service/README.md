@@ -84,6 +84,8 @@ También expone las transiciones logísticas de la orden
 - Solo el tenant proveedor puede avanzar el estado de su envío.
 - Estados de envío: `en_preparacion` (inicial), `enviada`, `entregada`,
   `cancelada`.
+- La capacidad `logistica_pod` exige receptor y foto/firma antes de `entregada`.
+  `POST /api/v2/envios/{id}/prueba-entrega` guarda la evidencia.
 - Estados de orden que logística puede fijar: `en_preparacion`, `enviada`,
   `entregada`, `cancelada`, `devuelta`.
 

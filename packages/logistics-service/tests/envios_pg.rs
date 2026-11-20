@@ -83,7 +83,12 @@ async fn provisionar(url: &str) {
           negocio_id uuid,
           proveedor_tipo text,
           proveedor_tenant_id uuid,
-          parte_id uuid
+          parte_id uuid,
+          pod_receptor text,
+          pod_notas text,
+          pod_foto_objeto_id uuid,
+          pod_firma_objeto_id uuid,
+          pod_capturado_en timestamptz
         );
         CREATE UNIQUE INDEX idx_envios_orden_empresa
           ON logistics.envios (order_id, empresa_id);
@@ -133,6 +138,18 @@ fn capacidades(empresa: &str, rutas: bool, delivery: bool) -> Arc<dyn Capacidade
         filas.push(CapacidadActiva {
             empresa_id: empresa.to_string(),
             capacidad_codigo: "fulfillment_delivery".to_string(),
+            activo: true,
+        });
+    }
+    Arc::new(CapacidadesFijas(filas))
+}
+
+fn capacidades_con_pod(empresa: &str) -> Arc<dyn Capacidades> {
+    let mut filas = Vec::new();
+    for codigo in ["logistica_rutas", "fulfillment_delivery", "logistica_pod"] {
+        filas.push(CapacidadActiva {
+            empresa_id: empresa.to_string(),
+            capacidad_codigo: codigo.to_string(),
             activo: true,
         });
     }
@@ -456,4 +473,61 @@ async fn debe_servir_los_endpoints_internos_de_ciclo_de_vida() {
     let _ = logistics_service::http::interno::purgar_tenant(State(estado), headers, Json(req()))
         .await
         .expect("purgar http");
+}
+
+#[tokio::test]
+async fn debe_exigir_y_guardar_la_prueba_de_entrega() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+
+    let db = Arc::new(Db::conectar(&url).await.expect("postgres"));
+    let empresa = Uuid::new_v4().to_string();
+    let order_id = "00000000-0000-4000-8000-000000000099";
+    let orders = Arc::new(OrdersFake::default());
+    *orders.orden.lock().await = Some(orden(order_id, &[&empresa]));
+    let envios = Envios::nueva(
+        Arc::clone(&db),
+        orders,
+        capacidades_con_pod(&empresa),
+        "00000000-0000-0000-0000-000000000001",
+        "logistics.outbox",
+    );
+    let envio = envios
+        .preparar_envio(order_id, &empresa, None, 1_500, None)
+        .await
+        .expect("envio");
+    sqlx::query("UPDATE logistics.envios SET proveedor_tenant_id = $1, proveedor_tipo = 'empresa' WHERE id = $2")
+        .bind(Uuid::parse_str(&empresa).expect("uuid"))
+        .bind(Uuid::parse_str(&envio.id).expect("uuid"))
+        .execute(db.pool())
+        .await
+        .expect("flota");
+
+    let error = envios
+        .avanzar_estado_envio(&envio.id, &empresa, "entregada", None, Some("u-l"))
+        .await
+        .expect_err("sin pod");
+    assert_eq!(error.codigo, "POD_REQUERIDO");
+
+    let con_pod = envios
+        .registrar_pod(
+            &envio.id,
+            &empresa,
+            "María López",
+            Some(&Uuid::new_v4().to_string()),
+            None,
+            Some("entregado en portería"),
+        )
+        .await
+        .expect("pod");
+    assert_eq!(con_pod.pod_receptor.as_deref(), Some("María López"));
+    assert!(con_pod.pod_capturado_en.is_some());
+    assert!(con_pod.pod_foto_objeto_id.is_some());
+
+    let entregado = envios
+        .avanzar_estado_envio(&envio.id, &empresa, "entregada", None, Some("u-l"))
+        .await
+        .expect("entregado");
+    assert_eq!(entregado.estado, "entregada");
 }
