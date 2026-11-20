@@ -126,15 +126,17 @@ impl Empresas {
             let pack =
                 resolver_pack(&mut tx, &pack_codigo, Some(&vertical), input.pack_version).await?;
             let slug = elegir_slug(&mut tx, &nombre, slug_explicito.as_deref()).await?;
+            let plantilla_override = meta.get("plantilla").and_then(Value::as_str);
+            let tema_override = meta.get("tema").cloned().unwrap_or_else(|| json!({}));
             let insertado = sqlx::query(
                 "INSERT INTO identity.empresas AS e
                    (nombre, slug, vertical_id, pack_codigo, pack_version, creado_por,
                     ruc, razon_social, nombre_comercial, descripcion, telefono,
                     correo_contacto, sitio_web, direccion, ciudad, departamento, pais,
                     moneda, zona_horaria, sector, representante_legal, horario_atencion,
-                    logo_objeto_id)
+                    plantilla_override, tema_override, logo_objeto_id)
                  VALUES ($1,$2,$3,$4,$5,$6::uuid,$7,$8,$9,$10,$11,$12,$13,$14,
-                         $15,$16,$17,$18,$19,$20,$21,$22,NULL)
+                         $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NULL)
                  RETURNING to_jsonb(e) AS datos",
             )
             .bind(&nombre)
@@ -159,6 +161,8 @@ impl Empresas {
             .bind(texto(&meta, "sector"))
             .bind(texto(&meta, "representante_legal"))
             .bind(texto(&meta, "horario_atencion"))
+            .bind(plantilla_override)
+            .bind(tema_override)
             .fetch_optional(&mut *tx)
             .await;
 

@@ -10,6 +10,7 @@ use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
 use crate::dominio::extensiones::Extensiones;
 use crate::dominio::negocios::Negocios;
+use crate::dominio::onboarding::Onboarding;
 use crate::dominio::packs::Packs;
 use crate::dominio::partes::Partes;
 use crate::dominio::password_reset::PasswordReset;
@@ -34,6 +35,7 @@ pub struct Servicios {
     pub empresas: Arc<Empresas>,
     pub extensiones: Arc<Extensiones>,
     pub negocios: Arc<Negocios>,
+    pub onboarding: Arc<Onboarding>,
     pub personal: Arc<Personal>,
     pub partes: Arc<Partes>,
     pub registros: Arc<Registros>,

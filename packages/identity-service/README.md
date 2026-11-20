@@ -267,6 +267,22 @@ internos son objetos concretos (`Storage`, `Stores`).
   gracia (`origen='legacy'`).
 - Decisión y límites: [ADR-0046](../../docs/adr/0046-suscripcion-plataforma-expansion.md).
 
+### Onboarding idempotente
+
+- `POST /api/v2/onboarding` con `Idempotency-Key` obligatoria crea empresa +
+  negocio principal + pack + capacidades + roles en una sola llamada.
+- Exige un `empresario` autenticado; no crea usuarios ni admins.
+- Devuelve `empresa`, `negocio_id`, `slug`, `capacidades`, `tema` y un
+  `access_token` con el tenant nuevo (evita re-loguear).
+- Reintento con la misma clave y cuerpo: replay con
+  `Idempotency-Replayed: true`; otra clave/cuerpo: `422
+  IDEMPOTENCIA_CLAVE_REUTILIZADA`; sin clave: `400`.
+- `GET /api/v2/onboarding/{id}` consulta el estado (`en_proceso`, `completado`,
+  `fallido`). Tras 2 minutos, un job atascado puede reclamarse y adopta la
+  empresa existente por slug.
+- `storage` es lazy (bucket al primer uso); dominios personalizados y datos demo
+  no están soportados. Decisión: [ADR-0047](../../docs/adr/0047-onboarding-idempotente.md).
+
 ### Capacidades y manifiesto
 
 - `GET /empresas/{empresaId}/capacidades` lista las de la empresa.
