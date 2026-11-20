@@ -23,6 +23,8 @@ x-servicio-base: &servicio-base
   environment:
     TZ: America/Managua
   depends_on:
+    db-migrate:
+      condition: service_completed_successfully
     postgres:
       condition: service_healthy
     rabbitmq:
@@ -55,6 +57,29 @@ services:
       retries: 12
     networks:
       - core-engine
+
+  # ── Migraciones versionadas con ledger (R-DB-6) ───────────────────────
+  db-migrate:
+    image: postgis/postgis:16-3.4-alpine
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-core_engine}
+      PGUSER: ${POSTGRES_USER:-core_engine}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
+      MIGRATIONS_DIR: /migrations
+      APPLY_RLS: "false"
+    volumes:
+      - ./infra/db:/migrations:ro
+    command: ["sh", "/migrations/apply.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core-engine
+    restart: "no"
 
   # ── Backup lógico diario (ADR-0044) ────────────────────────────────────
   # Dump custom con retención local. El envío fuera del host se hace desde
