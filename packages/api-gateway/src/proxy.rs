@@ -103,6 +103,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/admin/envios", &["*"]),
                 patron(r"^/api/v2/empresarios/me/envios", &["*"]),
                 patron(r"^/api/v2/envios/[^/]+/estado$", &["PATCH"]),
+                patron(r"^/api/v2/envios/[^/]+/prueba-entrega$", &["POST"]),
             ],
         },
         Destino {
@@ -141,6 +142,11 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             nombre: "intelligence",
             url: config.intelligence_url.clone(),
             patrones: vec![patron(r"^/api/v2/inteligencia(/|$)", &["*"])],
+        },
+        Destino {
+            nombre: "notifications",
+            url: config.notifications_url.clone(),
+            patrones: vec![patron(r"^/api/v2/(admin/)?notifications(/|$)", &["*"])],
         },
         Destino {
             nombre: "analytics",
