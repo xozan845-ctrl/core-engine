@@ -14778,6 +14778,72 @@
         ]
       }
     },
+    "/api/v2/usuarios/{id}/telefono": {
+      "patch": {
+        "operationId": "UsuariosController_actualizarTelefono",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "telefono": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Teléfono actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar el teléfono de contacto",
+        "tags": [
+          "Usuarios"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "summary": "Listar niveles de stock",
@@ -17127,6 +17193,90 @@
         ]
       }
     },
+    "/api/v2/envios/{id}/prueba-entrega": {
+      "post": {
+        "operationId": "EnviosController_registrarPod",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "receptor"
+                ],
+                "properties": {
+                  "receptor": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "foto_objeto_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "firma_objeto_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "notas": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prueba de entrega registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar prueba de entrega (POD)",
+        "tags": [
+          "Envíos"
+        ]
+      }
+    },
     "/api/v2/inteligencia/mapa-calor": {
       "get": {
         "operationId": "MetricasController_getMapaCalor",
@@ -17883,6 +18033,138 @@
         "summary": "Dashboard de calidad de datos del pipeline (últimas N horas)",
         "tags": [
           "Inteligencia — Predicción"
+        ]
+      }
+    },
+    "/api/v2/admin/notifications/plantillas": {
+      "get": {
+        "operationId": "NotificationsController_listarPlantillas",
+        "responses": {
+          "200": {
+            "description": "Plantillas efectivas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar plantillas de notificación",
+        "tags": [
+          "Notificaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/notifications/plantillas/{evento}/{canal}": {
+      "put": {
+        "operationId": "NotificationsController_guardarPlantilla",
+        "parameters": [
+          {
+            "name": "evento",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "canal",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "email",
+                "whatsapp",
+                "sms"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cuerpo"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "asunto": {
+                    "type": "string"
+                  },
+                  "cuerpo": {
+                    "type": "string"
+                  },
+                  "activo": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plantilla guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear o actualizar una plantilla",
+        "tags": [
+          "Notificaciones"
         ]
       }
     },
