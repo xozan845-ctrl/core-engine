@@ -32,6 +32,8 @@ impl Webhooks {
     pub fn nueva(db: Arc<Db>, timeout_ms: u64, https_obligatorio: bool) -> Self {
         let cliente = reqwest::Client::builder()
             .timeout(Duration::from_millis(timeout_ms.max(1)))
+            // Un webhook no debe poder redirigirse a la red interna.
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
         Self {
@@ -422,6 +424,38 @@ fn validar_url(url: &str, https_obligatorio: bool) -> Result<(), ErrorNotificaci
             "La URL del webhook no es válida.".to_string(),
         ));
     }
+    if let Some(host) = parsed.host_str() {
+        let host = host.trim_matches(['[', ']']);
+        if host.eq_ignore_ascii_case("localhost") {
+            return Err(ErrorNotificacion::Evento(
+                "El webhook no puede apuntar a loopback.".to_string(),
+            ));
+        }
+        if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+            let reservada = match ip {
+                std::net::IpAddr::V4(v4) => {
+                    v4.is_loopback()
+                        || v4.is_private()
+                        || v4.is_link_local()
+                        || v4.is_unspecified()
+                        || v4.is_multicast()
+                        || v4.is_broadcast()
+                }
+                std::net::IpAddr::V6(v6) => {
+                    v6.is_loopback()
+                        || v6.is_unspecified()
+                        || v6.is_multicast()
+                        || v6.is_unique_local()
+                        || v6.is_unicast_link_local()
+                }
+            };
+            if reservada {
+                return Err(ErrorNotificacion::Evento(
+                    "El webhook no puede apuntar a una IP privada o reservada.".to_string(),
+                ));
+            }
+        }
+    }
     Ok(())
 }
 
@@ -567,7 +601,10 @@ mod tests {
     fn valida_esquema_host_y_https() {
         assert!(validar_url("https://erp.example.com/hook", true).is_ok());
         assert!(validar_url("http://erp.example.com/hook", true).is_err());
-        assert!(validar_url("http://127.0.0.1:8080/hook", false).is_ok());
+        assert!(validar_url("http://127.0.0.1:8080/hook", false).is_err());
+        assert!(validar_url("https://169.254.169.254/latest/meta-data", false).is_err());
+        assert!(validar_url("https://[::1]/hook", false).is_err());
+        assert!(validar_url("https://localhost/hook", false).is_err());
         assert!(validar_url("ftp://erp.example.com/hook", false).is_err());
         assert!(validar_url("https://user:pass@erp.example.com", false).is_err());
         assert!(validar_url("corto", false).is_err());
