@@ -124,6 +124,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             patrones: vec![
                 patron(r"^/api/v2/orders(/|$)", &["*"]),
                 patron(r"^/api/v2/carrito(/|$)", &["*"]),
+                patron(r"^/api/v2/pagos/webhook$", &["POST"]),
             ],
         },
         Destino {
@@ -476,6 +477,10 @@ mod tests {
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/orders/1/estado", "PATCH").map(|d| d.nombre),
             Some("logistics")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/pagos/webhook", "POST").map(|d| d.nombre),
+            Some("orders")
         );
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/finanzas/resumen", "GET").map(|d| d.nombre),
