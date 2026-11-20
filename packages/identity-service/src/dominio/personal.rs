@@ -142,6 +142,19 @@ impl ContextoPersonal {
                     .any(|permiso| permiso == AccionPersonal::Leer.permiso())
         })
     }
+
+    /// Permisos que el actor puede otorgar en el alcance indicado.
+    fn permisos_en(&self, negocio_id: Option<&str>) -> Vec<String> {
+        self.asignaciones
+            .iter()
+            .filter(|asignacion| match (asignacion.rol_negocio_id.as_deref(), negocio_id) {
+                (None, _) => true,
+                (Some(rol), Some(objetivo)) => rol == objetivo,
+                (Some(_), None) => false,
+            })
+            .flat_map(|asignacion| asignacion.permisos.clone())
+            .collect()
+    }
 }
 
 pub struct Personal {
@@ -197,6 +210,16 @@ impl Personal {
             None => contexto.negocio_id.clone(),
         };
         Self::exigir_gestion(&contexto, negocio_id.as_deref())?;
+        if !contexto.empresa_global {
+            let permitidos = contexto.permisos_en(negocio_id.as_deref());
+            for accion in acciones_de(&permisos) {
+                if !permitidos.contains(&accion) {
+                    return Err(ApiError::acceso_denegado(
+                        "Un rol de negocio no puede otorgar permisos que no posee.",
+                    ));
+                }
+            }
+        }
         let mut tx = self.db.transaccion().await.map_err(interno)?;
         let fila = sqlx::query(
             "INSERT INTO identity.roles_empresa AS r
@@ -414,8 +437,34 @@ impl Personal {
         let contexto = self.contexto(actor, empresa_id).await?;
         self.assert_miembro(empresa_id, &datos.usuario_id).await?;
         let rol_negocio = self
-            .assert_rol(empresa_id, &datos.rol_empresa_id, false)
+            .assert_rol(empresa_id, &datos.rol_empresa_id, true)
             .await?;
+        if !contexto.empresa_global {
+            if datos.usuario_id == actor.user_id {
+                return Err(ApiError::acceso_denegado(
+                    "Un rol de negocio no puede asignarse permisos a si mismo.",
+                ));
+            }
+            let codigo = self.codigo_rol(empresa_id, &datos.rol_empresa_id).await?;
+            if codigo == "empresario" {
+                return Err(ApiError::acceso_denegado(
+                    "Solo el empresario puede asignar el rol empresario.",
+                ));
+            }
+            let permitidos = contexto.permisos_en(
+                datos
+                    .negocio_id
+                    .as_deref()
+                    .or(contexto.negocio_id.as_deref()),
+            );
+            for permiso in self.permisos_rol(empresa_id, &datos.rol_empresa_id).await? {
+                if !permitidos.contains(&permiso) {
+                    return Err(ApiError::acceso_denegado(
+                        "Un rol de negocio no puede asignar permisos que no posee.",
+                    ));
+                }
+            }
+        }
         if datos.tienda_id.is_none() && datos.puesto_id.is_none() {
             return Err(ApiError::dominio(
                 "ALCANCE_REQUERIDO",
@@ -1224,6 +1273,38 @@ impl Personal {
         Ok(negocio_id.map(|id| id.to_string()))
     }
 
+    async fn codigo_rol(&self, empresa_id: &str, rol_id: &str) -> Result<String, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let codigo: Option<String> = sqlx::query_scalar(
+            "SELECT codigo FROM identity.roles_empresa
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo = true",
+        )
+        .bind(rol_id)
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        codigo.ok_or_else(|| ApiError::no_encontrado("Rol", rol_id))
+    }
+
+    async fn permisos_rol(&self, empresa_id: &str, rol_id: &str) -> Result<Vec<String>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let permisos: Option<Value> = sqlx::query_scalar(
+            "SELECT permisos FROM identity.roles_empresa
+              WHERE id = $1::uuid AND empresa_id = $2::uuid AND activo = true",
+        )
+        .bind(rol_id)
+        .bind(empresa_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        permisos
+            .map(|valor| acciones_de(&valor))
+            .ok_or_else(|| ApiError::no_encontrado("Rol", rol_id))
+    }
+
     async fn assert_puesto(
         &self,
         empresa_id: &str,
@@ -1341,6 +1422,20 @@ fn validar_alcance_negocio(
         }
     }
     Ok(())
+}
+
+fn acciones_de(permisos: &Value) -> Vec<String> {
+    permisos
+        .get("acciones")
+        .and_then(Value::as_array)
+        .map(|acciones| {
+            acciones
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn validar_permisos(permisos: &Value) -> Result<Value, ApiError> {
