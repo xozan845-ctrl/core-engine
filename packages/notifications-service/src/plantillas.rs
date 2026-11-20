@@ -127,7 +127,13 @@ pub fn variables(
     let mut variables = std::collections::BTreeMap::new();
     variables.insert("pedido".into(), pedido_corto(&orden.id));
     variables.insert("orden_id".into(), orden.id.clone());
-    variables.insert("estado".into(), estado_legible(&orden.estado).to_string());
+    let estado_evento = buscar("estado");
+    let estado = if estado_evento.is_empty() {
+        orden.estado.as_str()
+    } else {
+        estado_evento.as_str()
+    };
+    variables.insert("estado".into(), estado_legible(estado).to_string());
     variables.insert("total".into(), total_orden(contexto));
     variables.insert("moneda".into(), orden.moneda.clone());
     variables.insert("motivo".into(), buscar("motivo"));
@@ -348,6 +354,31 @@ mod tests {
             "ocurrido_en": "2026-11-11T00:00:00.000Z",
             "data": data,
         })
+    }
+
+    #[test]
+    fn debe_exponer_las_variables_para_plantillas_editables() {
+        let evento = evento(
+            EVENTO_ORDER_STATUS_UPDATED,
+            json!({"order_id": orden().id, "estado": "enviada", "motivo": "despacho", "guia": "BGH-1"}),
+        );
+        let variables = variables(&evento, &contexto(), Destinatario::Comprador);
+        assert_eq!(
+            variables.get("pedido").map(String::as_str),
+            Some("aaaaaaaa")
+        );
+        assert_eq!(variables.get("estado").map(String::as_str), Some("enviado"));
+        assert_eq!(
+            variables.get("motivo").map(String::as_str),
+            Some("despacho")
+        );
+        assert_eq!(variables.get("guia").map(String::as_str), Some("BGH-1"));
+        assert_eq!(variables.get("cliente").map(String::as_str), Some("Ana"));
+        assert_eq!(variables.get("vendedor").map(String::as_str), Some("Luis"));
+        assert_eq!(
+            variables.get("destinatario").map(String::as_str),
+            Some("comprador")
+        );
     }
 
     #[test]
