@@ -111,6 +111,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v2/usuarios/{id}", get(usuarios::obtener))
         .route("/api/v2/usuarios/{id}/mfa/reset", post(usuarios::reset_mfa))
         .route(
+            "/api/v2/usuarios/{id}/telefono",
+            patch(usuarios::actualizar_telefono),
+        )
+        .route(
             "/api/v2/usuarios/{id}/avatar",
             patch(usuarios::actualizar_avatar),
         )
