@@ -52,6 +52,9 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0041](./0041-mvp-endurecimiento-ciclo-vida.md) | Aceptado (implementado) | MFA cifrado, reset admin, purga cross-service, retención de auditoría y nota de crédito electrónica |
 | [0042](./0042-exportacion-asincrona-purga-total-pdf-storage.md) | Aceptado (implementado) | Exportación asíncrona firmada, purga en todos los servicios y PDF en object storage |
 | [0043](./0043-cierre-p0-retail-flota.md) | Aceptado (implementado) | Analytics con devoluciones, pago manual explícito, notificaciones multicanal, POD, trigram y entrega de reportes |
+| [0044](./0044-backup-restore-verificado.md) | Aceptado (implementado; PITR en backlog) | Backup lógico diario, retención, copia offsite manual y restore drill |
+| [0045](./0045-webhooks-salientes.md) | Aceptado (implementado) | Webhooks salientes por tenant con HMAC, reintentos y API admin |
+| [0046](./0046-suscripcion-plataforma-expansion.md) | Aceptado (implementado con cobro manual) | Plan USD 35/mes para operar más de un negocio |
 
 ## Convención
 
