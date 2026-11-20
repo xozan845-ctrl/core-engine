@@ -429,3 +429,37 @@ async fn debe_registrar_la_ip_de_la_sesion() {
         .expect("sesion");
     assert_eq!(sesion["ip"], "203.0.113.7");
 }
+
+#[tokio::test]
+async fn debe_guardar_y_validar_el_telefono_del_usuario() {
+    let Some(ctx) = preparar().await else { return };
+    let usuario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Telefono".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "comprador".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("usuario");
+    ctx.usuarios
+        .actualizar_telefono(&usuario.id, Some("+505 8888-7777"))
+        .await
+        .expect("telefono");
+    let guardado = ctx
+        .usuarios
+        .encontrar_por_id(&usuario.id)
+        .await
+        .expect("buscar")
+        .expect("usuario");
+    assert_eq!(guardado.telefono.as_deref(), Some("+505 8888-7777"));
+    let error = ctx
+        .usuarios
+        .actualizar_telefono(&usuario.id, Some("abc"))
+        .await
+        .expect_err("invalido");
+    assert_eq!(error.codigo, "TELEFONO_INVALIDO");
+}

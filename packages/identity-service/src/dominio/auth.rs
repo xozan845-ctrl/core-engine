@@ -344,6 +344,7 @@ mod tests {
             id: "u-1".into(),
             nombre: "Ana".into(),
             correo: "ana@test.dev".into(),
+            telefono: None,
             rol: "empresario".into(),
             tenant_id: Some("t-1".into()),
             personal_id: None,
