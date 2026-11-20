@@ -66,3 +66,86 @@ updates:
       - dependency-name: "@nestjs/*"
         update-types:
           - "version-update:semver-major"
+
+  # Dependencias Rust: un Cargo.lock por servicio (no hay workspace raíz).
+  # El grupo único evita 16 PRs semanales y fuerza a revisar el drift junto.
+  - package-ecosystem: "cargo"
+    directory: "/packages/api-gateway"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/identity-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/item-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/inventory-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/pricing-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/stores-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/orders-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/logistics-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/scheduling-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/commissions-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/finance-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/field-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/market-intelligence-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/storage-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/notifications-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }
+  - package-ecosystem: "cargo"
+    directory: "/packages/analytics-service"
+    target-branch: "develop"
+    schedule: { interval: "weekly" }
+    commit-message: { prefix: "build(deps)" }

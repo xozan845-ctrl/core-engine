@@ -198,7 +198,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: ${{ matrix.dir }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
       - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: cargo audit (deuda aceptada; falla ante avisos nuevos)
+        working-directory: ${{ matrix.dir }}
+        run: |
+          IGNORES=$(sed 's/^/--ignore /' "$GITHUB_WORKSPACE/scripts/config/cargo-audit-ignores.txt" | tr '\n' ' ')
+          cargo audit --locked $IGNORES
       - name: rustfmt
         working-directory: ${{ matrix.dir }}
         run: cargo fmt --check
