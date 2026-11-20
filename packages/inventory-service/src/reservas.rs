@@ -28,7 +28,17 @@ impl Reservas {
         order_id: &str,
         items: &Value,
     ) -> Result<Value, ApiError> {
-        let lineas = expandir_componentes(tx, &lineas_de(items)).await?;
+        let mut lineas = expandir_componentes(tx, &lineas_de(items)).await?;
+        // Orden estable de locks: dos órdenes con los mismos ítems en orden
+        // distinto no deben bloquearse mutuamente.
+        lineas.sort_by(|a, b| {
+            (&a.empresa_id, &a.sku, &a.item_id, &a.ubicacion_id).cmp(&(
+                &b.empresa_id,
+                &b.sku,
+                &b.item_id,
+                &b.ubicacion_id,
+            ))
+        });
         sqlx::query("SAVEPOINT reserva_stock")
             .execute(&mut **tx)
             .await
