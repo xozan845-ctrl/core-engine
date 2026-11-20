@@ -237,6 +237,10 @@ Campos: `codigo`, `nombre`, `requiere_confirmacion`, `activo`, `config`.
   `GET/PUT /api/v2/empresas/{id}/configuracion-pagos` (empresario o admin).
   El catálogo se administra en `GET/POST /api/v2/admin/proveedores-pago` y
   `PATCH /api/v2/admin/proveedores-pago/{codigo}`.
+- **Pago manual (MVP):** configurar `proveedor_codigo=manual` en
+  `PUT /api/v2/empresas/{id}/configuracion-pagos`; el pago queda `pendiente` y
+  un admin lo confirma en `POST /api/v2/admin/pagos/{id}/confirmar`. No exige
+  pasarela externa y conserva reembolso/conciliación manuales.
 - Tipos disponibles: `simulado`, `http`, `manual`. Un `http` activo exige
   `config.url`; la clave y el secreto de webhook se referencian por variable de
   entorno (`clave_env`, `webhook_secreto_env`) y nunca se guardan en BD.
