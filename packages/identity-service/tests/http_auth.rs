@@ -18,6 +18,7 @@ use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
 use identity_service::dominio::negocios::Negocios;
+use identity_service::dominio::onboarding::Onboarding;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -147,6 +148,7 @@ async fn preparar() -> Option<Contexto> {
         1,
     ));
     let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db), Arc::clone(&suscripciones)));
+    let onboarding = Arc::new(Onboarding::nuevo(Arc::clone(&db)));
     let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
@@ -186,6 +188,7 @@ async fn preparar() -> Option<Contexto> {
             )),
             extensiones,
             negocios,
+            onboarding,
             personal,
             partes,
             registros,
@@ -4454,4 +4457,154 @@ async fn debe_cobrar_el_plan_para_operar_mas_de_un_negocio() {
         error["codigo"],
         "SUSCRIPCION_REQUIERIDA".replace("REQUIERIDA", "REQUERIDA")
     );
+}
+
+#[tokio::test]
+async fn debe_hacer_onboarding_idempotente_y_devolver_token_con_tenant() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Onboarding".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let clave = format!("onboarding-{}", Uuid::new_v4());
+    let slug = format!("onboarding-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let cuerpo = json!({
+        "vertical": "retail",
+        "pack": "pack_retail",
+        "pack_version": 1,
+        "empresa": {
+            "nombre": "Empresa Onboarding",
+            "slug": slug,
+            "moneda": "nio",
+            "plantilla": "minimal",
+            "tema": { "color_primario": "#112233" }
+        }
+    });
+    let mut pares = actor.clone();
+    pares.push(("Idempotency-Key", clave.clone()));
+    let con_clave = headers(&pares);
+
+    let (status, creado) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creado["data"]["empresa_id"]
+        .as_str()
+        .expect("empresa_id")
+        .to_string();
+    let negocio_id = creado["data"]["negocio_id"]
+        .as_str()
+        .expect("negocio_id")
+        .to_string();
+    assert_eq!(creado["data"]["estado"], "completado");
+    assert_eq!(creado["data"]["slug"], slug);
+    assert_eq!(creado["data"]["empresa"]["plantilla"], "minimal");
+    assert!(creado["data"]["capacidades"]
+        .as_array()
+        .expect("capacidades")
+        .iter()
+        .any(|capacidad| capacidad == "catalogo_items"));
+
+    let token = creado["data"]["access_token"]
+        .as_str()
+        .expect("access_token");
+    let payload = identity_service::auth::verificar_token(token, "secreto-de-prueba").expect("jwt");
+    assert_eq!(payload.rol, "empresario");
+    assert_eq!(payload.tenant_id.as_deref(), Some(empresa_id.as_str()));
+
+    let (status, replay) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(replay["data"]["empresa_id"], empresa_id);
+    assert_eq!(replay["data"]["negocio_id"], negocio_id);
+    let empresas: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM identity.empresas WHERE creado_por = $1::uuid")
+            .bind(&empresario.id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("empresas");
+    assert_eq!(empresas, 1);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        json!({
+            "vertical": "retail",
+            "pack": "pack_retail",
+            "empresa": { "nombre": "Otro nombre", "slug": slug }
+        }),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["codigo"], "IDEMPOTENCIA_CLAVE_REUTILIZADA");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "IDEMPOTENCIA_REQUERIDA");
+
+    let (status, estado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!(
+            "/api/v2/onboarding/{}",
+            creado["data"]["onboarding_id"]
+                .as_str()
+                .expect("onboarding_id")
+        ),
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(estado["data"]["estado"], "completado");
+    assert!(estado["data"]["access_token"].is_string());
+
+    // El primer negocio/empresa ya existe: un segundo onboarding sin plan paga.
+    let mut pares2 = actor.clone();
+    pares2.push(("Idempotency-Key", format!("onboarding-{}", Uuid::new_v4())));
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        json!({
+            "vertical": "retail",
+            "pack": "pack_retail",
+            "empresa": { "nombre": "Segunda Empresa", "slug": format!("segunda-{}", &Uuid::new_v4().simple().to_string()[..8]) }
+        }),
+        &headers(&pares2),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
 }

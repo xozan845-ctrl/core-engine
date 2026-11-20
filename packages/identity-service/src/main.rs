@@ -12,6 +12,7 @@ use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
 use identity_service::dominio::negocios::Negocios;
+use identity_service::dominio::onboarding::Onboarding;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
@@ -158,6 +159,7 @@ async fn main() {
         config.plataforma_negocios_gratis,
     ));
     let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db), Arc::clone(&suscripciones)));
+    let onboarding = Arc::new(Onboarding::nuevo(Arc::clone(&db)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
     let personal = Arc::new(Personal::nueva(
@@ -183,6 +185,7 @@ async fn main() {
             empresas,
             extensiones,
             negocios,
+            onboarding,
             personal,
             partes,
             registros,

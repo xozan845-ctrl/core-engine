@@ -11,6 +11,7 @@ pub mod extensiones;
 pub mod features;
 pub mod media;
 pub mod negocios;
+pub mod onboarding;
 pub mod packs;
 pub mod partes;
 pub mod password_reset;
