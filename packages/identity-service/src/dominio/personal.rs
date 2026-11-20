@@ -147,11 +147,13 @@ impl ContextoPersonal {
     fn permisos_en(&self, negocio_id: Option<&str>) -> Vec<String> {
         self.asignaciones
             .iter()
-            .filter(|asignacion| match (asignacion.rol_negocio_id.as_deref(), negocio_id) {
-                (None, _) => true,
-                (Some(rol), Some(objetivo)) => rol == objetivo,
-                (Some(_), None) => false,
-            })
+            .filter(
+                |asignacion| match (asignacion.rol_negocio_id.as_deref(), negocio_id) {
+                    (None, _) => true,
+                    (Some(rol), Some(objetivo)) => rol == objetivo,
+                    (Some(_), None) => false,
+                },
+            )
             .flat_map(|asignacion| asignacion.permisos.clone())
             .collect()
     }

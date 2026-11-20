@@ -2765,11 +2765,7 @@ async fn debe_procesar_un_webhook_de_pago_con_firma_hmac() {
         .header("x-webhook-signature", "incorrecta");
     let response = router
         .clone()
-        .oneshot(
-            request
-                .body(Body::from(cuerpo.clone()))
-                .expect("request"),
-        )
+        .oneshot(request.body(Body::from(cuerpo.clone())).expect("request"))
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
