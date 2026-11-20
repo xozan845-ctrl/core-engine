@@ -135,9 +135,10 @@ async fn purgar_tenant(
         .filter_map(|valor| uuid::Uuid::parse_str(valor).ok())
         .collect();
     let db = state.db()?;
-    let mut tx = db.transaccion_servicio().await.map_err(|error| {
-        purga_error(error)
-    })?;
+    let mut tx = db
+        .transaccion_servicio()
+        .await
+        .map_err(|error| purga_error(error))?;
 
     sqlx::query("DELETE FROM orders.carritos WHERE comprador_id = ANY($1::uuid[])")
         .bind(&usuarios)

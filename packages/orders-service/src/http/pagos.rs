@@ -48,10 +48,7 @@ pub fn rutas() -> Router<AppState> {
             post(contracargo_pago),
         )
         .route("/api/v2/admin/pagos/{id}/conciliar", post(conciliar_pago))
-        .route(
-            "/internal/pagos/webhook",
-            post(webhook_pago_interno),
-        )
+        .route("/internal/pagos/webhook", post(webhook_pago_interno))
         .route("/api/v2/pagos/webhook", post(webhook_pago_publico))
 }
 
@@ -406,9 +403,9 @@ async fn procesar_webhook(
         .get("x-webhook-timestamp")
         .and_then(|valor| valor.to_str().ok())
         .unwrap_or("");
-    let momento = timestamp.parse::<i64>().map_err(|_| {
-        ApiError::acceso_denegado("Timestamp de webhook invalido.")
-    })?;
+    let momento = timestamp
+        .parse::<i64>()
+        .map_err(|_| ApiError::acceso_denegado("Timestamp de webhook invalido."))?;
     let ahora = chrono::Utc::now().timestamp();
     if (ahora - momento).abs() > VENTANA_TIMESTAMP_SEGUNDOS {
         return Err(ApiError::acceso_denegado(
