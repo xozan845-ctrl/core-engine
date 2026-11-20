@@ -1731,6 +1731,12 @@ DROP POLICY IF EXISTS configuracion_pagos_app ON orders.configuracion_pagos;
 CREATE POLICY configuracion_pagos_app ON orders.configuracion_pagos
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
 
+-- ── notifications.plantillas (ADR-0043) ───────────────────────────────────
+ALTER TABLE notifications.plantillas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notificaciones_plantillas_app ON notifications.plantillas;
+CREATE POLICY notificaciones_plantillas_app ON notifications.plantillas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
 -- ── identity.exportacion_jobs (ADR-0042) ──────────────────────────────────
 ALTER TABLE identity.exportacion_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS exportacion_jobs_app ON identity.exportacion_jobs;

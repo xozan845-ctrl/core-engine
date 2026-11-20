@@ -51,6 +51,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0040](./0040-pdf-comprobantes.md) | Aceptado (implementado) | PDF completo con emisor, cliente, líneas, IVA y almacenamiento |
 | [0041](./0041-mvp-endurecimiento-ciclo-vida.md) | Aceptado (implementado) | MFA cifrado, reset admin, purga cross-service, retención de auditoría y nota de crédito electrónica |
 | [0042](./0042-exportacion-asincrona-purga-total-pdf-storage.md) | Aceptado (implementado) | Exportación asíncrona firmada, purga en todos los servicios y PDF en object storage |
+| [0043](./0043-cierre-p0-retail-flota.md) | Aceptado (implementado) | Analytics con devoluciones, pago manual explícito, notificaciones multicanal, POD, trigram y entrega de reportes |
 
 ## Convención
 
