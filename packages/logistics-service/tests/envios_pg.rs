@@ -170,6 +170,7 @@ fn orden(order_id: &str, empresas: &[&str]) -> OrdenExterna {
                 cantidad: 1,
                 producto_nombre: "Cafe".to_string(),
                 precio_unitario_cents: 1_500,
+                fulfillment: None,
             })
             .collect(),
         total: "30.00".to_string(),
