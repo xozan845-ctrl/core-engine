@@ -16,6 +16,15 @@ use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
+/// Límite de cuerpo que el gateway materializa en memoria antes de reenviar.
+/// Los servicios tienen su propio límite de 100 KiB para JSON; este margen
+/// cubre uploads pequeños y evita que un POST grande tumbe el perímetro.
+const MAX_CUERPO_BYTES: usize = 2 * 1024 * 1024;
+
+fn cuerpo_excede(longitud: usize) -> bool {
+    longitud > MAX_CUERPO_BYTES
+}
+
 pub struct Destino {
     pub nombre: &'static str,
     pub url: String,
@@ -291,8 +300,34 @@ pub async fn reenviar(State(state): State<AppState>, request: Request) -> Respon
     let cuerpo = if matches!(metodo, Method::GET | Method::HEAD | Method::OPTIONS) {
         Vec::new()
     } else {
+        if let Some(longitud) = request
+            .headers()
+            .get(header::CONTENT_LENGTH)
+            .and_then(|valor| valor.to_str().ok())
+            .and_then(|valor| valor.parse::<usize>().ok())
+        {
+            if cuerpo_excede(longitud) {
+                return ApiError::nueva(
+                    "HTTP_413",
+                    "El cuerpo de la peticion excede el limite permitido.",
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                )
+                .into_response();
+            }
+        }
         match request.into_body().collect().await {
-            Ok(bytes) => bytes.to_bytes().to_vec(),
+            Ok(bytes) => {
+                let bytes = bytes.to_bytes();
+                if cuerpo_excede(bytes.len()) {
+                    return ApiError::nueva(
+                        "HTTP_413",
+                        "El cuerpo de la peticion excede el limite permitido.",
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                    )
+                    .into_response();
+                }
+                bytes.to_vec()
+            }
             Err(_) => {
                 return ApiError::nueva(
                     "HTTP_413",
@@ -422,6 +457,13 @@ mod tests {
             Some("1.2.3.4")
         );
         assert!(headers.get("x-tenant").is_none());
+    }
+
+    #[test]
+    fn debe_rechazar_cuerpos_sobre_el_limite() {
+        assert!(!cuerpo_excede(0));
+        assert!(!cuerpo_excede(MAX_CUERPO_BYTES));
+        assert!(cuerpo_excede(MAX_CUERPO_BYTES + 1));
     }
 
     #[test]

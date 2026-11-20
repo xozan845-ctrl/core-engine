@@ -158,7 +158,7 @@ async fn borde(State(state): State<AppState>, mut request: Request, next: Next) 
     }
 
     if !es_media_publica(metodo.as_str(), &ruta) {
-        let ip = ip_de(request.headers());
+        let ip = ip_de(request.headers(), state.config.confiar_en_forwarded);
         let (clave, limite) = if ruta == "/ready" {
             ("ready", 10)
         } else if es_login(metodo.as_str(), &ruta) {
