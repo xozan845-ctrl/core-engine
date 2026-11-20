@@ -147,5 +147,7 @@
   "99_suscripciones_plataforma.sql": "00c628edde1055a6f9f7bcdf6172e56aa1d71bbb85dc116c477da065307dab64",
   "99_tenant_eliminacion.sql": "67aa6b4b2f3f343d795604f5e5eafec346fcf48f84b3b751fd842386872e30a3",
   "99_usuario_telefono.sql": "11f12aa56c5e3e54d385f8ed3fc7518e6244f48b1ca62f58f4bd85808d574750",
-  "99_wishlist_verificadas.sql": "1b37314815829a283c35c44a18280694f84ec2f315a3d5179ef5f45c98e508f9"
+  "99_wishlist_verificadas.sql": "1b37314815829a283c35c44a18280694f84ec2f315a3d5179ef5f45c98e508f9",
+  "99z_append_only.sql": "548c3b383409e222b2edcdd4fe317ae8e8387fe36c3801898b575c1f70f76ae1",
+  "99z_scheduling_outbox_rls.sql": "b7e3cbf4962cff7243affda7011a88880ce7d5b6ebd33b99f4f5edd493847f38"
 }
