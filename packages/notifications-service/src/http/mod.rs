@@ -1,7 +1,7 @@
 //! Router HTTP y middlewares transversales.
 //!
-//! El servicio no expone API pública de negocio: solo `/health`, `/metrics` y
-//! `/docs` (contrato OpenAPI versionado). Los errores y la salud no llevan
+//! Superficie: `/health`, `/metrics`, `/docs` (contrato OpenAPI versionado) y
+//! la API admin de plantillas/webhooks. Los errores y la salud no llevan
 //! envelope `{data, meta}`.
 
 use crate::auth::UsuarioContexto;
@@ -14,10 +14,12 @@ use axum::extract::{MatchedPath, Path, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{get, patch, post, put};
 use axum::{Json, Router};
 use std::time::Instant;
 use uuid::Uuid;
+
+mod webhooks;
 
 /// Documentos OpenAPI versionados (golden del contrato, R-C-7).
 const OPENAPI_PUBLICO: &str =
@@ -58,6 +60,26 @@ pub fn build_router(state: AppState) -> Router {
             put(guardar_plantilla),
         )
         .route(
+            "/api/v2/admin/notifications/webhooks",
+            get(webhooks::listar).post(webhooks::crear),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}",
+            patch(webhooks::actualizar).delete(webhooks::eliminar),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}/rotar-secreto",
+            post(webhooks::rotar),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}/entregas",
+            get(webhooks::entregas),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/entregas/{id}/reintentar",
+            post(webhooks::reintentar),
+        )
+        .route(
             "/internal/notifications/tenant/exportar",
             post(exportar_tenant),
         )
@@ -87,38 +109,81 @@ fn exigir_clave(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(),
     Ok(())
 }
 
+fn empresa_del_cuerpo(cuerpo: &serde_json::Value) -> Result<String, StatusCode> {
+    cuerpo
+        .get("empresa_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string)
+        .ok_or(StatusCode::BAD_REQUEST)
+}
+
 async fn exportar_tenant(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
+    Json(cuerpo): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     exigir_clave(&state, &headers)?;
+    let empresa_id = empresa_del_cuerpo(&cuerpo)?;
+    let plantillas = state
+        .plantillas()?
+        .exportar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let webhooks = state
+        .webhooks()?
+        .exportar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(serde_json::json!({
         "servicio": "notifications",
         "estado": "completado",
-        "datos": { "no_aplica": true, "motivo": "El servicio no persiste datos de tenant." },
+        "datos": { "plantillas": plantillas, "webhooks": webhooks },
     })))
 }
 
 async fn purgar_tenant(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
+    Json(cuerpo): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     exigir_clave(&state, &headers)?;
+    let empresa_id = empresa_del_cuerpo(&cuerpo)?;
+    let plantillas = state
+        .plantillas()?
+        .purgar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let webhooks = state
+        .webhooks()?
+        .purgar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(serde_json::json!({
         "servicio": "notifications",
         "estado": "completado",
-        "detalle": { "no_aplica": true },
+        "detalle": { "plantillas": plantillas, "webhooks": webhooks },
     })))
 }
 
 fn envelope(data: serde_json::Value, path: &str, method: &str) -> Json<serde_json::Value> {
+    envelope_con(data, path, method, 200)
+}
+
+pub(crate) fn envelope_con(
+    data: serde_json::Value,
+    path: &str,
+    method: &str,
+    status: u16,
+) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "data": data,
         "meta": {
             "timestamp": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
             "path": path,
             "method": method,
-            "statusCode": 200,
+            "statusCode": status,
         }
     }))
 }
