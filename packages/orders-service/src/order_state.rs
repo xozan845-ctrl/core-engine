@@ -53,6 +53,7 @@ pub struct ItemOrden {
     pub comision: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ubicacion_id: Option<String>,
+    #[serde(default)]
     pub item_type: String,
     pub item_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
