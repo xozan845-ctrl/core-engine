@@ -56,6 +56,37 @@ services:
     networks:
       - core-engine
 
+  # ── Backup lógico diario (ADR-0044) ────────────────────────────────────
+  # Dump custom con retención local. El envío fuera del host se hace desde
+  # `backup.yml` o el almacenamiento externo que configure operación.
+  db-backup:
+    image: postgres:16-alpine
+    env_file:
+      - .env
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-core_engine}
+      PGUSER: ${POSTGRES_USER:-core_engine}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
+      BACKUP_DIR: /backups
+      BACKUP_RETENCION_DIAS: ${BACKUP_RETENCION_DIAS:-14}
+      BACKUP_INTERVALO_SEGUNDOS: ${BACKUP_INTERVALO_SEGUNDOS:-86400}
+    volumes:
+      - ./infra/db/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./infra/db/restore-verify.sh:/usr/local/bin/restore-verify.sh:ro
+      - db_backups:/backups
+    command:
+      - sh
+      - -c
+      - while true; do sh /usr/local/bin/backup.sh || true; sleep "$$BACKUP_INTERVALO_SEGUNDOS"; done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core-engine
+    restart: unless-stopped
+
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -309,6 +340,7 @@ volumes:
   pg_data:
   rabbitmq_data:
   minio_data:
+  db_backups:
 
 networks:
   core-engine:
