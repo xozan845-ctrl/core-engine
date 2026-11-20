@@ -1,18 +1,23 @@
 //! Métodos de pago configurables (`/api/v2/orders/metodos-pago` y admin).
 
 use super::{created, ok, Cuerpo};
-use crate::auth::UsuarioContexto;
+use crate::auth::{exigir_clave_interna, UsuarioContexto};
 use crate::checkout::PAYMENT_PROCESADO;
 use crate::errors::ApiError;
 use crate::pagos::Pago;
 use crate::state::AppState;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::HeaderMap;
 use axum::response::Response;
 use axum::routing::{get, patch, post};
 use axum::Router;
+use hmac::{Hmac, Mac};
 use serde_json::{json, Value};
+use sha2::Sha256;
 use std::collections::HashMap;
+
+const MAX_WEBHOOK_BYTES: usize = 100 * 1024;
+const VENTANA_TIMESTAMP_SEGUNDOS: i64 = 300;
 
 pub fn rutas() -> Router<AppState> {
     Router::new()
@@ -43,7 +48,11 @@ pub fn rutas() -> Router<AppState> {
             post(contracargo_pago),
         )
         .route("/api/v2/admin/pagos/{id}/conciliar", post(conciliar_pago))
-        .route("/internal/pagos/webhook", post(webhook_pago))
+        .route(
+            "/internal/pagos/webhook",
+            post(webhook_pago_interno),
+        )
+        .route("/api/v2/pagos/webhook", post(webhook_pago_publico))
 }
 
 /// `GET /api/v2/orders/metodos-pago` (cualquier usuario autenticado).
@@ -304,12 +313,70 @@ fn negocio_de(query: &HashMap<String, String>) -> Result<Option<&str>, ApiError>
     Ok(negocio)
 }
 
-/// `POST /internal/pagos/webhook` (proveedor de pagos; secreto compartido).
-pub async fn webhook_pago(
+/// `POST /internal/pagos/webhook` (servicio→servicio; clave interna + HMAC).
+pub async fn webhook_pago_interno(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Cuerpo(dto): Cuerpo,
+    request: Request,
 ) -> Result<Response, ApiError> {
+    procesar_webhook(state, headers, request, true).await
+}
+
+/// `POST /api/v2/pagos/webhook` (proveedor externo; HMAC obligatorio).
+pub async fn webhook_pago_publico(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    request: Request,
+) -> Result<Response, ApiError> {
+    procesar_webhook(state, headers, request, false).await
+}
+
+fn firma_webhook(secreto: &str, timestamp: &str, cuerpo: &[u8]) -> String {
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes())
+        .expect("HMAC acepta cualquier longitud de clave");
+    mac.update(timestamp.as_bytes());
+    mac.update(b".");
+    mac.update(cuerpo);
+    hex::encode(mac.finalize().into_bytes())
+}
+
+fn firma_valida(secreto: &str, timestamp: &str, cuerpo: &[u8], firma: &str) -> bool {
+    let Ok(firma) = hex::decode(firma.trim()) else {
+        return false;
+    };
+    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes())
+        .expect("HMAC acepta cualquier longitud de clave");
+    mac.update(timestamp.as_bytes());
+    mac.update(b".");
+    mac.update(cuerpo);
+    mac.verify_slice(&firma).is_ok()
+}
+
+async fn procesar_webhook(
+    state: AppState,
+    headers: HeaderMap,
+    request: Request,
+    exigir_interna: bool,
+) -> Result<Response, ApiError> {
+    if exigir_interna {
+        exigir_clave_interna(&headers, state.config.internal_api_key.as_deref())?;
+    }
+    let cuerpo = axum::body::to_bytes(request.into_body(), MAX_WEBHOOK_BYTES)
+        .await
+        .map_err(|_| {
+            ApiError::nueva(
+                "HTTP_413",
+                "El cuerpo del webhook excede el limite permitido.",
+                axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+            )
+        })?;
+    let dto: Value = serde_json::from_slice(&cuerpo).map_err(|_| {
+        ApiError::nueva(
+            "SOLICITUD_INVALIDA",
+            "Peticion invalida.",
+            axum::http::StatusCode::BAD_REQUEST,
+        )
+    })?;
     let pago_id = dto
         .get("pago_id")
         .and_then(Value::as_str)
@@ -326,12 +393,30 @@ pub async fn webhook_pago(
         .await?
         .or_else(|| state.config.pago_webhook_secret.clone())
         .unwrap_or_default();
-    let recibido = headers
-        .get("x-webhook-secret")
+    if esperado.is_empty() {
+        return Err(ApiError::acceso_denegado(
+            "El webhook no tiene un secreto configurado.",
+        ));
+    }
+    let firma = headers
+        .get("x-webhook-signature")
         .and_then(|valor| valor.to_str().ok())
         .unwrap_or("");
-    if esperado.is_empty() || recibido != esperado {
-        return Err(ApiError::acceso_denegado("Secreto de webhook invalido."));
+    let timestamp = headers
+        .get("x-webhook-timestamp")
+        .and_then(|valor| valor.to_str().ok())
+        .unwrap_or("");
+    let momento = timestamp.parse::<i64>().map_err(|_| {
+        ApiError::acceso_denegado("Timestamp de webhook invalido.")
+    })?;
+    let ahora = chrono::Utc::now().timestamp();
+    if (ahora - momento).abs() > VENTANA_TIMESTAMP_SEGUNDOS {
+        return Err(ApiError::acceso_denegado(
+            "El webhook expiro fuera de la ventana permitida.",
+        ));
+    }
+    if !firma_valida(&esperado, timestamp, &cuerpo, firma) {
+        return Err(ApiError::acceso_denegado("Firma de webhook invalida."));
     }
     let estado = dto
         .get("estado")
@@ -425,4 +510,25 @@ async fn rechazar_y_cancelar(
         )
         .await?;
     ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn la_firma_hmac_cubre_timestamp_y_cuerpo() {
+        let cuerpo = br#"{"pago_id":"p-1","estado":"confirmado"}"#;
+        let firma = firma_webhook("secreto", "1700000000", cuerpo);
+        assert!(firma_valida("secreto", "1700000000", cuerpo, &firma));
+        assert!(!firma_valida("otro", "1700000000", cuerpo, &firma));
+        assert!(!firma_valida("secreto", "1700000001", cuerpo, &firma));
+        assert!(!firma_valida(
+            "secreto",
+            "1700000000",
+            br#"{"pago_id":"p-2"}"#,
+            &firma
+        ));
+        assert!(!firma_valida("secreto", "1700000000", cuerpo, "no-hex"));
+    }
 }
