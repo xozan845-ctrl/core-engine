@@ -8,7 +8,9 @@ use crate::clientes::{es_uuid, Clientes};
 use crate::email::EmailProvider;
 use crate::errors::ErrorNotificacion;
 use crate::logs;
-use crate::plantillas::construir_mensajes;
+use crate::mensajeria::{Sms, WhatsApp};
+use crate::plantillas::{construir_mensajes, render, variables};
+use crate::plantillas_db::Plantillas;
 use crate::tipos::{ContextoPedido, OrdenExterna};
 use async_trait::async_trait;
 use serde_json::Value;
@@ -22,11 +24,60 @@ pub trait NotificacionesPort: Send + Sync {
 pub struct Notificaciones {
     clientes: Arc<dyn Clientes>,
     email: Arc<dyn EmailProvider>,
+    plantillas: Option<Arc<Plantillas>>,
+    whatsapp: Option<Arc<WhatsApp>>,
+    sms: Option<Arc<Sms>>,
+    canales: Vec<String>,
 }
 
 impl Notificaciones {
     pub fn nueva(clientes: Arc<dyn Clientes>, email: Arc<dyn EmailProvider>) -> Self {
-        Self { clientes, email }
+        Self {
+            clientes,
+            email,
+            plantillas: None,
+            whatsapp: None,
+            sms: None,
+            canales: vec!["email".to_string()],
+        }
+    }
+
+    pub fn con_plantillas(mut self, plantillas: Arc<Plantillas>) -> Self {
+        self.plantillas = Some(plantillas);
+        self
+    }
+
+    pub fn con_whatsapp(mut self, whatsapp: Arc<WhatsApp>) -> Self {
+        self.whatsapp = Some(whatsapp);
+        self
+    }
+
+    pub fn con_sms(mut self, sms: Arc<Sms>) -> Self {
+        self.sms = Some(sms);
+        self
+    }
+
+    pub fn con_canales(mut self, canales: Vec<String>) -> Self {
+        if !canales.is_empty() {
+            self.canales = canales;
+        }
+        self
+    }
+
+    async fn texto_canal(
+        &self,
+        tipo: &str,
+        empresa_id: Option<&str>,
+        canal: &str,
+        vars: &std::collections::BTreeMap<String, String>,
+        fallback: &str,
+    ) -> Result<String, ErrorNotificacion> {
+        if let Some(plantillas) = self.plantillas.as_ref() {
+            if let Some(plantilla) = plantillas.obtener(empresa_id, tipo, canal).await? {
+                return Ok(render(&plantilla.cuerpo, vars));
+            }
+        }
+        Ok(fallback.to_string())
     }
 }
 
@@ -65,11 +116,61 @@ impl NotificacionesPort for Notificaciones {
             vendedor: vendedor?,
         };
         let mensajes = construir_mensajes(evento, &contexto);
+        let empresa_id = evento
+            .get("data")
+            .and_then(|data| data.get("empresa_id"))
+            .and_then(Value::as_str);
         for mensaje in &mensajes {
-            self.email
-                .enviar(&mensaje.mensaje)
-                .await
-                .map_err(ErrorNotificacion::Correo)?;
+            let vars = variables(evento, &contexto, mensaje.destinatario);
+            let mut correo = mensaje.mensaje.clone();
+            if let Some(plantillas) = self.plantillas.as_ref() {
+                if let Some(plantilla) = plantillas.obtener(empresa_id, tipo, "email").await? {
+                    if !plantilla.asunto.trim().is_empty() {
+                        correo.subject = render(&plantilla.asunto, &vars);
+                    }
+                    correo.text = render(&plantilla.cuerpo, &vars);
+                    correo.html = None;
+                }
+            }
+            if self.canales.iter().any(|canal| canal == "email") {
+                self.email
+                    .enviar(&correo)
+                    .await
+                    .map_err(ErrorNotificacion::Correo)?;
+            }
+            let Some(telefono) = mensaje
+                .telefono
+                .as_deref()
+                .filter(|valor| !valor.is_empty())
+            else {
+                continue;
+            };
+            if self.canales.iter().any(|canal| canal == "whatsapp") {
+                if let Some(whatsapp) = self.whatsapp.as_ref() {
+                    let texto = self
+                        .texto_canal(tipo, empresa_id, "whatsapp", &vars, &correo.text)
+                        .await?;
+                    if let Err(error) = whatsapp.enviar(telefono, &texto).await {
+                        logs::error(
+                            "notifications.whatsapp",
+                            campos! { "msg": "envio fallido", "order_id": order_id, "err": error },
+                        );
+                    }
+                }
+            }
+            if self.canales.iter().any(|canal| canal == "sms") {
+                if let Some(sms) = self.sms.as_ref() {
+                    let texto = self
+                        .texto_canal(tipo, empresa_id, "sms", &vars, &correo.text)
+                        .await?;
+                    if let Err(error) = sms.enviar(telefono, &texto).await {
+                        logs::error(
+                            "notifications.sms",
+                            campos! { "msg": "envio fallido", "order_id": order_id, "err": error },
+                        );
+                    }
+                }
+            }
         }
         let destinatarios = mensajes
             .iter()
@@ -176,6 +277,7 @@ mod tests {
                     "luis@core.test"
                 }
                 .to_string(),
+                telefono: None,
             }))
         }
     }

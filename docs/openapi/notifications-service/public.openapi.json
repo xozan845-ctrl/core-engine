@@ -9,13 +9,151 @@
   "x-servicio": "notifications-service",
   "x-superficie": "publica",
   "tags": [],
-  "paths": {},
+  "paths": {
+    "/api/v2/admin/notifications/plantillas": {
+      "get": {
+        "operationId": "NotificationsController_listarPlantillas",
+        "responses": {
+          "200": {
+            "description": "Plantillas efectivas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar plantillas de notificación",
+        "tags": [
+          "Notificaciones"
+        ]
+      }
+    },
+    "/api/v2/admin/notifications/plantillas/{evento}/{canal}": {
+      "put": {
+        "operationId": "NotificationsController_guardarPlantilla",
+        "parameters": [
+          {
+            "name": "evento",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "canal",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "email",
+                "whatsapp",
+                "sms"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cuerpo"
+                ],
+                "properties": {
+                  "empresa_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "asunto": {
+                    "type": "string"
+                  },
+                  "cuerpo": {
+                    "type": "string"
+                  },
+                  "activo": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plantilla guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear o actualizar una plantilla",
+        "tags": [
+          "Notificaciones"
+        ]
+      }
+    }
+  },
   "components": {
     "securitySchemes": {
       "internalKey": {
         "type": "apiKey",
         "in": "header",
         "name": "x-internal-key"
+      },
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {}

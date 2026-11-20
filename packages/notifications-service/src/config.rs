@@ -22,6 +22,11 @@ pub struct Config {
     pub identity_service_url: String,
     pub internal_request_timeout_ms: u64,
     pub email: EmailConfig,
+    pub canales: Vec<String>,
+    pub whatsapp_token: Option<String>,
+    pub whatsapp_phone_id: Option<String>,
+    pub sms_url: Option<String>,
+    pub sms_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,6 +154,16 @@ impl Config {
                 smtp_user: leer("SMTP_USER"),
                 smtp_password: leer("SMTP_PASSWORD"),
             },
+            canales: leer("NOTIFICACIONES_CANALES")
+                .unwrap_or_else(|| "email".to_string())
+                .split(',')
+                .map(|valor| valor.trim().to_lowercase())
+                .filter(|valor| matches!(valor.as_str(), "email" | "whatsapp" | "sms"))
+                .collect(),
+            whatsapp_token: leer("WHATSAPP_TOKEN"),
+            whatsapp_phone_id: leer("WHATSAPP_PHONE_ID"),
+            sms_url: leer("SMS_URL"),
+            sms_key: leer("SMS_KEY"),
         })
     }
 
@@ -161,6 +176,26 @@ impl Config {
         }
         if self.rabbitmq_url.is_none() {
             return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
+        if self.canales.is_empty() {
+            return Err(ConfigError::Invalida(
+                "NOTIFICACIONES_CANALES",
+                "debe incluir email, whatsapp o sms".to_string(),
+            ));
+        }
+        if self.canales.iter().any(|canal| canal == "whatsapp")
+            && (self.whatsapp_token.is_none() || self.whatsapp_phone_id.is_none())
+        {
+            return Err(ConfigError::Invalida(
+                "WHATSAPP_TOKEN/WHATSAPP_PHONE_ID",
+                "obligatorias si NOTIFICACIONES_CANALES incluye whatsapp".to_string(),
+            ));
+        }
+        if self.canales.iter().any(|canal| canal == "sms") && self.sms_url.is_none() {
+            return Err(ConfigError::Invalida(
+                "SMS_URL",
+                "obligatoria si NOTIFICACIONES_CANALES incluye sms".to_string(),
+            ));
         }
         self.email.validar()
     }
