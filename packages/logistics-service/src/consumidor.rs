@@ -310,6 +310,11 @@ mod tests {
             proveedor_tipo: Some("empresa".into()),
             proveedor_tenant_id: Some("empresa-1".into()),
             parte_id: None,
+            pod_receptor: None,
+            pod_notas: None,
+            pod_foto_objeto_id: None,
+            pod_firma_objeto_id: None,
+            pod_capturado_en: None,
         }
     }
 
