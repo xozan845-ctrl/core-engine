@@ -12,19 +12,22 @@ export default defineSuite({
   rules: ['R-OB-1', 'R-OB-2'],
   mode: 'repo',
   run: ({ test, assert }) => {
-    test('R-OB-1: los servicios no emiten console logs sin JSON estructurado', () => {
+    test('R-OB-1: los servicios emiten logs estructurados, no prints sueltos', () => {
       const problems = [];
       for (const service of SERVICES) {
         const files = walkFiles(
           join(packagesRoot, service, 'src'),
-          (name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'),
-        ).filter((file) => !file.endsWith('swagger-export.ts'));
+          (name) =>
+            name.endsWith('.rs') &&
+            !name.endsWith('main.rs') &&
+            !name.endsWith('logs.rs'),
+        );
 
         for (const file of files) {
           const lines = readText(file).split('\n');
           lines.forEach((line, index) => {
-            if (!/console\.(log|warn|error|debug)\s*\(/.test(line)) return;
-            if (/console\.error\(JSON\.stringify\(/.test(line)) return;
+            if (!/(println!|eprintln!|dbg!)\s*\(/.test(line)) return;
+            if (/^\s*(\/\/|\*)/.test(line)) return;
             problems.push(`${relative(repoRoot, file)}:${index + 1}`);
           });
         }
@@ -32,7 +35,7 @@ export default defineSuite({
       assert.deepEqual(
         problems,
         [],
-        `console sin JSON estructurado en código de runtime:\n${problems.join('\n')}`,
+        `prints sueltos en código de runtime:\n${problems.join('\n')}`,
       );
     });
 
