@@ -16,7 +16,7 @@ use axum::Json;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-const PERFIL: &[ReglaCampo] = &[
+pub(crate) const PERFIL: &[ReglaCampo] = &[
     campo("ruc", false, &[Regla::Texto, Regla::MaxLongitud(30)]),
     campo(
         "razon_social",
@@ -84,7 +84,7 @@ const PERFIL: &[ReglaCampo] = &[
     campo("tema", false, &[Regla::Objeto]),
 ];
 
-const CREAR: &[ReglaCampo] = &[
+pub(crate) const CREAR: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 160)]),
     campo("slug", false, &[Regla::Texto, Regla::Longitud(2, 80)]),
     campo(
@@ -531,7 +531,7 @@ pub async fn crear_vendedor(
     created(vendedor)
 }
 
-fn capacidades_extra(dto: &Value) -> Result<Vec<String>, ApiError> {
+pub(crate) fn capacidades_extra(dto: &Value) -> Result<Vec<String>, ApiError> {
     match dto.get("capacidades_extra") {
         None | Some(Value::Null) => Ok(Vec::new()),
         Some(Value::Array(items)) => items

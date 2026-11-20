@@ -1781,3 +1781,9 @@ ALTER TABLE notifications.webhook_entregas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS notifications_webhook_entregas_app ON notifications.webhook_entregas;
 CREATE POLICY notifications_webhook_entregas_app ON notifications.webhook_entregas
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.provisioning_jobs (ADR-0047) ─────────────────────────────────
+ALTER TABLE identity.provisioning_jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS provisioning_jobs_app ON identity.provisioning_jobs;
+CREATE POLICY provisioning_jobs_app ON identity.provisioning_jobs
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);

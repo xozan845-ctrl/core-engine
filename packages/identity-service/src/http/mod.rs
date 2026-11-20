@@ -14,6 +14,7 @@ pub mod envelope;
 pub mod extensiones;
 pub mod internal;
 pub mod negocios;
+pub mod onboarding;
 pub mod packs;
 pub mod partes;
 pub mod personal;
@@ -343,6 +344,8 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades/{capacidad}",
             patch(capacidades::actualizar_negocio),
         )
+        .route("/api/v2/onboarding", post(onboarding::crear))
+        .route("/api/v2/onboarding/{id}", get(onboarding::estado))
         .route("/api/v2/plataforma/planes", get(plataforma::planes))
         .route(
             "/api/v2/plataforma/suscripciones/me",
