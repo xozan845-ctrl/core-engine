@@ -15164,6 +15164,192 @@
         ]
       }
     },
+    "/api/v2/onboarding": {
+      "post": {
+        "operationId": "OnboardingController_crear",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vertical",
+                  "pack",
+                  "empresa"
+                ],
+                "properties": {
+                  "vertical": {
+                    "type": "string"
+                  },
+                  "pack": {
+                    "type": "string"
+                  },
+                  "pack_version": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "dominio_deseado": {
+                    "type": "string",
+                    "description": "Se usa como slug; los dominios personalizados aún no están soportados."
+                  },
+                  "capacidades_extra": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "empresa": {
+                    "type": "object",
+                    "required": [
+                      "nombre"
+                    ],
+                    "properties": {
+                      "nombre": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 160
+                      },
+                      "slug": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 80
+                      },
+                      "plantilla": {
+                        "type": "string",
+                        "enum": [
+                          "clasica",
+                          "minimal",
+                          "boutique",
+                          "mercado"
+                        ]
+                      },
+                      "tema": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Onboarding creado o replay idempotente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Idempotency-Replayed": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "true cuando la respuesta se reprodujo desde la misma clave."
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Provisionar empresa y negocio de forma idempotente",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
+    "/api/v2/onboarding/{id}": {
+      "get": {
+        "operationId": "OnboardingController_estado",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado del onboarding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar el estado del onboarding",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
     "/api/v2/admin/inventario": {
       "get": {
         "summary": "Listar niveles de stock",
