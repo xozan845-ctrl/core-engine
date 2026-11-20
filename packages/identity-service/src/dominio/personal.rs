@@ -955,6 +955,7 @@ impl Personal {
             id: usuario_id.to_string(),
             nombre: nombre_usuario,
             correo: correo.clone(),
+            telefono: None,
             rol: "operativo".to_string(),
             tenant_id: Some(empresa_id),
             personal_id: None,

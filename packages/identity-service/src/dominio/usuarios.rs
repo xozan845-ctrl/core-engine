@@ -24,7 +24,7 @@ use std::sync::Arc;
 const MAX_INTENTOS_LOGIN: i32 = 5;
 const BLOQUEO_LOGIN_MINUTOS: i64 = 15;
 
-const COLUMNAS: &str = "u.id, u.nombre, u.correo, u.rol, u.tenant_id, u.personal_id,
+const COLUMNAS: &str = "u.id, u.nombre, u.correo, u.telefono, u.rol, u.tenant_id, u.personal_id,
        u.participacion_porcentaje, u.avatar_objeto_id, u.creado_en,
        (SELECT a.rol_empresa_id FROM identity.asignaciones_personal a
          WHERE a.usuario_id = u.id AND a.empresa_id = u.tenant_id AND a.estado = 'activa'
@@ -48,6 +48,8 @@ pub struct Usuario {
     pub id: String,
     pub nombre: String,
     pub correo: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub telefono: Option<String>,
     pub rol: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
@@ -423,6 +425,40 @@ impl Usuarios {
             .await
             .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
+        Ok(())
+    }
+
+    /// Actualiza el teléfono de contacto (puede ser `None` para borrarlo).
+    pub async fn actualizar_telefono(
+        &self,
+        id: &str,
+        telefono: Option<&str>,
+    ) -> Result<(), ApiError> {
+        let telefono = telefono
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string);
+        if let Some(valor) = &telefono {
+            let valido = (7..=20).contains(&valor.len())
+                && valor
+                    .chars()
+                    .all(|caracter| caracter.is_ascii_digit() || "+- ()".contains(caracter));
+            if !valido {
+                return Err(ApiError::dominio(
+                    "TELEFONO_INVALIDO",
+                    "El teléfono debe tener entre 7 y 20 caracteres y solo dígitos, +, -, espacios o paréntesis.",
+                ));
+            }
+        }
+        sqlx::query(
+            "UPDATE identity.usuarios SET telefono = $2, actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(id)
+        .bind(&telefono)
+        .execute(self.db.pool())
+        .await
+        .map_err(interno)?;
         Ok(())
     }
 
@@ -849,6 +885,7 @@ fn sanear(fila: &PgRow) -> Result<Usuario, sqlx::Error> {
         id: id.to_string(),
         nombre: fila.try_get("nombre")?,
         correo: fila.try_get("correo")?,
+        telefono: fila.try_get::<Option<String>, _>("telefono")?,
         rol: fila.try_get("rol")?,
         tenant_id: tenant_id.map(|valor| valor.to_string()),
         personal_id: personal_id.map(|valor| valor.to_string()),

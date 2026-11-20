@@ -145,6 +145,7 @@ internos son objetos concretos (`Storage`, `Stores`).
   `X-Client-IP` del gateway) y último uso.
 - El secreto TOTP se guarda cifrado con AES-256-GCM (`v1:...`) usando
   `MFA_ENCRYPTION_KEY`; los secretos legacy se migran al confirmar.
+- Teléfono de contacto para notificaciones: `PATCH /api/v2/usuarios/{id}/telefono`.
 - Reset administrativo: `POST /api/v2/usuarios/{id}/mfa/reset`
   (`super_admin`/`admin`) limpia el MFA y revoca sesiones.
 - `POST /auth/refresh` valida firma, `tipo = refresh`, `jti` y que la sesión
