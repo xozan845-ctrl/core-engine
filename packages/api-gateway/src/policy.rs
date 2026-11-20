@@ -131,6 +131,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/empresarios/me/reportes/negocios$", &["GET"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/analytics/plataforma$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/analytics(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/admin/notifications/webhooks(/|$)", &["GET", "POST", "PATCH", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/admin/notifications(/|$)", &["GET", "PUT", "POST", "PATCH", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/empresarios/me/ventas$", &["GET"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/empresarios/me/tiendas$", &["GET"], Some(vec![EMPRESARIO])),
@@ -157,6 +158,8 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/storage/bucket$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/storage/", &["*"], Some(todos.clone())),
             p(r"^/api/v2/api-keys(/|$)", &["GET", "POST", "DELETE"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/plataforma(/|$)", &["GET", "POST"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/admin/plataforma(/|$)", &["GET", "POST"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/admin/(inventario|ubicaciones)", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/admin/", &["*"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/comercio/", &["*"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR])),
@@ -228,6 +231,18 @@ mod tests {
             encontrar_politica("/api/v2/empresas/e-1/negocios/n-1/capacidades", "PATCH")
                 .expect("capacidades negocio");
         assert_eq!(capacidades.roles.as_ref().map(Vec::len), Some(ROLES.len()));
+        let plan =
+            encontrar_politica("/api/v2/plataforma/suscripciones", "POST").expect("plataforma");
+        assert_eq!(plan.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let admin_plan = encontrar_politica("/api/v2/admin/plataforma/suscripciones", "GET")
+            .expect("admin plataforma");
+        assert_eq!(admin_plan.roles, Some(vec![SUPER_ADMIN, ADMIN]));
+        let webhooks =
+            encontrar_politica("/api/v2/admin/notifications/webhooks", "POST").expect("webhooks");
+        assert_eq!(webhooks.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let plantillas = encontrar_politica("/api/v2/admin/notifications/plantillas", "PUT")
+            .expect("plantillas");
+        assert_eq!(plantillas.roles, Some(vec![SUPER_ADMIN, ADMIN]));
         let negocio_activo =
             encontrar_politica("/api/v2/auth/negocio-activo", "POST").expect("negocio-activo");
         assert_eq!(
