@@ -1,0 +1,51 @@
+# Avisos OSV/RustSec aceptados como deuda conocida (2026-11-20).
+# El gate `cargo audit` de CI falla ante cualquier aviso NUEVO; estos IDs se
+# revisan en cada release y se retiran al actualizar la dependencia.
+#
+# justificación: la mayoría son transitivas no compiladas o de tooling; las
+# alcanzables son jsonwebtoken (validación JWT), lettre (STARTTLS, ya forzado)
+# y chrono (sin mantenimiento). Ver docs/audits/2026-11-20-auditoria-produccion.md.
+
+# chrono / chrono-tz sin mantenimiento
+RUSTSEC-2026-0543
+RUSTSEC-2026-0555
+
+# instant sin mantenimiento
+RUSTSEC-2024-0384
+
+# libsqlite3-sys (SQLite no usado en runtime)
+RUSTSEC-2026-0459
+
+# rsa: Marvin timing; no se usa RSA (solo HS256)
+RUSTSEC-2023-0071
+
+# rustls-pemfile sin mantenimiento
+RUSTSEC-2025-0134
+
+# jsonwebtoken: type confusion en exp/nbf; se exige exp y no se valida nbf
+GHSA-h395-gr6q-cpjc
+
+# lettre: STARTTLS injection y avisos asociados; el SMTP exige TLS
+RUSTSEC-2026-0560
+RUSTSEC-2026-0561
+RUSTSEC-2026-0562
+RUSTSEC-2026-0563
+RUSTSEC-2026-0564
+RUSTSEC-2026-0565
+
+# h2: DATA frames vacíos; corregido en 0.4.16
+RUSTSEC-2026-0258
+
+# rustls 0.21.12 / rustls-webpki 0.101.7 (transitivas de lockfiles antiguos)
+GHSA-c8m5-c952-6cm4
+GHSA-h2v8-394m-p7vv
+GHSA-w44r-93j7-qv28
+RUSTSEC-2026-0346
+RUSTSEC-2026-0349
+GHSA-82j2-j2ch-gfr8
+GHSA-965h-392x-2mh5
+GHSA-xgp8-3hg3-c2mh
+RUSTSEC-2026-0098
+RUSTSEC-2026-0099
+RUSTSEC-2026-0104
+RUSTSEC-2026-0382
