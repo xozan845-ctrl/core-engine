@@ -358,7 +358,14 @@ fn lineas_orden(data: &Value) -> Vec<Value> {
         .map(|items| {
             items
                 .iter()
-                .filter(|item| item.get("fulfillment").and_then(Value::as_str) != Some("digital"))
+                .filter(|item| {
+                    item.get("fulfillment").and_then(Value::as_str) != Some("digital")
+                        && item
+                            .get("item_type")
+                            .and_then(Value::as_str)
+                            .unwrap_or("producto")
+                            == "producto"
+                })
                 .map(|item| {
                     let mut linea = Map::new();
                     linea.insert(
