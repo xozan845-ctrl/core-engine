@@ -259,8 +259,8 @@ async fn debe_reservar_lotes_en_orden_fefo_y_registrar_asignaciones() {
     sqlx::query(
         "INSERT INTO inventory.lotes_inventario
            (empresa_id, item_id, codigo_lote, vence_en, cantidad_inicial, cantidad_disponible)
-         VALUES ($1::uuid, $2::uuid, 'L-TARDE', '2026-12-31', 10, 10),
-                ($1::uuid, $2::uuid, 'L-PRONTO', '2026-11-20', 4, 4)",
+         VALUES ($1::uuid, $2::uuid, 'L-TARDE', '2027-12-31', 10, 10),
+                ($1::uuid, $2::uuid, 'L-PRONTO', '2027-11-20', 4, 4)",
     )
     .bind(EMPRESA)
     .bind(ITEM)
