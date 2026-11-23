@@ -14,6 +14,7 @@ para que las decisiones no se diluyan (R-DO-7).
 | Cobro de plataforma | Plan `empresario_plus` USD 35/mes para >1 negocio, cobro manual | [ADR-0046](./adr/0046-suscripcion-plataforma-expansion.md) |
 | Onboarding | Alta autenticada e idempotente con estado y token fresco | [ADR-0047](./adr/0047-onboarding-idempotente.md) |
 | Regiones tributarias | Selección por pack/tenant, manifiesto fiscal y resolución fail-closed | [ADR-0049](./adr/0049-regiones-tributarias.md), [runbook](./runbook-regiones-tributarias.md) |
+| Cierre fiscal multirregión | Series por empresa/región, catálogo de tasas, exenciones, retenciones, declaraciones por tenant, formato de moneda y adaptador DGI de referencia | [ADR-0049](./adr/0049-regiones-tributarias.md) |
 
 ## Backlog priorizado
 
@@ -45,15 +46,6 @@ para que las decisiones no se diluyan (R-DO-7).
 | 7 | **Réplicas de lectura** | Una `DATABASE_URL` para lectura/escritura | Reportes/analytics compitiendo con checkout | `DATABASE_REPLICA_URL` y pool de lectura separado por servicio; consistencia explícita | Reportes leen de réplica sin afectar la latencia de escritura |
 | 8 | **Búsqueda dedicada** | Trigram GIN en PostgreSQL (`99_busqueda_trigram.sql`) | Catálogo > ~1M ítems o búsqueda semántica/facetada | Índice externo (OpenSearch/Meilisearch) con outbox de indexación y fallback a SQL | Búsqueda con facetas y relevancia sin degradar checkout |
 | 9 | **OpenTelemetry real** | `OTEL_EXPORTER_OTLP_ENDPOINT` en `.env*`, sin crate ni exportador; logs JSON + Prometheus/Grafana propios | Necesidad de trazas entre servicios o correlación con APM | `tracing` + `opentelemetry-otlp` en un crate compartido, propagación W3C y muestreo configurable | Una orden se sigue de gateway a finance en el APM |
-
-### P2/P3 — Fiscalidad multirregión
-
-| # | Tema | Estado actual | Disparador | Diseño mínimo | Aceptación |
-|---|---|---|---|---|---|
-| 20 | **Series fiscales por región/tenant** | `finance.series_comprobantes` es global o por negocio y declara `jurisdiccion`; el seed es `NI` | Segundo país activo o tenant que factura fuera de `NI` | Serie por `(empresa/negocio, región, tipo)`, selección por región efectiva y prefijo configurable | Un tenant de otra región emite con su serie y secuencial propio, sin tocar el de `NI` |
-| 21 | **CRUD de regiones de un pack por API** | Las regiones se declaran al crear el pack o por SQL; no hay endpoint para editarlas | Operación recurrente de packs o alta de un país nuevo | `GET/PUT /api/v2/packs/{codigo}/{version}/regiones` con validación de una predeterminada | Un admin agrega/retira una región sin recrear el pack ni tocar la BD |
-| 22 | **Formato de moneda y documento por región** | Notificaciones y PDF usan el símbolo recibido; notificaciones asume `US$`/`C$` | Segundo símbolo regional o queja de presentación | Resolver símbolo/locale desde la región o desde el descriptor de la orden; formateador compartido | El correo/PDF de un tenant muestra su símbolo y formato regional |
-| 23 | **Adaptadores electrónicos por región** | ACL genérico `simulado|http`; sin DGI ni otros proveedores concretos | Primer tenant que exige factura electrónica real | Adaptador por región detrás del ACL, credenciales por tenant y estados de envío | El comprobante se envía y reconcilia con el proveedor de su región |
 
 ### P3 — Producto/plataforma
 

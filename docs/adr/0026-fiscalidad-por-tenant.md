@@ -41,8 +41,11 @@
   de orden acepta `items` (opcional).
 - **Datos:** migración aditiva `97_fiscal_tenant.sql`; backfill de empresas
   existentes a `NI` si existe.
-- **Pendiente:** declaraciones por tenant (requiere tenant en el libro mayor),
-  facturación electrónica DGI y PDF.
+- **Límite actualizado (2026-11-23):** la declaración de plataforma sigue
+  usando el libro mayor porque no tiene `empresa_id`; la declaración por tenant
+  ya existe y se calcula desde comprobantes. La facturación electrónica tiene
+  adaptador DGI de referencia; la certificación/credenciales del proveedor
+  autorizado son operativas de cada país.
 
 ## Criterios de aceptación
 
@@ -68,5 +71,6 @@ dejó como configuración posterior al alta:
   histórico que usan los comprobantes.
 - Cambiar la región de la empresa realinea el override de empresa y respeta los
   overrides por negocio; no reescribe documentos ya emitidos.
-- Sigue pendiente la declaración por tenant: el libro mayor no tiene
-  `empresa_id`.
+- La declaración por tenant ya se genera desde sus comprobantes y gastos
+  (`declaraciones.empresa_id`); la declaración de plataforma sigue sobre el
+  libro mayor porque este no tiene `empresa_id`.

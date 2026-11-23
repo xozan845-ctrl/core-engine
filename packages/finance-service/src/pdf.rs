@@ -108,20 +108,29 @@ fn texto_comprobante(comprobante: &Comprobante) -> Vec<String> {
         lineas.push(format!("Devolucion: {devolucion}"));
     }
     lineas.push(String::new());
-    lineas.push("SKU                CANT      BASE       IVA     TOTAL".to_string());
-    lineas.push("-------------------------------------------------------".to_string());
+    lineas.push("SKU              CANT      BASE   TASA       IVA     TOTAL".to_string());
+    lineas.push("------------------------------------------------------------".to_string());
     for item in items {
         let sku = item.get("sku").and_then(Value::as_str).unwrap_or("-");
-        let sku: String = sku.chars().take(18).collect();
+        let sku: String = sku.chars().take(16).collect();
         let cantidad = item.get("cantidad").and_then(Value::as_i64).unwrap_or(0);
         let base = centavos(item.get("base_cents"));
         let iva = centavos(item.get("iva_cents"));
         let total = centavos(item.get("total_cents"));
+        let tasa = item
+            .get("tasa_impuesto_bps")
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let tasa = if item.get("exento").and_then(Value::as_bool).unwrap_or(false) {
+            "EXENTO".to_string()
+        } else {
+            format!("{:.2}%", tasa as f64 / 100.0)
+        };
         lineas.push(format!(
-            "{sku:<18} {cantidad:>4} {base:>10} {iva:>10} {total:>10}"
+            "{sku:<16} {cantidad:>4} {base:>10} {tasa:>6} {iva:>9} {total:>10}"
         ));
     }
-    lineas.push("-------------------------------------------------------".to_string());
+    lineas.push("------------------------------------------------------------".to_string());
     lineas.push(format!(
         "Base gravada: {:.2}",
         comprobante.base_gravada_cents as f64 / 100.0
@@ -131,6 +140,19 @@ fn texto_comprobante(comprobante: &Comprobante) -> Vec<String> {
         "Exento: {:.2}",
         comprobante.exento_cents as f64 / 100.0
     ));
+    if comprobante.retencion_cents != 0 {
+        let codigo = datos
+            .and_then(|valor| valor.get("retencion"))
+            .and_then(|valor| valor.get("codigo"))
+            .and_then(Value::as_str)
+            .unwrap_or("IR");
+        lineas.push(format!(
+            "Retencion {} ({:.2}%): {:.2}",
+            codigo,
+            comprobante.retencion_tasa_bps as f64 / 100.0,
+            comprobante.retencion_cents as f64 / 100.0
+        ));
+    }
     lineas.push(format!(
         "TOTAL: {:.2} {}",
         comprobante.total_cents as f64 / 100.0,
@@ -206,6 +228,8 @@ mod tests {
             base_gravada_cents: 100_000,
             iva_cents: 15_000,
             exento_cents: 0,
+            retencion_cents: 2_000,
+            retencion_tasa_bps: 200,
             total_cents: 115_000,
             moneda: "NIO".into(),
             estado: "EMITIDO".into(),
@@ -213,7 +237,8 @@ mod tests {
                 "razon_social": "Cliente S.A.",
                 "ruc": "RUC-1",
                 "emisor_ruc": "RUC-EMISOR",
-                "items": [{"sku": "SKU-1", "cantidad": 2, "base_cents": 100_000, "iva_cents": 15_000, "total_cents": 115_000}]
+                "items": [{"sku": "SKU-1", "cantidad": 2, "base_cents": 100_000, "iva_cents": 15_000, "total_cents": 115_000, "tasa_impuesto_bps": 1500, "exento": false}],
+                "retencion": {"codigo": "IR", "tasa_bps": 200, "monto_cents": 2_000}
             })),
             emitido_en: Some("2026-01-01T00:00:00.000Z".into()),
             creado_en: "2026-01-01T00:00:00.000Z".into(),
@@ -238,6 +263,8 @@ mod tests {
         assert!(texto.contains("RUC-EMISOR"));
         assert!(texto.contains("Cliente S.A."));
         assert!(texto.contains("SKU-1"));
+        assert!(texto.contains("15.00%"));
+        assert!(texto.contains("Retencion IR"));
         assert!(texto.contains("TOTAL: 1150.00"));
     }
 }

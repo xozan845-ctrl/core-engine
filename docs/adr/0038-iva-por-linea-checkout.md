@@ -49,8 +49,11 @@ elegir si sus precios incluían IVA.
   proyección `orders.orden_vista.impuesto_cents`.
 - **Límite:** si finance no responde, orders no aplica impuesto (comportamiento
   actual). Para un régimen fiscal obligatorio conviene volverlo fail-closed.
-- **Pendiente:** exenciones por ítem, múltiples tasas por línea, retenciones y
-  desglose en el PDF del comprobante.
+- **Implementado (2026-11-23):** exenciones y múltiples tasas por línea vía
+  `impuesto_codigo` contra el catálogo de la región, retención plana por región
+  y desglose de tasa/exento/retención en el PDF. **Límite:** la retención es
+  una tasa plana por región; regímenes con retenciones múltiples o por tipo de
+  bien quedan como configuración adicional del catálogo.
 
 ## Criterios de aceptación
 
@@ -72,5 +75,5 @@ elegida por el tenant:
   o negocio; la región es el valor por defecto.
 - Si la serie del comprobante apunta a una región inexistente, finance responde
   `SIN_JURISDICCION` en lugar de aplicar `15 %`/`NIO` por su cuenta.
-- Pendiente: formato de moneda por región en notificaciones/PDF y series
-  fiscales por región/tenant.
+- Implementado: formato de moneda por región y series fiscales por
+  empresa/región.

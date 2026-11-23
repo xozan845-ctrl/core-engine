@@ -228,6 +228,38 @@ pub async fn crear(
     created(valores(pack)?)
 }
 
+/// GET /api/v2/packs/:codigo/:version/regiones
+pub async fn regiones_listar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((codigo, version)): Path<(String, i32)>,
+) -> Result<Response, ApiError> {
+    actor(&headers)?.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    let regiones = state
+        .servicios()?
+        .packs
+        .regiones(&codigo.trim().to_lowercase(), version)
+        .await?;
+    ok(valores(regiones)?)
+}
+
+/// PUT /api/v2/packs/:codigo/:version/regiones
+pub async fn regiones_guardar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((codigo, version)): Path<(String, i32)>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    actor(&headers)?.exigir_roles(&["super_admin", "admin"], &[])?;
+    let regiones = regiones_input(&dto)?;
+    let pack = state
+        .servicios()?
+        .packs
+        .reemplazar_regiones(&codigo.trim().to_lowercase(), version, regiones)
+        .await?;
+    ok(valores(pack)?)
+}
+
 /// GET /api/v2/packs/:codigo/:version
 pub async fn obtener(
     State(state): State<AppState>,

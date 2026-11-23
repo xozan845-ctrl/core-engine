@@ -81,6 +81,30 @@ empresario eligiera su régimen fiscal al aplicar un pack.
    `SIN_JURISDICCION`. La columna `series_comprobantes.jurisdiccion` deja de
    tener default `'NI'`; cada serie debe declarar su región.
 
+10. **Cierre del bloque fiscal.** La región no solo elige país: también
+    parametriza el detalle operativo:
+    - **Catálogo de tasas** (`finance.tasas_impuesto`): `GENERAL`, `EXENTA` y
+      las que agregue el admin. `finance.jurisdicciones.tasa_default_codigo`
+      define la tasa por defecto.
+    - **Exenciones y múltiples tasas por línea**: la orden resuelve
+      `impuesto_codigo` (override de la línea o
+      `atributos.impuesto_codigo` del ítem) contra el catálogo de la región y
+      guarda el snapshot `tasa_impuesto_bps`/`impuesto_cents`.
+    - **Retenciones**: `retencion_activa`, `tasa_retencion` y
+      `retencion_codigo` por región; el comprobante guarda
+      `retencion_cents`/`retencion_tasa_bps` y el PDF lo desglosa.
+    - **Series por empresa/región**: `series_comprobantes.empresa_id` +
+      Jurisdicción. La emisión prefiere serie del tenant y región, luego
+      global. API de alta/listado/estado.
+    - **Declaraciones por tenant**: `declaraciones.empresa_id`; el IVA sale de
+      los comprobantes EMITIDOS del tenant y la declaración de plataforma
+      sigue usando el libro mayor. El planificador genera ambos.
+    - **Formato de moneda**: notificaciones resuelve el símbolo por ISO/símbolo
+      y deja el código visible si no lo conoce; ya no asume `C$`.
+    - **Adaptador DGI de referencia**: `proveedor_electronico=dgi` genera XML
+      fiscal y lo publica en el gateway configurado. La certificación,
+      credenciales y endpoint los provee el país/proveedor autorizado.
+
 ## Contrato
 
 - `GET /api/v2/regiones-tributarias?pack_codigo=&pack_version=`
@@ -92,16 +116,35 @@ empresario eligiera su régimen fiscal al aplicar un pack.
   `region_tributaria`.
 - `GET /api/v2/empresas/{id}/features` incluye `region_tributaria`.
 - `GET /api/v2/finanzas/jurisdicciones` devuelve el descriptor ampliado.
+- `PATCH /api/v2/finanzas/jurisdicciones/{codigo}` actualiza estado, tasas,
+  retención y presentación de una región existente.
+- `GET /api/v2/packs/{codigo}/{version}/regiones` y `PUT` del mismo path para
+  que un admin ajuste las regiones del pack sin recrearlo.
+- `GET/PUT /api/v2/finanzas/jurisdicciones/{codigo}/tasas` para el catálogo de
+  tasas (incluye `EXENTA`).
+- `GET/POST /api/v2/finanzas/series` y `PATCH /api/v2/finanzas/series/{serie}`
+  para series por empresa/región.
+- `POST /api/v2/finanzas/declaraciones/generar` acepta `empresa_id` (admin);
+  el empresario siempre declara su propio tenant.
+- `GET /api/v2/finanzas/comprobantes` expone `retencion_cents` y
+  `retencion_tasa_bps`.
 
 ## Datos
 
-Migración aditiva `99_regiones_tributarias.sql`:
+Migraciones aditivas `99_regiones_tributarias.sql` y
+`99z_regiones_fiscal_completo.sql`:
 
-- `finance.jurisdicciones`: columnas nuevas y descriptor de Nicaragua.
+- `finance.jurisdicciones`: descriptor de región, `tasa_default_codigo` y
+  retenciones.
+- `finance.tasas_impuesto`: catálogo de tasas por región con semilla
+  `GENERAL`/`EXENTA`.
 - `identity.pack_regiones`: catálogo pack ↔ región, con una predeterminada.
 - `identity.empresas.region_tributaria` (+ fecha) con backfill a `NI`.
 - `identity.empresa_region_historial`.
-- Grants, RLS y retiro del default `'NI'` de las series.
+- `finance.series_comprobantes.empresa_id` + índice y selección por región.
+- `finance.comprobantes.retencion_cents`/`retencion_tasa_bps`.
+- `finance.declaraciones.empresa_id` + unicidad por tenant/periodo/tipo.
+- Grants y RLS para tasas, declaraciones y series por empresa.
 
 ## Cómo se añade un país
 
@@ -109,10 +152,14 @@ Migración aditiva `99_regiones_tributarias.sql`:
    fiscal, locale, zona horaria y `perfil.features`.
 2. Declararlo en `identity.pack_regiones` para los packs que lo soporten (o
    crear una nueva versión del pack).
-3. Si aplica facturación electrónica, configurar el proveedor por tenant
-   (ADR-0031); el núcleo no incluye adaptadores por país.
-4. Crear las series fiscales de ese país con `jurisdiccion` explícita.
-5. No se modifica código de dominio ni se añade un servicio por país.
+3. Configurar su catálogo de tasas con
+   `PUT /finanzas/jurisdicciones/{codigo}/tasas` (mínimo `GENERAL` y, si
+   aplica, `EXENTA`).
+4. Si aplica facturación electrónica, elegir `proveedor_electronico=dgi` o
+   `http` y configurar el gateway/credenciales (ADR-0031). El adaptador DGI de
+   referencia ya genera el XML; la certificación es operativa.
+5. Crear las series fiscales del tenant con `jurisdiccion` explícita.
+6. No se modifica código de dominio ni se añade un servicio por país.
 
 ## Consecuencias
 
@@ -122,12 +169,17 @@ Migración aditiva `99_regiones_tributarias.sql`:
 - **Compatibilidad:** las empresas existentes quedan en `NI`; los packs
   existentes heredan `NI` como predeterminada; las órdenes y comprobantes
   históricos no cambian.
-- **Límite:** las declaraciones siguen siendo de plataforma (ADR-0026);
-  cambiar de región no recalcula documentos ya emitidos ni migra series
-  históricas.
-- **Pendiente:** series fiscales por región/tenant, adaptadores electrónicos
-  concretos, retenciones por región, edición de regiones de un pack desde API,
-  formato de moneda por región en notificaciones/PDF y declaraciones por tenant.
+- **Límite:** cambiar de región no recalcula documentos ya emitidos ni migra
+  series históricas. La declaración de plataforma sigue usando el libro mayor;
+  la del tenant usa comprobantes y los gastos del tenant
+  (`workspace_registros`).
+- **Operativo:** el adaptador DGI de referencia requiere endpoint, credenciales
+  y certificación del proveedor autorizado; sin ellos el comprobante queda en
+  `electronica_estado='error'` y puede reintentarse.
+- **Sin pendientes de producto en este bloque:** series por empresa/región,
+  catálogo de tasas, exenciones/múltiples tasas, retenciones, declaraciones
+  por tenant, formato de moneda y CRUD de regiones de pack están implementados
+  y cubiertos por pruebas.
 
 ## Criterios de aceptación
 
@@ -141,6 +193,18 @@ Migración aditiva `99_regiones_tributarias.sql`:
   solo con `facturacion` activa.
 - Finance emite con la región del tenant cuando no hay override explícito.
 - Cambiar región deja historial y auditoría.
+- Un admin puede listar y reemplazar las regiones de un pack por API; no puede
+  retirar una región que ya usan empresas de ese pack (`REGION_EN_USO`).
+- El catálogo de tasas admite `GENERAL`, `EXENTA` y tasas adicionales; una
+  línea con código desconocido falla con `IMPUESTO_NO_DISPONIBLE`.
+- Una línea con `impuesto_codigo=EXENTA` no paga IVA y se reporta en
+  `exento_cents`.
+- Con retención activa, el comprobante guarda el monto y el PDF lo desglosa.
+- La emisión prefiere una serie del tenant y su región; sin serie compatible
+  falla con `SERIE_NO_DISPONIBLE`.
+- Un tenant puede generar su declaración de IVA/IR desde sus comprobantes; el
+  planificador también las genera por tenant.
+- Notificaciones muestra el símbolo de la moneda o el código, sin asumir `C$`.
 - `npm run multi-vertical:check` falla si una empresa o pack activo queda sin
   región.
 
@@ -156,10 +220,15 @@ Migración aditiva `99_regiones_tributarias.sql`:
 
 ## Verificación
 
-- `cargo test` en `identity-service`: unitarios, HTTP y PostgreSQL desde cero
-  con la migración `99_regiones_tributarias.sql`.
-- `cargo test` en `finance-service`: unitarios y PostgreSQL con el fallback a
-  la región del tenant y `SIN_JURISDICCION`.
-- `npm run rules:check`: agnosticismo, migraciones, RLS y contrato OpenAPI.
+- `cargo test` en `identity-service`: 138 unitarios, 35 HTTP y 10 PostgreSQL
+  desde cero con ambas migraciones de región y CRUD de regiones de pack.
+- `cargo test` en `finance-service`: 93 unitarios y 18 PostgreSQL con fallback
+  de región, `SIN_JURISDICCION`, tasas, retención, serie por tenant y
+  declaración por tenant.
+- `cargo test` en `orders-service`: 135 unitarios y 55 PostgreSQL, incluida
+  exención por línea y `IMPUESTO_NO_DISPONIBLE`.
+- `cargo test` en `notifications-service`: 72 unitarios, incluido el símbolo
+  por moneda.
+- `npm run rules:check`: 84/84 (agnosticismo, migraciones, RLS, OpenAPI).
 - `npm run multi-vertical:check`: toda empresa y pack activo con región; una
   sola predeterminada por pack.

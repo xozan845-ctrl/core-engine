@@ -216,6 +216,9 @@ internos son objetos concretos (`Storage`, `Stores`).
 - `GET/PUT /empresas/{id}/region-tributaria` consulta o cambia la región con
   validación contra el pack, historial y auditoría. El manifiesto de features
   expone `region_tributaria` y sus features `fiscal.*`.
+- `GET/PUT /packs/{codigo}/{version}/regiones` lista y reemplaza las regiones
+  declaradas por un pack; el PUT es solo `super_admin`/`admin` y exige una
+  predeterminada.
 - `GET /empresas/{id}` resuelve por UUID **o slug**; solo miembros o admins.
 - `PATCH /empresas/{id}/perfil` actualiza datos comerciales/fiscales y logo.
 - `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en

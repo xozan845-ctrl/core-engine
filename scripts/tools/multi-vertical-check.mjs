@@ -30,6 +30,20 @@ export function validarCierre({
         !regionesExistentes.has(empresa.region_tributaria)
       ) {
         problemas.push(`empresa ${empresa.id}: region tributaria inexistente ${empresa.region_tributaria}`);
+      } else {
+        const delPack = packRegiones
+          .filter(
+            (region) =>
+              region.pack_codigo === empresa.pack_codigo &&
+              region.pack_version === empresa.pack_version &&
+              region.activo,
+          )
+          .map((region) => region.region_codigo);
+        if (delPack.length > 0 && !delPack.includes(empresa.region_tributaria)) {
+          problemas.push(
+            `empresa ${empresa.id}: region ${empresa.region_tributaria} no declarada por su pack`,
+          );
+        }
       }
     }
   }

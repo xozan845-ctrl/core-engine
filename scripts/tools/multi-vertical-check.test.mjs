@@ -86,6 +86,28 @@ test('debe detectar empresas sin region o con una region inexistente', () => {
   ]);
 });
 
+test('debe detectar una empresa cuya region no esta declarada por su pack', () => {
+  const resultado = validarCierre({
+    ...base,
+    packRegiones: [
+      {
+        pack_codigo: 'pack_retail',
+        pack_version: 1,
+        region_codigo: 'CR',
+        predeterminada: true,
+        activo: true,
+      },
+    ],
+    jurisdicciones: [
+      { codigo_pais: 'NI', activa: true },
+      { codigo_pais: 'CR', activa: true },
+    ],
+  });
+  assert.deepEqual(resultado.problemas, [
+    'empresa e-1: region NI no declarada por su pack',
+  ]);
+});
+
 test('una region desactivada puede seguir asignada pero no sirve para packs nuevos', () => {
   const soloInactiva = validarCierre({
     ...base,

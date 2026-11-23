@@ -164,6 +164,12 @@ La región tributaria es **configuración del tenant**, no un servicio nuevo:
 - Finance resuelve `negocio → empresa → región del tenant → primera activa`
   (este último solo como compatibilidad legacy).
 
+El bloque fiscal está cerrado: catálogo de tasas (`GENERAL`, `EXENTA` y
+adicionales), exenciones/múltiples tasas por línea vía `impuesto_codigo`,
+retenciones por región, series por empresa/región, declaraciones por tenant,
+formato de moneda sin país asumido y adaptador DGI de referencia para
+facturación electrónica.
+
 **Piloto Nicaragua.** `NI` queda activa con IVA 15 %, moneda `NIO`/`C$`, RUC
 como documento fiscal y `America/Managua`. Para añadir otro país: se inserta la
 fila fiscal, se declara en los packs y, si aplica, se configura su proveedor

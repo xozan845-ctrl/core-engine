@@ -34,18 +34,35 @@ pub struct Jurisdiccion {
     pub perfil: Value,
     pub leyes: Value,
     pub vigente_desde: Option<String>,
+    pub tasa_default_codigo: String,
+    pub retencion_activa: bool,
+    pub tasa_retencion: f64,
+    pub retencion_codigo: String,
+    pub activa: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TasaImpuesto {
+    pub codigo: String,
+    pub nombre: String,
+    pub tasa: f64,
+    pub exenta: bool,
     pub activa: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ConfiguracionFacturacion {
     pub jurisdiccion: Jurisdiccion,
+    pub tasas: Vec<TasaImpuesto>,
     pub facturacion_electronica: bool,
     pub formato_pdf: bool,
     pub proveedor_electronico: String,
     pub ambiente_electronico: String,
     pub impuesto_activo: bool,
     pub precios_con_impuesto: bool,
+    pub retencion_activa: bool,
+    pub tasa_retencion: f64,
+    pub retencion_codigo: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -76,6 +93,7 @@ pub struct SujetoTributario {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Declaracion {
     pub id: String,
+    pub empresa_id: Option<String>,
     pub jurisdiccion: String,
     pub tipo: String,
     pub periodo_inicio: String,
@@ -127,6 +145,55 @@ pub struct CrearJurisdiccion {
     pub documento_fiscal: Option<Value>,
     #[serde(default)]
     pub perfil: Option<Value>,
+    #[serde(default)]
+    pub tasa_default_codigo: Option<String>,
+    #[serde(default)]
+    pub retencion_activa: Option<bool>,
+    #[serde(default)]
+    pub tasa_retencion_por_mil: Option<i64>,
+    #[serde(default)]
+    pub retencion_codigo: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ActualizarJurisdiccion {
+    #[serde(default)]
+    pub nombre: Option<String>,
+    #[serde(default)]
+    pub activa: Option<bool>,
+    #[serde(default)]
+    pub tasa_iva_por_mil: Option<i64>,
+    #[serde(default)]
+    pub tasa_ir_por_mil: Option<i64>,
+    #[serde(default)]
+    pub tasa_default_codigo: Option<String>,
+    #[serde(default)]
+    pub retencion_activa: Option<bool>,
+    #[serde(default)]
+    pub tasa_retencion_por_mil: Option<i64>,
+    #[serde(default)]
+    pub retencion_codigo: Option<String>,
+    #[serde(default)]
+    pub locale: Option<String>,
+    #[serde(default)]
+    pub zona_horaria: Option<String>,
+    #[serde(default)]
+    pub documento_fiscal: Option<Value>,
+    #[serde(default)]
+    pub perfil: Option<Value>,
+    #[serde(default)]
+    pub leyes: Option<Value>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct CrearTasaImpuesto {
+    pub codigo: String,
+    pub nombre: String,
+    pub tasa_por_mil: i64,
+    #[serde(default)]
+    pub exenta: bool,
+    #[serde(default)]
+    pub activa: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -159,6 +226,8 @@ pub struct RegistrarSujeto {
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct FiltrosDeclaracion {
     #[serde(default)]
+    pub empresa_id: Option<String>,
+    #[serde(default)]
     pub tipo: Option<String>,
     #[serde(default)]
     pub periodo_inicio: Option<String>,
@@ -170,7 +239,8 @@ pub struct FiltrosDeclaracion {
 /// que añadir un campo no obligue a tocar cada `SELECT`.
 const COLUMNAS_JURISDICCION: &str = "codigo_pais, nombre, pais_iso, subdivision, moneda,
     moneda_iso, simbolo_moneda, locale, zona_horaria, tasa_iva, tasa_ir,
-    periodicidad_declaracion, documento_fiscal, perfil, leyes, vigente_desde, activa";
+    periodicidad_declaracion, documento_fiscal, perfil, leyes, vigente_desde,
+    tasa_default_codigo, retencion_activa, tasa_retencion, retencion_codigo, activa";
 
 fn columnas_jurisdiccion(alias: &str) -> String {
     COLUMNAS_JURISDICCION
@@ -364,7 +434,12 @@ impl Tributacion {
                     true,
                 ),
             };
+        let tasas = self.tasas_de(Some(&jurisdiccion.codigo_pais)).await?;
         Ok(ConfiguracionFacturacion {
+            tasas,
+            retencion_activa: jurisdiccion.retencion_activa,
+            tasa_retencion: jurisdiccion.tasa_retencion,
+            retencion_codigo: jurisdiccion.retencion_codigo.clone(),
             jurisdiccion,
             facturacion_electronica: electronica,
             formato_pdf: pdf,
@@ -395,10 +470,10 @@ impl Tributacion {
             .transpose()
             .map_err(|_| ApiError::dominio("NEGOCIO_INVALIDO", "Negocio inválido."))?;
         let codigo = jurisdiccion.trim().to_uppercase();
-        if !["simulado", "http"].contains(&proveedor_electronico) {
+        if !["simulado", "http", "dgi"].contains(&proveedor_electronico) {
             return Err(ApiError::dominio(
                 "PROVEEDOR_ELECTRONICO_INVALIDO",
-                "El proveedor debe ser simulado o http.",
+                "El proveedor debe ser simulado, http o dgi.",
             ));
         }
         if !["pruebas", "produccion"].contains(&ambiente_electronico) {
@@ -493,6 +568,252 @@ impl Tributacion {
         Ok(filas.iter().map(jurisdiccion_de_fila).collect())
     }
 
+    pub async fn actualizar_jurisdiccion(
+        &self,
+        codigo: &str,
+        dto: ActualizarJurisdiccion,
+    ) -> Result<Jurisdiccion, ApiError> {
+        let codigo = codigo.trim().to_uppercase();
+        let nueva_tasa_iva = dto.tasa_iva_por_mil;
+        for (campo, valor) in [
+            ("tasa_iva_por_mil", dto.tasa_iva_por_mil),
+            ("tasa_ir_por_mil", dto.tasa_ir_por_mil),
+            ("tasa_retencion_por_mil", dto.tasa_retencion_por_mil),
+        ] {
+            if valor.is_some_and(|valor| !(0..=1000).contains(&valor)) {
+                return Err(ApiError::validacion(json!([
+                    {"campo": campo, "restricciones": ["min:0", "max:1000"]}
+                ])));
+            }
+        }
+        if let Some(default) = dto.tasa_default_codigo.as_deref() {
+            let existe = sqlx::query(
+                "SELECT 1 FROM finance.tasas_impuesto
+                  WHERE jurisdiccion = $1 AND codigo = $2 AND activa",
+            )
+            .bind(&codigo)
+            .bind(default.trim().to_uppercase())
+            .fetch_optional(self.db.pool())
+            .await
+            .map_err(error_db)?;
+            if existe.is_none() {
+                return Err(ApiError::dominio(
+                    "TASA_DEFAULT_INEXISTENTE",
+                    "La tasa predeterminada no existe o está inactiva.",
+                ));
+            }
+        }
+        let fila = sqlx::query(&format!(
+            "UPDATE finance.jurisdicciones
+                SET nombre = COALESCE($2, nombre),
+                    activa = COALESCE($3, activa),
+                    tasa_iva = COALESCE($4, tasa_iva),
+                    tasa_ir = COALESCE($5, tasa_ir),
+                    tasa_default_codigo = COALESCE($6, tasa_default_codigo),
+                    retencion_activa = COALESCE($7, retencion_activa),
+                    tasa_retencion = COALESCE($8, tasa_retencion),
+                    retencion_codigo = COALESCE($9, retencion_codigo),
+                    locale = COALESCE($10, locale),
+                    zona_horaria = COALESCE($11, zona_horaria),
+                    documento_fiscal = COALESCE($12::jsonb, documento_fiscal),
+                    perfil = COALESCE($13::jsonb, perfil),
+                    leyes = COALESCE($14::jsonb, leyes)
+              WHERE codigo_pais = $1
+              RETURNING {COLUMNAS_JURISDICCION}"
+        ))
+        .bind(&codigo)
+        .bind(dto.nombre)
+        .bind(dto.activa)
+        .bind(dto.tasa_iva_por_mil.map(|valor| valor as f64 / 1000.0))
+        .bind(dto.tasa_ir_por_mil.map(|valor| valor as f64 / 1000.0))
+        .bind(
+            dto.tasa_default_codigo
+                .map(|valor| valor.trim().to_uppercase()),
+        )
+        .bind(dto.retencion_activa)
+        .bind(
+            dto.tasa_retencion_por_mil
+                .map(|valor| valor as f64 / 1000.0),
+        )
+        .bind(dto.retencion_codigo)
+        .bind(dto.locale)
+        .bind(dto.zona_horaria)
+        .bind(dto.documento_fiscal.map(sqlx::types::Json))
+        .bind(dto.perfil.map(sqlx::types::Json))
+        .bind(dto.leyes.map(sqlx::types::Json))
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .ok_or_else(|| ApiError::no_encontrado("Jurisdiccion", &codigo))?;
+        if let Some(valor) = nueva_tasa_iva {
+            sqlx::query(
+                "UPDATE finance.tasas_impuesto
+                    SET tasa = $2, actualizado_en = NOW()
+                  WHERE jurisdiccion = $1 AND codigo = 'GENERAL'",
+            )
+            .bind(&codigo)
+            .bind(valor as f64 / 1000.0)
+            .execute(self.db.pool())
+            .await
+            .map_err(error_db)?;
+        }
+        Ok(jurisdiccion_de_fila(&fila))
+    }
+
+    /// Tasas activas de una región (o de todas si no se filtra).
+    pub async fn tasas_de(
+        &self,
+        jurisdiccion: Option<&str>,
+    ) -> Result<Vec<TasaImpuesto>, ApiError> {
+        let filas = sqlx::query(
+            "SELECT codigo, nombre, tasa, exenta, activa
+               FROM finance.tasas_impuesto
+              WHERE ($1::text IS NULL OR jurisdiccion = $1)
+                AND activa = true
+              ORDER BY tasa DESC, codigo",
+        )
+        .bind(jurisdiccion)
+        .fetch_all(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        Ok(filas.iter().map(tasa_de_fila).collect())
+    }
+
+    /// Reemplaza/actualiza el catálogo de tasas de una región.
+    ///
+    /// No borra tasas: las ausentes quedan inactivas para conservar el
+    /// histórico de comprobantes. `GENERAL` es obligatoria y el código default
+    /// debe seguir existiendo.
+    pub async fn guardar_tasas(
+        &self,
+        jurisdiccion: &str,
+        tasas: Vec<CrearTasaImpuesto>,
+    ) -> Result<Vec<TasaImpuesto>, ApiError> {
+        let codigo_region = jurisdiccion.trim().to_uppercase();
+        if codigo_region.is_empty() {
+            return Err(ApiError::validacion(json!([
+                {"campo": "jurisdiccion", "restricciones": ["isString"]}
+            ])));
+        }
+        let region = sqlx::query(
+            "SELECT tasa_default_codigo FROM finance.jurisdicciones
+              WHERE codigo_pais = $1",
+        )
+        .bind(&codigo_region)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .ok_or_else(|| ApiError::no_encontrado("Jurisdiccion", &codigo_region))?;
+        let default_actual: String = region
+            .try_get("tasa_default_codigo")
+            .unwrap_or_else(|_| "GENERAL".to_string());
+
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        let mut activos = std::collections::HashSet::new();
+        let mut general_tasa = None;
+        for tasa in &tasas {
+            let codigo = tasa.codigo.trim().to_uppercase();
+            if codigo.is_empty() {
+                return Err(ApiError::validacion(json!([
+                    {"campo": "codigo", "restricciones": ["isString"]}
+                ])));
+            }
+            if !codigo.chars().all(|caracter| {
+                caracter.is_ascii_uppercase() || caracter.is_ascii_digit() || caracter == '_'
+            }) {
+                return Err(ApiError::validacion(json!([
+                    {"campo": "codigo", "restricciones": ["matches:^[A-Z][A-Z0-9_]{1,39}$"]}
+                ])));
+            }
+            if !(0..=1000).contains(&tasa.tasa_por_mil) {
+                return Err(ApiError::validacion(json!([
+                    {"campo": "tasa_por_mil", "restricciones": ["min:0", "max:1000"]}
+                ])));
+            }
+            if codigo == "GENERAL" && tasa.activa == Some(false) {
+                return Err(ApiError::dominio(
+                    "TASA_GENERAL_REQUERIDA",
+                    "La tasa GENERAL no puede desactivarse.",
+                ));
+            }
+            let exenta = tasa.exenta || tasa.tasa_por_mil == 0;
+            if exenta && tasa.tasa_por_mil != 0 {
+                return Err(ApiError::dominio(
+                    "TASA_EXENTA_INVALIDA",
+                    "Una tasa exenta debe tener 0 por mil.",
+                ));
+            }
+            let nombre = tasa.nombre.trim();
+            if !(2..=120).contains(&nombre.chars().count()) {
+                return Err(ApiError::validacion(json!([
+                    {"campo": "nombre", "restricciones": ["isLength:2,120"]}
+                ])));
+            }
+            sqlx::query(
+                "INSERT INTO finance.tasas_impuesto AS t
+                   (jurisdiccion, codigo, nombre, tasa, exenta, activa, actualizado_en)
+                 VALUES ($1, $2, $3, $4, $5, COALESCE($6, true), NOW())
+                 ON CONFLICT (jurisdiccion, codigo) DO UPDATE
+                   SET nombre = EXCLUDED.nombre,
+                       tasa = EXCLUDED.tasa,
+                       exenta = EXCLUDED.exenta,
+                       activa = EXCLUDED.activa,
+                       actualizado_en = NOW()",
+            )
+            .bind(&codigo_region)
+            .bind(&codigo)
+            .bind(nombre)
+            .bind(tasa.tasa_por_mil as f64 / 1000.0)
+            .bind(exenta)
+            .bind(tasa.activa)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+            if codigo == "GENERAL" {
+                general_tasa = Some(tasa.tasa_por_mil as f64 / 1000.0);
+            }
+            if tasa.activa.unwrap_or(true) {
+                activos.insert(codigo);
+            }
+        }
+        if !activos.contains("GENERAL") {
+            return Err(ApiError::dominio(
+                "TASA_GENERAL_REQUERIDA",
+                "El catálogo debe incluir la tasa GENERAL activa.",
+            ));
+        }
+        let codigos_activos: Vec<String> = activos.iter().cloned().collect();
+        sqlx::query(
+            "UPDATE finance.tasas_impuesto
+                SET activa = false, actualizado_en = NOW()
+              WHERE jurisdiccion = $1 AND NOT (codigo = ANY($2))",
+        )
+        .bind(&codigo_region)
+        .bind(&codigos_activos)
+        .execute(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        let default_nuevo = if activos.contains(default_actual.as_str()) {
+            default_actual
+        } else {
+            "GENERAL".to_string()
+        };
+        sqlx::query(
+            "UPDATE finance.jurisdicciones
+                SET tasa_default_codigo = $2,
+                    tasa_iva = COALESCE($3, tasa_iva)
+              WHERE codigo_pais = $1",
+        )
+        .bind(&codigo_region)
+        .bind(&default_nuevo)
+        .bind(general_tasa)
+        .execute(&mut *tx)
+        .await
+        .map_err(error_db)?;
+        tx.commit().await.map_err(error_db)?;
+        self.tasas_de(Some(&codigo_region)).await
+    }
+
     pub async fn crear_jurisdiccion(
         &self,
         datos: CrearJurisdiccion,
@@ -508,16 +829,28 @@ impl Tributacion {
                 {"campo": "tasa_ir_por_mil", "restricciones": ["min:0"]}
             ])));
         }
+        if let Some(codigo) = datos.tasa_default_codigo.as_deref() {
+            if !codigo.trim().eq_ignore_ascii_case("GENERAL") {
+                return Err(ApiError::dominio(
+                    "TASA_DEFAULT_INVALIDA",
+                    "Al crear una región la tasa predeterminada debe ser GENERAL; cámbiala después de configurar el catálogo.",
+                ));
+            }
+        }
         let fila = sqlx::query(&format!(
             "INSERT INTO finance.jurisdicciones
                (codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,
                 periodicidad_declaracion, leyes, pais_iso, subdivision, moneda_iso,
-                locale, zona_horaria, documento_fiscal, perfil)
+                locale, zona_horaria, documento_fiscal, perfil,
+                tasa_default_codigo, retencion_activa, tasa_retencion,
+                retencion_codigo)
              VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'MENSUAL'),
                      COALESCE($8::jsonb, '{{}}'), $9, $10, $11,
                      COALESCE($12, 'es'), COALESCE($13, 'UTC'),
                      COALESCE($14::jsonb, '{{}}'::jsonb),
-                     COALESCE($15::jsonb, '{{}}'::jsonb))
+                     COALESCE($15::jsonb, '{{}}'::jsonb),
+                     COALESCE($16, 'GENERAL'), COALESCE($17, false),
+                     COALESCE($18, 0), COALESCE($19, 'IR'))
              RETURNING {COLUMNAS_JURISDICCION}"
         ))
         .bind(datos.codigo_pais.to_uppercase())
@@ -535,6 +868,14 @@ impl Tributacion {
         .bind(datos.zona_horaria)
         .bind(datos.documento_fiscal.map(sqlx::types::Json))
         .bind(datos.perfil.map(sqlx::types::Json))
+        .bind(datos.tasa_default_codigo)
+        .bind(datos.retencion_activa)
+        .bind(
+            datos
+                .tasa_retencion_por_mil
+                .map(|valor| valor as f64 / 1000.0),
+        )
+        .bind(datos.retencion_codigo)
         .fetch_optional(self.db.pool())
         .await
         .map_err(|error| {
@@ -545,7 +886,20 @@ impl Tributacion {
             }
         })?
         .ok_or_else(|| ApiError::conflicto("La jurisdiccion ya existe."))?;
-        Ok(jurisdiccion_de_fila(&fila))
+        let creada = jurisdiccion_de_fila(&fila);
+        sqlx::query(
+            "INSERT INTO finance.tasas_impuesto
+               (jurisdiccion, codigo, nombre, tasa, exenta)
+             VALUES ($1, 'GENERAL', 'Tasa general', $2, false),
+                    ($1, 'EXENTA', 'Exento', 0, true)
+             ON CONFLICT (jurisdiccion, codigo) DO NOTHING",
+        )
+        .bind(&creada.codigo_pais)
+        .bind(creada.tasa_iva)
+        .execute(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        Ok(creada)
     }
 
     // ── regímenes ──────────────────────────────────────────────────────────
@@ -736,17 +1090,19 @@ impl Tributacion {
         filtros: FiltrosDeclaracion,
     ) -> Result<Vec<Declaracion>, ApiError> {
         let filas = sqlx::query(
-            "SELECT id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
+            "SELECT id, empresa_id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
                     base_gravada_cents, iva_debitado_cents, iva_credito_cents,
                     iva_a_pagar_cents, renta_bruta_cents, renta_gravable_cents,
                     ir_a_pagar_cents, cuota_cents, estado, detalle, generada_en,
                     presentada_en, creado_en
              FROM finance.declaraciones
-             WHERE ($1::text IS NULL OR tipo = $1)
-               AND ($2::date IS NULL OR periodo_inicio = $2::date)
-               AND ($3::text IS NULL OR estado = $3)
+             WHERE ($1::uuid IS NULL OR empresa_id = $1::uuid)
+               AND ($2::text IS NULL OR tipo = $2)
+               AND ($3::date IS NULL OR periodo_inicio = $3::date)
+               AND ($4::text IS NULL OR estado = $4)
              ORDER BY periodo_inicio DESC, tipo LIMIT 300",
         )
+        .bind(filtros.empresa_id.as_deref())
         .bind(filtros.tipo.as_deref())
         .bind(filtros.periodo_inicio.as_deref())
         .bind(filtros.estado.as_deref())
@@ -760,29 +1116,148 @@ impl Tributacion {
         &self,
         fecha: NaiveDate,
     ) -> Result<Vec<Declaracion>, ApiError> {
-        self.generar_declaraciones(Some(Self::mes_anterior(fecha)))
-            .await
+        let mes = Self::mes_anterior(fecha);
+        let mut generadas = self.generar_declaraciones(Some(mes.clone()), None).await?;
+        generadas.extend(self.generar_declaraciones_tenants(Some(mes)).await?);
+        Ok(generadas)
     }
 
-    /// Genera IVA e IR (más CUOTA_FIJA informativa) del periodo. Idempotente
-    /// por `(jurisdiccion, tipo, periodo_inicio)`.
-    pub async fn generar_declaraciones(
+    /// Genera las declaraciones de todos los tenants con comprobantes emitidos
+    /// en el periodo. Cada tenant usa su propia jurisdicción y series.
+    pub async fn generar_declaraciones_tenants(
         &self,
         periodo: Option<PeriodoMensual>,
     ) -> Result<Vec<Declaracion>, ApiError> {
-        let jurisdiccion = self.jurisdiccion_activa().await?.ok_or_else(|| {
-            ApiError::dominio(
-                "SIN_JURISDICCION",
-                "No hay jurisdiccion activa configurada.",
-            )
-        })?;
         let mes = periodo.unwrap_or_else(|| Self::mes_anterior(Local::now().date_naive()));
-        let inicio = fecha_utc(&mes.inicio)?;
-        let fin = fecha_utc(&mes.fin)?;
-        let ingresos = self.contabilidad.ingresos_del_periodo(inicio, fin).await?;
-        let gastos = self.contabilidad.gastos_del_periodo(inicio, fin).await?;
+        let filas = sqlx::query(
+            "SELECT DISTINCT c.empresa_id::text AS empresa_id
+               FROM finance.comprobantes c
+              WHERE c.empresa_id IS NOT NULL
+                AND c.estado = 'EMITIDO'
+                AND c.creado_en >= $1::date
+                AND c.creado_en < ($2::date + INTERVAL '1 day')
+              ORDER BY 1",
+        )
+        .bind(&mes.inicio)
+        .bind(&mes.fin)
+        .fetch_all(self.db.pool())
+        .await
+        .map_err(error_db)?;
 
-        let iva = (ingresos as f64 * jurisdiccion.tasa_iva).round() as i64;
+        let mut generadas = Vec::new();
+        for fila in filas {
+            let empresa_id: String = fila.try_get("empresa_id").map_err(error_db)?;
+            match self
+                .generar_declaraciones(Some(mes.clone()), Some(&empresa_id))
+                .await
+            {
+                Ok(declaraciones) => generadas.extend(declaraciones),
+                // Un tenant legacy sin región no debe frenar al resto.
+                Err(error) if error.codigo == "SIN_JURISDICCION" => continue,
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(generadas)
+    }
+
+    /// Genera IVA e IR (más CUOTA_FIJA informativa) del periodo.
+    ///
+    /// Con `empresa_id` la base sale de los comprobantes emitidos del tenant
+    /// (IVA real por línea); sin él se conserva la declaración de plataforma
+    /// sobre el libro mayor. Idempotente por
+    /// `(empresa_id, jurisdiccion, tipo, periodo_inicio)`.
+    pub async fn generar_declaraciones(
+        &self,
+        periodo: Option<PeriodoMensual>,
+        empresa_id: Option<&str>,
+    ) -> Result<Vec<Declaracion>, ApiError> {
+        let mes = periodo.unwrap_or_else(|| Self::mes_anterior(Local::now().date_naive()));
+
+        let (jurisdiccion, base_gravada, exento, gastos, iva, fuente, hay_datos) = match empresa_id
+        {
+            Some(empresa) => {
+                let jurisdiccion = self.jurisdiccion_de(empresa, None).await?.ok_or_else(|| {
+                    ApiError::dominio(
+                        "SIN_JURISDICCION",
+                        "La empresa no tiene una región tributaria configurada.",
+                    )
+                })?;
+                let fila = sqlx::query(
+                    "SELECT COALESCE(SUM(c.base_gravada_cents), 0)::bigint AS base,
+                            COALESCE(SUM(c.exento_cents), 0)::bigint AS exento,
+                            COALESCE(SUM(c.iva_cents), 0)::bigint AS iva,
+                            COUNT(*)::bigint AS comprobantes
+                       FROM finance.comprobantes c
+                       JOIN finance.series_comprobantes s ON s.serie = c.serie
+                      WHERE c.empresa_id = $1::uuid
+                        AND c.estado = 'EMITIDO'
+                        AND s.jurisdiccion = $2
+                        AND c.creado_en >= $3::date
+                        AND c.creado_en < ($4::date + INTERVAL '1 day')",
+                )
+                .bind(empresa)
+                .bind(&jurisdiccion.codigo_pais)
+                .bind(&mes.inicio)
+                .bind(&mes.fin)
+                .fetch_one(self.db.pool())
+                .await
+                .map_err(error_db)?;
+                let gastos: i64 = sqlx::query_scalar(
+                    "SELECT COALESCE(SUM((datos->>'amountCents')::bigint), 0)::bigint
+                       FROM finance.workspace_registros
+                      WHERE recurso = 'gastos'
+                        AND tenant_id = $1::uuid
+                        AND eliminado_en IS NULL
+                        AND (datos->>'date')::date >= $2::date
+                        AND (datos->>'date')::date <= $3::date",
+                )
+                .bind(empresa)
+                .bind(&mes.inicio)
+                .bind(&mes.fin)
+                .fetch_one(self.db.pool())
+                .await
+                .map_err(error_db)?;
+                (
+                    jurisdiccion,
+                    fila.try_get::<i64, _>("base").unwrap_or(0),
+                    fila.try_get::<i64, _>("exento").unwrap_or(0),
+                    gastos,
+                    fila.try_get::<i64, _>("iva").unwrap_or(0),
+                    json!({
+                        "fuente": "comprobantes+gastos",
+                        "detalle": "IVA de comprobantes EMITIDOS y gastos del tenant en el periodo.",
+                    }),
+                    fila.try_get::<i64, _>("comprobantes").unwrap_or(0) > 0,
+                )
+            }
+            None => {
+                let jurisdiccion = self.jurisdiccion_activa().await?.ok_or_else(|| {
+                    ApiError::dominio(
+                        "SIN_JURISDICCION",
+                        "No hay jurisdiccion activa configurada.",
+                    )
+                })?;
+                let inicio = fecha_utc(&mes.inicio)?;
+                let fin = fecha_utc(&mes.fin)?;
+                let ingresos = self.contabilidad.ingresos_del_periodo(inicio, fin).await?;
+                let gastos = self.contabilidad.gastos_del_periodo(inicio, fin).await?;
+                let iva = (ingresos as f64 * jurisdiccion.tasa_iva).round() as i64;
+                (
+                    jurisdiccion,
+                    ingresos,
+                    0,
+                    gastos,
+                    iva,
+                    json!({
+                        "fuente": "libro_mayor",
+                        "detalle": "Declaracion de plataforma; el libro mayor no separa por tenant.",
+                    }),
+                    ingresos != 0 || gastos != 0,
+                )
+            }
+        };
+
+        let ingresos = base_gravada + exento;
         let ir_base = (ingresos - gastos).max(0);
         let ir = (ir_base as f64 * jurisdiccion.tasa_ir).round() as i64;
 
@@ -790,18 +1265,20 @@ impl Tributacion {
             (
                 "IVA",
                 json!({
-                    "base_gravada_cents": ingresos,
+                    "base_gravada_cents": base_gravada,
                     "iva_debitado_cents": iva,
                     "iva_credito_cents": 0,
                     "iva_a_pagar_cents": iva,
                 }),
                 json!({
                     "tasa": jurisdiccion.tasa_iva,
+                    "exento_cents": exento,
                     "ley": jurisdiccion
                         .leyes
                         .get("iva")
                         .and_then(Value::as_str)
                         .unwrap_or("Ley 822"),
+                    "origen": fuente,
                 }),
             ),
             (
@@ -815,6 +1292,7 @@ impl Tributacion {
                     "tasa": jurisdiccion.tasa_ir,
                     "gastos_del_periodo_cents": gastos,
                     "ley": "Ley 822 (IR)",
+                    "origen": fuente,
                 }),
             ),
             (
@@ -823,22 +1301,25 @@ impl Tributacion {
                 json!({
                     "informativo": true,
                     "nota": "Cuota determinada por la DGI para cada contribuyente; la plataforma documenta comisiones para su declaracion.",
+                    "origen": fuente,
                 }),
             ),
         ];
 
         let mut generadas = Vec::new();
         for (tipo, campos, detalle) in plan {
-            if tipo != "IVA" && tipo != "IR" && ingresos == 0 && gastos == 0 {
+            if !hay_datos && (empresa_id.is_some() || tipo == "CUOTA_FIJA") {
                 continue;
             }
             let existente = sqlx::query(
                 "SELECT id FROM finance.declaraciones
-                 WHERE jurisdiccion = $1 AND tipo = $2 AND periodo_inicio = $3::date",
+                 WHERE jurisdiccion = $1 AND tipo = $2 AND periodo_inicio = $3::date
+                   AND empresa_id IS NOT DISTINCT FROM $4::uuid",
             )
             .bind(&jurisdiccion.codigo_pais)
             .bind(tipo)
             .bind(&mes.inicio)
+            .bind(empresa_id)
             .fetch_optional(self.db.pool())
             .await
             .map_err(error_db)?;
@@ -851,20 +1332,21 @@ impl Tributacion {
             let mut tx = self.db.transaccion().await.map_err(error_db)?;
             let fila = sqlx::query(
                 "INSERT INTO finance.declaraciones
-                   (jurisdiccion, tipo, periodo_inicio, periodo_fin,
+                   (empresa_id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
                     base_gravada_cents, iva_debitado_cents, iva_credito_cents,
                     iva_a_pagar_cents, renta_bruta_cents, renta_gravable_cents,
                     ir_a_pagar_cents, cuota_cents, estado, detalle, generada_en)
-                 VALUES ($1, $2, $3::date, $4::date,
-                         COALESCE($5, 0), COALESCE($6, 0), COALESCE($7, 0), COALESCE($8, 0),
-                         COALESCE($9, 0), COALESCE($10, 0), COALESCE($11, 0), COALESCE($12, 0),
-                         'GENERADA', $13, NOW())
-                 RETURNING id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
+                 VALUES ($1::uuid, $2, $3, $4::date, $5::date,
+                         COALESCE($6, 0), COALESCE($7, 0), COALESCE($8, 0), COALESCE($9, 0),
+                         COALESCE($10, 0), COALESCE($11, 0), COALESCE($12, 0), COALESCE($13, 0),
+                         'GENERADA', $14, NOW())
+                 RETURNING id, empresa_id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
                            base_gravada_cents, iva_debitado_cents, iva_credito_cents,
                            iva_a_pagar_cents, renta_bruta_cents, renta_gravable_cents,
                            ir_a_pagar_cents, cuota_cents, estado, detalle, generada_en,
                            presentada_en, creado_en",
             )
+            .bind(empresa_id)
             .bind(&jurisdiccion.codigo_pais)
             .bind(tipo)
             .bind(&mes.inicio)
@@ -893,6 +1375,7 @@ impl Tributacion {
                     DECLARACION_GENERADA,
                     json!({
                         "declaracion_id": creada.id,
+                        "empresa_id": empresa_id,
                         "jurisdiccion": creada.jurisdiccion,
                         "tipo": creada.tipo,
                         "periodo_inicio": mes.inicio,
@@ -912,7 +1395,7 @@ impl Tributacion {
         let uuid = uuid::Uuid::parse_str(id)
             .map_err(|_| ApiError::dominio("ID_INVALIDO", "La declaracion debe ser un UUID."))?;
         let fila = sqlx::query(
-            "SELECT id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
+            "SELECT id, empresa_id, jurisdiccion, tipo, periodo_inicio, periodo_fin,
                     base_gravada_cents, iva_debitado_cents, iva_credito_cents,
                     iva_a_pagar_cents, renta_bruta_cents, renta_gravable_cents,
                     ir_a_pagar_cents, cuota_cents, estado, detalle, generada_en,
@@ -1016,6 +1499,24 @@ fn jurisdiccion_de_fila(fila: &sqlx::postgres::PgRow) -> Jurisdiccion {
         perfil: jsonb(fila, "perfil").unwrap_or_else(|_| json!({})),
         leyes: jsonb(fila, "leyes").unwrap_or_else(|_| json!({})),
         vigente_desde: vigente_desde.map(|fecha| fecha.to_string()),
+        tasa_default_codigo: fila
+            .try_get("tasa_default_codigo")
+            .unwrap_or_else(|_| "GENERAL".to_string()),
+        retencion_activa: fila.try_get("retencion_activa").unwrap_or(false),
+        tasa_retencion: fila.try_get::<f64, _>("tasa_retencion").unwrap_or(0.0),
+        retencion_codigo: fila
+            .try_get("retencion_codigo")
+            .unwrap_or_else(|_| "IR".to_string()),
+        activa: fila.try_get("activa").unwrap_or(false),
+    }
+}
+
+fn tasa_de_fila(fila: &sqlx::postgres::PgRow) -> TasaImpuesto {
+    TasaImpuesto {
+        codigo: fila.try_get("codigo").unwrap_or_default(),
+        nombre: fila.try_get("nombre").unwrap_or_default(),
+        tasa: fila.try_get::<f64, _>("tasa").unwrap_or(0.0),
+        exenta: fila.try_get("exenta").unwrap_or(false),
         activa: fila.try_get("activa").unwrap_or(false),
     }
 }
@@ -1054,6 +1555,7 @@ fn sujeto_de_fila(fila: &sqlx::postgres::PgRow) -> SujetoTributario {
 fn declaracion_de_fila(fila: &sqlx::postgres::PgRow) -> Declaracion {
     Declaracion {
         id: uuid_texto(fila, "id").unwrap_or_default(),
+        empresa_id: uuid_texto(fila, "empresa_id").ok(),
         jurisdiccion: fila.try_get("jurisdiccion").unwrap_or_default(),
         tipo: fila.try_get("tipo").unwrap_or_default(),
         periodo_inicio: fila

@@ -4568,6 +4568,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -4831,6 +4840,27 @@
                         "zona_horaria": {
                           "type": "string",
                           "example": "America/Managua"
+                        },
+                        "tasas": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TasaImpuestoResponseDto"
+                          }
+                        },
+                        "tasa_default_codigo": {
+                          "type": "string",
+                          "example": "GENERAL"
+                        },
+                        "retencion_activa": {
+                          "type": "boolean"
+                        },
+                        "tasa_retencion": {
+                          "type": "number",
+                          "example": 0.02
+                        },
+                        "retencion_codigo": {
+                          "type": "string",
+                          "example": "IR"
                         }
                       },
                       "required": [
@@ -4890,7 +4920,8 @@
                     "type": "string",
                     "enum": [
                       "simulado",
-                      "http"
+                      "http",
+                      "dgi"
                     ]
                   },
                   "ambiente_electronico": {
@@ -8777,6 +8808,340 @@
         "summary": "Descargar comprobante en PDF",
         "tags": [
           "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v2/finanzas/jurisdicciones/{codigo}/tasas": {
+      "get": {
+        "operationId": "TributacionController_tasas",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tasas de la región",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TasaImpuestoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las tasas de una región",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      },
+      "put": {
+        "operationId": "TributacionController_guardarTasas",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarTasasRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tasas actualizadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TasaImpuestoResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reemplazar el catálogo de tasas de una región",
+        "tags": [
+          "Finanzas · Tributación"
+        ]
+      }
+    },
+    "/api/v2/finanzas/series": {
+      "get": {
+        "operationId": "FacturacionController_seriesAdmin",
+        "parameters": [
+          {
+            "name": "negocio_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresa_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Series visibles para el actor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SerieComprobanteResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar series por empresa y negocio",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      },
+      "post": {
+        "operationId": "FacturacionController_crearSerie",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSerieRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Serie creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SerieComprobanteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear una serie fiscal por empresa/región",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v2/finanzas/series/{serie}": {
+      "patch": {
+        "operationId": "FacturacionController_actualizarSerie",
+        "parameters": [
+          {
+            "name": "serie",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarSerieRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Serie actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SerieComprobanteResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activar/desactivar o cambiar el prefijo de una serie",
+        "tags": [
+          "Finanzas · Facturación"
+        ]
+      }
+    },
+    "/api/v2/finanzas/jurisdicciones/{codigo}": {
+      "patch": {
+        "operationId": "TributacionController_actualizarJurisdiccion",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarJurisdiccionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Región actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/JurisdiccionResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar retención, tasas, estado o presentación de una región",
+        "tags": [
+          "Finanzas · Tributación"
         ]
       }
     },
@@ -15525,6 +15890,131 @@
         "summary": "Cambiar la región tributaria (con historial y auditoría)",
         "tags": [
           "Regiones tributarias"
+        ]
+      }
+    },
+    "/api/v2/packs/{codigo}/{version}/regiones": {
+      "get": {
+        "operationId": "PacksController_regiones",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regiones del pack",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RegionTributariaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las regiones declaradas por un pack",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "put": {
+        "operationId": "PacksController_guardarRegiones",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackRegionesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pack con regiones actualizadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PackResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reemplazar las regiones de un pack (solo admin)",
+        "tags": [
+          "Packs"
         ]
       }
     },
@@ -31823,6 +32313,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "retencion_cents": {
+            "type": "number",
+            "description": "Retención en centavos",
+            "example": 2000
+          },
+          "retencion_tasa_bps": {
+            "type": "number",
+            "description": "Tasa de retención en puntos base",
+            "example": 200
           }
         },
         "required": [
@@ -32567,6 +33067,22 @@
           },
           "perfil": {
             "type": "object"
+          },
+          "tasa_default_codigo": {
+            "type": "string",
+            "example": "GENERAL"
+          },
+          "retencion_activa": {
+            "type": "boolean"
+          },
+          "tasa_retencion_por_mil": {
+            "type": "number",
+            "minimum": 0,
+            "example": 20
+          },
+          "retencion_codigo": {
+            "type": "string",
+            "example": "IR"
           }
         },
         "required": [
@@ -33258,6 +33774,11 @@
             "type": "string",
             "description": "Fecha de creación (ISO 8601 UTC)",
             "format": "date-time"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -33643,6 +34164,12 @@
           "fin": {
             "type": "string",
             "description": "Fin del periodo"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Admin: tenant a declarar; empresario: se fuerza al propio"
           }
         }
       },
@@ -33853,6 +34380,21 @@
             "type": "string",
             "nullable": true,
             "example": "2026-01-01"
+          },
+          "tasa_default_codigo": {
+            "type": "string",
+            "example": "GENERAL"
+          },
+          "retencion_activa": {
+            "type": "boolean"
+          },
+          "tasa_retencion": {
+            "type": "number",
+            "example": 0.02
+          },
+          "retencion_codigo": {
+            "type": "string",
+            "example": "IR"
           }
         },
         "required": [
@@ -33872,7 +34414,11 @@
           "zona_horaria",
           "documento_fiscal",
           "perfil",
-          "vigente_desde"
+          "vigente_desde",
+          "tasa_default_codigo",
+          "retencion_activa",
+          "tasa_retencion",
+          "retencion_codigo"
         ]
       },
       "KpisFinancierosResponseDto": {
@@ -34900,6 +35446,12 @@
             "type": "boolean",
             "description": "Serie activa",
             "example": true
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Empresa dueña de la serie; null si es global"
           }
         },
         "required": [
@@ -35326,6 +35878,184 @@
           "resumen_comisiones",
           "nota"
         ]
+      },
+      "TasaImpuestoResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "GENERAL"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tasa": {
+            "type": "number",
+            "example": 0.15
+          },
+          "exenta": {
+            "type": "boolean"
+          },
+          "activa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "tasa",
+          "exenta",
+          "activa"
+        ]
+      },
+      "GuardarTasasRequestDto": {
+        "type": "object",
+        "properties": {
+          "tasas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string",
+                  "example": "GENERAL"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "tasa_por_mil": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000,
+                  "example": 150
+                },
+                "exenta": {
+                  "type": "boolean"
+                },
+                "activa": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "codigo",
+                "nombre",
+                "tasa_por_mil"
+              ]
+            }
+          }
+        },
+        "required": [
+          "tasas"
+        ]
+      },
+      "CrearSerieRequestDto": {
+        "type": "object",
+        "properties": {
+          "serie": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "FACTURA",
+              "NOTA_CREDITO"
+            ]
+          },
+          "prefijo": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "ruc_emisor": {
+            "type": "string"
+          },
+          "jurisdiccion": {
+            "type": "string",
+            "example": "NI"
+          },
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "negocio_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "activa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "serie",
+          "tipo",
+          "prefijo",
+          "ruc_emisor",
+          "jurisdiccion"
+        ]
+      },
+      "ActualizarSerieRequestDto": {
+        "type": "object",
+        "properties": {
+          "activa": {
+            "type": "boolean"
+          },
+          "prefijo": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      },
+      "ActualizarJurisdiccionRequestDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "tasa_iva_por_mil": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "tasa_ir_por_mil": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "tasa_default_codigo": {
+            "type": "string"
+          },
+          "retencion_activa": {
+            "type": "boolean"
+          },
+          "tasa_retencion_por_mil": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "retencion_codigo": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "zona_horaria": {
+            "type": "string"
+          },
+          "documento_fiscal": {
+            "type": "object"
+          },
+          "perfil": {
+            "type": "object"
+          },
+          "leyes": {
+            "type": "object"
+          }
+        }
       },
       "AceptarInvitacionPersonalRequestDto": {
         "type": "object",
@@ -39011,6 +39741,36 @@
         },
         "required": [
           "region_tributaria"
+        ]
+      },
+      "PackRegionesRequestDto": {
+        "type": "object",
+        "properties": {
+          "regiones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string",
+                  "maxLength": 16,
+                  "example": "NI"
+                },
+                "predeterminada": {
+                  "type": "boolean"
+                },
+                "activo": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "codigo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "regiones"
         ]
       },
       "Envelope": {

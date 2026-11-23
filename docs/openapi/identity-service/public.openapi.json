@@ -6757,6 +6757,131 @@
           "Regiones tributarias"
         ]
       }
+    },
+    "/api/v2/packs/{codigo}/{version}/regiones": {
+      "get": {
+        "operationId": "PacksController_regiones",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regiones del pack",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RegionTributariaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar las regiones declaradas por un pack",
+        "tags": [
+          "Packs"
+        ]
+      },
+      "put": {
+        "operationId": "PacksController_guardarRegiones",
+        "parameters": [
+          {
+            "name": "codigo",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackRegionesRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pack con regiones actualizadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PackResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reemplazar las regiones de un pack (solo admin)",
+        "tags": [
+          "Packs"
+        ]
+      }
     }
   },
   "components": {
@@ -10481,6 +10606,36 @@
         },
         "required": [
           "region_tributaria"
+        ]
+      },
+      "PackRegionesRequestDto": {
+        "type": "object",
+        "properties": {
+          "regiones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string",
+                  "maxLength": 16,
+                  "example": "NI"
+                },
+                "predeterminada": {
+                  "type": "boolean"
+                },
+                "activo": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "codigo"
+              ]
+            }
+          }
+        },
+        "required": [
+          "regiones"
         ]
       }
     }

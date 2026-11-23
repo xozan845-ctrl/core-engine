@@ -382,6 +382,10 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/packs/verticales",
             get(packs::listar_verticales).post(packs::crear_vertical),
         )
+        .route(
+            "/api/v2/packs/{codigo}/{version}/regiones",
+            get(packs::regiones_listar).put(packs::regiones_guardar),
+        )
         .route("/api/v2/packs/{codigo}/{version}", get(packs::obtener))
         .fallback(no_encontrado)
         .with_state(state.clone());

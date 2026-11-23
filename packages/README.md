@@ -270,7 +270,7 @@ No se envuelven: `/health`, `/metrics`, `/docs*`, `/internal/**`,
 | `orders` | orders | eventos (ES), orden_vista, orden_timeline, carritos, pagos, métodos_pago, tipos/estados/transiciones, fulfillments, entregas_digitales, contratos, contrato_eventos, suscripciones, ejecuciones, mesas, comandas, fidelización (5 tablas), eventos_procesados |
 | `logistics` | logistics | envíos, asignaciones_envio, eventos_procesados |
 | `scheduling` | scheduling | recursos, disponibilidad, bloqueos, citas, recordatorios, eventos_procesados |
-| `finance` | finance | plan_cuentas, asientos, asiento_detalles, comprobantes, series, jurisdicciones, regímenes, sujetos, declaraciones, proyecciones, métricas, tipos_cambio, crédito_cuentas, workspace_registros |
+| `finance` | finance | plan_cuentas, asientos, asiento_detalles, comprobantes, series (empresa/región), jurisdicciones, tasas_impuesto, regímenes, sujetos, declaraciones (tenant/plataforma), proyecciones, métricas, tipos_cambio, crédito_cuentas, workspace_registros |
 | `field` | field | personal, clientes, vehículos, rutas, paradas, pedidos, asistencia, incidencias, tracking, visitas, cumplimiento |
 | `storage` | storage | buckets, objetos |
 | `notifications` | notifications | eventos_procesados, plantillas, webhooks, webhook_entregas |

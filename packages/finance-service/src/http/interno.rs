@@ -121,6 +121,7 @@ pub async fn declaraciones(
         state
             .tributacion
             .declaraciones(FiltrosDeclaracion {
+                empresa_id: query.get("empresa_id").cloned(),
                 tipo: query.get("tipo").cloned(),
                 periodo_inicio: query.get("periodo_inicio").cloned(),
                 estado: query.get("estado").cloned(),
@@ -167,6 +168,11 @@ pub async fn configuracion_fiscal(
         "moneda": config.jurisdiccion.moneda,
         "moneda_iso": config.jurisdiccion.moneda_iso,
         "tasa_iva": config.jurisdiccion.tasa_iva,
+        "tasas": config.tasas,
+        "tasa_default_codigo": config.jurisdiccion.tasa_default_codigo,
+        "retencion_activa": config.retencion_activa,
+        "tasa_retencion": config.retencion_activa.then_some(config.tasa_retencion),
+        "retencion_codigo": config.retencion_codigo,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,
     })))

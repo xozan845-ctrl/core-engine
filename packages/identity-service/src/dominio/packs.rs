@@ -4,7 +4,7 @@
 //! modelos por pack; la creación valida códigos y referencias activas.
 
 use crate::db::Db;
-use crate::dominio::regiones::RegionTributaria;
+use crate::dominio::regiones::{region_de_fila, RegionTributaria};
 use crate::errors::ApiError;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -272,6 +272,159 @@ impl Packs {
             modelo_operacion: fila.try_get("modelo_operacion").map_err(interno)?,
             activo: fila.try_get("activo").map_err(interno)?,
         })
+    }
+
+    pub async fn regiones(
+        &self,
+        codigo: &str,
+        version: i32,
+    ) -> Result<Vec<RegionTributaria>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let existe = sqlx::query(
+            "SELECT 1 FROM identity.packs WHERE codigo = $1 AND version = $2 AND activo",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado(
+                "Pack",
+                &format!("{codigo}@{version}"),
+            ));
+        }
+        let filas = sqlx::query(
+            "SELECT j.codigo_pais, j.nombre, j.pais_iso, j.subdivision, j.moneda,
+                    j.moneda_iso, j.simbolo_moneda, j.locale, j.zona_horaria,
+                    j.tasa_iva, j.tasa_ir, j.periodicidad_declaracion,
+                    j.documento_fiscal, j.perfil, j.leyes, j.vigente_desde, j.activa,
+                    pr.predeterminada
+               FROM identity.pack_regiones pr
+               JOIN finance.jurisdicciones j ON j.codigo_pais = pr.region_codigo
+              WHERE pr.pack_codigo = $1 AND pr.pack_version = $2
+              ORDER BY pr.predeterminada DESC, j.codigo_pais",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas.iter().map(region_de_fila).collect()
+    }
+
+    pub async fn reemplazar_regiones(
+        &self,
+        codigo: &str,
+        version: i32,
+        mut regiones: Vec<PackRegionInput>,
+    ) -> Result<Pack, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let existe = sqlx::query(
+            "SELECT 1 FROM identity.packs WHERE codigo = $1 AND version = $2 AND activo",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado(
+                "Pack",
+                &format!("{codigo}@{version}"),
+            ));
+        }
+        if regiones.is_empty() {
+            return Err(ApiError::dominio(
+                "REGION_NO_DISPONIBLE",
+                "El pack debe declarar al menos una región.",
+            ));
+        }
+        if regiones
+            .iter()
+            .filter(|region| region.predeterminada == Some(true))
+            .count()
+            > 1
+        {
+            return Err(ApiError::dominio(
+                "REGION_PREDETERMINADA_UNICA",
+                "Un pack solo puede tener una región predeterminada.",
+            ));
+        }
+        let mut predeterminada_asignada = regiones
+            .iter()
+            .any(|region| region.predeterminada == Some(true));
+        for (indice, region) in regiones.iter_mut().enumerate() {
+            region.codigo = region.codigo.trim().to_uppercase();
+            let existe = sqlx::query(
+                "SELECT 1 FROM finance.jurisdicciones
+                  WHERE codigo_pais = $1 AND activa = true",
+            )
+            .bind(&region.codigo)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if existe.is_none() {
+                return Err(ApiError::no_encontrado("Region tributaria", &region.codigo));
+            }
+            if !predeterminada_asignada && indice == 0 {
+                region.predeterminada = Some(true);
+                predeterminada_asignada = true;
+            }
+        }
+        let usadas = sqlx::query_scalar::<_, String>(
+            "SELECT DISTINCT region_tributaria
+               FROM identity.empresas
+              WHERE pack_codigo = $1 AND pack_version = $2
+                AND region_tributaria IS NOT NULL",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let en_uso: Vec<String> = usadas
+            .into_iter()
+            .filter(|region| {
+                !regiones
+                    .iter()
+                    .any(|nueva| nueva.codigo == *region && nueva.activo.unwrap_or(true))
+            })
+            .collect();
+        if !en_uso.is_empty() {
+            return Err(ApiError::dominio(
+                "REGION_EN_USO",
+                "No se puede retirar una región que ya usan empresas de este pack.",
+            )
+            .con_detalles(json!({ "regiones": en_uso })));
+        }
+        sqlx::query(
+            "DELETE FROM identity.pack_regiones
+              WHERE pack_codigo = $1 AND pack_version = $2",
+        )
+        .bind(codigo)
+        .bind(version)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        for region in &regiones {
+            sqlx::query(
+                "INSERT INTO identity.pack_regiones
+                   (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+                 VALUES ($1, $2, $3, $4, COALESCE($5, true))",
+            )
+            .bind(codigo)
+            .bind(version)
+            .bind(&region.codigo)
+            .bind(region.predeterminada.unwrap_or(false))
+            .bind(region.activo)
+            .execute(&mut *tx)
+            .await
+            .map_err(conflicto_o_interno)?;
+        }
+        tx.commit().await.map_err(interno)?;
+        self.obtener(codigo, i64::from(version)).await
     }
 
     pub async fn crear(&self, input: CrearPack) -> Result<Pack, ApiError> {

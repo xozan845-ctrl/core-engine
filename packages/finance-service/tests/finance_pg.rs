@@ -13,7 +13,9 @@ use finance_service::facturacion::{
 };
 use finance_service::finanzas::proyecciones::{Proyecciones, SupuestosProyeccion};
 use finance_service::outbox::Outbox;
-use finance_service::tributacion::{FiltrosDeclaracion, PeriodoMensual, Tributacion};
+use finance_service::tributacion::{
+    ActualizarJurisdiccion, CrearTasaImpuesto, FiltrosDeclaracion, PeriodoMensual, Tributacion,
+};
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -50,6 +52,8 @@ impl Ordenes for OrdenesFijas {
                     cantidad: 1,
                     descuento_cents: 0,
                     impuesto_cents: 0,
+                    tasa_impuesto_bps: 0,
+                    impuesto_codigo: None,
                     total_linea_cents: 0,
                 },
                 OrdenItemFiscal {
@@ -58,6 +62,8 @@ impl Ordenes for OrdenesFijas {
                     cantidad: 1,
                     descuento_cents: 0,
                     impuesto_cents: 0,
+                    tasa_impuesto_bps: 0,
+                    impuesto_codigo: None,
                     total_linea_cents: 0,
                 },
             ],
@@ -81,6 +87,8 @@ impl Ordenes for OrdenesSnapshot {
                 cantidad: 2,
                 descuento_cents: 0,
                 impuesto_cents: 3_000,
+                tasa_impuesto_bps: 1_500,
+                impuesto_codigo: Some("GENERAL".into()),
                 total_linea_cents: 23_000,
             }],
             descuento_cupon_cents: 0,
@@ -268,7 +276,23 @@ async fn provisionar(url: &str) {
           zona_horaria text NOT NULL DEFAULT 'UTC',
           documento_fiscal jsonb NOT NULL DEFAULT '{}',
           perfil jsonb NOT NULL DEFAULT '{}',
-          vigente_desde date
+          vigente_desde date,
+          tasa_default_codigo text NOT NULL DEFAULT 'GENERAL',
+          retencion_activa boolean NOT NULL DEFAULT false,
+          tasa_retencion double precision NOT NULL DEFAULT 0,
+          retencion_codigo text NOT NULL DEFAULT 'IR'
+        );
+        CREATE TABLE finance.tasas_impuesto (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          jurisdiccion text NOT NULL,
+          codigo text NOT NULL,
+          nombre text NOT NULL,
+          tasa double precision NOT NULL,
+          exenta boolean NOT NULL DEFAULT false,
+          activa boolean NOT NULL DEFAULT true,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+          UNIQUE (jurisdiccion, codigo)
         );
         CREATE TABLE finance.configuracion_fiscal (
           empresa_id uuid NOT NULL,
@@ -310,6 +334,7 @@ async fn provisionar(url: &str) {
         );
         CREATE TABLE finance.declaraciones (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          empresa_id uuid,
           jurisdiccion text NOT NULL,
           tipo text NOT NULL,
           periodo_inicio date NOT NULL,
@@ -326,9 +351,13 @@ async fn provisionar(url: &str) {
           detalle jsonb NOT NULL DEFAULT '{}',
           generada_en timestamptz,
           presentada_en timestamptz,
-          creado_en timestamptz NOT NULL DEFAULT NOW(),
-          UNIQUE (jurisdiccion, tipo, periodo_inicio)
+          creado_en timestamptz NOT NULL DEFAULT NOW()
         );
+        CREATE UNIQUE INDEX ux_declaraciones_tenant_periodo
+          ON finance.declaraciones (
+            COALESCE(empresa_id, '00000000-0000-0000-0000-000000000000'::uuid),
+            jurisdiccion, tipo, periodo_inicio
+          );
         CREATE TABLE finance.comprobantes (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           serie text NOT NULL,
@@ -341,6 +370,8 @@ async fn provisionar(url: &str) {
           base_gravada_cents integer NOT NULL,
           iva_cents integer NOT NULL,
           exento_cents integer NOT NULL DEFAULT 0,
+          retencion_cents integer NOT NULL DEFAULT 0,
+          retencion_tasa_bps integer NOT NULL DEFAULT 0,
           total_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'C$',
           estado text NOT NULL DEFAULT 'BORRADOR',
@@ -364,6 +395,7 @@ async fn provisionar(url: &str) {
         ALTER TABLE finance.comprobantes ADD COLUMN IF NOT EXISTS electronica_enviada_en timestamptz;
         CREATE TABLE finance.series_comprobantes (
           serie text PRIMARY KEY,
+          empresa_id uuid,
           negocio_id uuid,
           tipo text NOT NULL,
           prefijo text NOT NULL,
@@ -432,6 +464,10 @@ async fn provisionar(url: &str) {
         VALUES ('NI', 'Nicaragua', 'NIO', 'C$', 0.15, 0.30, '{"iva":"Ley 822"}',
                 'NI', 'NIO', 'es-NI', 'America/Managua',
                 '{"features":["fiscal.iva","fiscal.declaraciones"]}');
+
+        INSERT INTO finance.tasas_impuesto (jurisdiccion, codigo, nombre, tasa, exenta)
+        VALUES ('NI', 'GENERAL', 'Tasa general', 0.15, false),
+               ('NI', 'EXENTA', 'Exento', 0, true);
 
         INSERT INTO finance.series_comprobantes
           (serie, tipo, prefijo, secuencial_actual, ruc_emisor, jurisdiccion)
@@ -756,7 +792,7 @@ async fn debe_generar_declaraciones_idempotentes() {
         fin: "2026-10-31".into(),
     };
     let generadas = tributacion
-        .generar_declaraciones(Some(periodo.clone()))
+        .generar_declaraciones(Some(periodo.clone()), None)
         .await
         .expect("declaraciones");
     let tipos: Vec<&str> = generadas.iter().map(|d| d.tipo.as_str()).collect();
@@ -765,7 +801,7 @@ async fn debe_generar_declaraciones_idempotentes() {
     assert_eq!(tipos.len(), 2);
 
     let repetidas = tributacion
-        .generar_declaraciones(Some(periodo))
+        .generar_declaraciones(Some(periodo), None)
         .await
         .expect("repetidas");
     let ids: Vec<&str> = generadas.iter().map(|d| d.id.as_str()).collect();
@@ -787,6 +823,7 @@ async fn debe_generar_declaraciones_idempotentes() {
 
     let listado = tributacion
         .declaraciones(FiltrosDeclaracion {
+            empresa_id: None,
             tipo: Some("IVA".into()),
             periodo_inicio: None,
             estado: None,
@@ -895,6 +932,177 @@ async fn debe_reutilizar_el_snapshot_de_iva_de_la_orden() {
     assert_eq!(comprobante.base_gravada_cents, 20_000);
     assert_eq!(comprobante.iva_cents, 3_000);
     assert_eq!(comprobante.total_cents, 23_000);
+}
+
+#[tokio::test]
+async fn debe_gestionar_tasas_y_retencion_por_region() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let tributacion = Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    );
+    let tasas = tributacion
+        .guardar_tasas(
+            "NI",
+            vec![
+                CrearTasaImpuesto {
+                    codigo: "GENERAL".into(),
+                    nombre: "Tasa general".into(),
+                    tasa_por_mil: 150,
+                    exenta: false,
+                    activa: None,
+                },
+                CrearTasaImpuesto {
+                    codigo: "EXENTA".into(),
+                    nombre: "Exento".into(),
+                    tasa_por_mil: 0,
+                    exenta: true,
+                    activa: None,
+                },
+            ],
+        )
+        .await
+        .expect("tasas");
+    assert!(tasas.iter().any(|tasa| tasa.codigo == "GENERAL"));
+    assert!(tasas
+        .iter()
+        .any(|tasa| tasa.codigo == "EXENTA" && tasa.exenta));
+
+    let actualizada = tributacion
+        .actualizar_jurisdiccion(
+            "NI",
+            ActualizarJurisdiccion {
+                retencion_activa: Some(true),
+                tasa_retencion_por_mil: Some(20),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("retencion");
+    assert!(actualizada.retencion_activa);
+    assert_eq!(actualizada.tasa_retencion, 0.02);
+
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesSnapshot),
+        true,
+    );
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            tipo: "FACTURA".into(),
+            orden_id: "33333333-3333-4333-8333-333333333333".into(),
+            parte_id: None,
+            razon_social: Some("Ana".into()),
+            ruc: None,
+        })
+        .await
+        .expect("comprobante con retencion");
+    // Base 200.00, IVA 30.00 y retención 2 % sobre la base.
+    assert_eq!(comprobante.base_gravada_cents, 20_000);
+    assert_eq!(comprobante.iva_cents, 3_000);
+    assert_eq!(comprobante.retencion_cents, 400);
+    assert_eq!(comprobante.retencion_tasa_bps, 200);
+}
+
+#[tokio::test]
+async fn debe_usar_serie_del_tenant_y_generar_declaracion_por_tenant() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let empresa = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    sqlx::query(
+        "INSERT INTO identity.empresas (id, region_tributaria)
+         VALUES ($1::uuid, 'NI')",
+    )
+    .bind(empresa)
+    .execute(db.pool())
+    .await
+    .expect("empresa");
+    let hoy = chrono::Local::now().format("%Y-%m-%d").to_string();
+    sqlx::query(
+        "INSERT INTO finance.workspace_registros (tenant_id, recurso, datos)
+         VALUES ($1::uuid, 'gastos', jsonb_build_object('date', $2, 'amountCents', 5000))",
+    )
+    .bind(empresa)
+    .bind(&hoy)
+    .execute(db.pool())
+    .await
+    .expect("gasto tenant");
+
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesSnapshot),
+        true,
+    );
+    facturacion
+        .crear_serie(
+            "F900",
+            "FACTURA",
+            "F900-",
+            "RUC-TENANT",
+            "NI",
+            Some(empresa),
+            None,
+            true,
+        )
+        .await
+        .expect("serie tenant");
+    let comprobante = facturacion
+        .emitir(EmitirComprobante {
+            tipo: "FACTURA".into(),
+            orden_id: "33333333-3333-4333-8333-333333333333".into(),
+            parte_id: None,
+            razon_social: Some("Ana".into()),
+            ruc: None,
+        })
+        .await
+        .expect("comprobante tenant");
+    assert_eq!(comprobante.serie, "F900");
+    assert_eq!(comprobante.empresa_id.as_deref(), Some(empresa));
+
+    let tributacion = Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    );
+    let periodo = Tributacion::periodo_del_mes(chrono::Local::now().date_naive());
+    let declaraciones = tributacion
+        .generar_declaraciones(Some(periodo), Some(empresa))
+        .await
+        .expect("declaraciones tenant");
+    assert!(declaraciones
+        .iter()
+        .all(|declaracion| { declaracion.empresa_id.as_deref() == Some(empresa) }));
+    let iva = declaraciones
+        .iter()
+        .find(|declaracion| declaracion.tipo == "IVA")
+        .expect("IVA tenant");
+    assert_eq!(iva.base_gravada_cents, 20_000);
+    assert_eq!(iva.iva_debitado_cents, 3_000);
+    let ir = declaraciones
+        .iter()
+        .find(|declaracion| declaracion.tipo == "IR")
+        .expect("IR tenant");
+    assert_eq!(ir.renta_bruta_cents, 20_000);
+    assert_eq!(ir.renta_gravable_cents, 15_000);
+    assert_eq!(ir.ir_a_pagar_cents, 4_500);
 }
 
 #[tokio::test]

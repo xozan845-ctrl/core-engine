@@ -159,5 +159,6 @@ mueve la selección de país al alta del tenant:
   una región inexistente; ya no asume `15 %`/`NIO`.
 - Nicaragua deja de ser un default de código; queda como datos del piloto en la
   migración `99_regiones_tributarias.sql`.
-- Cobertura actual del crate: 92 pruebas unitarias y 16 de integración
-  PostgreSQL, incluida la migración de región desde cero.
+- Cobertura actual del crate: 93 pruebas unitarias y 18 de integración
+  PostgreSQL, incluida la migración de región desde cero, tasas, retención,
+  series por tenant y declaraciones por tenant.

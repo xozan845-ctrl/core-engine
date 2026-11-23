@@ -40,8 +40,10 @@ Chequeo automatizado:
 npm run multi-vertical:check
 ```
 
-Falla si una empresa no tiene región, si un pack activo no declara regiones o
-si no hay exactamente una predeterminada.
+Falla si una empresa no tiene región, si su región no está declarada por su
+pack, si un pack activo no declara regiones o si no hay exactamente una
+predeterminada. El `PUT /packs/{codigo}/{version}/regiones` rechaza retirar una
+región que ya usan empresas (`REGION_EN_USO`).
 
 ## Añadir una región (país o subdivisión)
 
@@ -74,17 +76,49 @@ ON CONFLICT (pack_codigo, pack_version, region_codigo)
 DO UPDATE SET activo = EXCLUDED.activo, actualizado_en = NOW();
 ```
 
-3. Activarla cuando esté validada:
+3. Configurar retención y presentación con `PATCH
+   /finanzas/jurisdicciones/{codigo}`:
+
+```bash
+curl -X PATCH http://localhost:8080/api/v2/finanzas/jurisdicciones/CR \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"retencion_activa":true,"tasa_retencion_por_mil":20,
+       "retencion_codigo":"IR","locale":"es-CR",
+       "zona_horaria":"America/Costa_Rica"}'
+```
+
+4. Configurar su catálogo de tasas (mínimo `GENERAL` y `EXENTA`):
+
+```bash
+curl -X PUT http://localhost:8080/api/v2/finanzas/jurisdicciones/CR/tasas \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"tasas":[
+    {"codigo":"GENERAL","nombre":"Tasa general","tasa_por_mil":130},
+    {"codigo":"EXENTA","nombre":"Exento","tasa_por_mil":0,"exenta":true}
+  ]}'
+```
+
+5. Activarla cuando esté validada:
 
 ```sql
 UPDATE finance.jurisdicciones SET activa = true WHERE codigo_pais = 'CR';
 ```
 
-4. Crear las series fiscales de esa región con `jurisdiccion = 'CR'`
-   (la columna ya no tiene default) y configurar el proveedor electrónico por
-   tenant si aplica.
+6. Crear las series fiscales por empresa/región:
 
-5. Probar el selector:
+```bash
+curl -X POST http://localhost:8080/api/v2/finanzas/series \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"serie":"CR001","tipo":"FACTURA","prefijo":"CR001-",
+       "ruc_emisor":"RUC-EMPRESA","jurisdiccion":"CR",
+       "empresa_id":"<empresaId>"}'
+```
+
+7. Si aplica facturación electrónica, configurar
+   `proveedor_electronico=dgi` (o `http`) y el endpoint/credenciales
+   (`FACTURACION_PROVEEDOR_URL`, `FACTURACION_PROVEEDOR_KEY`).
+
+8. Probar el selector:
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
@@ -98,6 +132,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `REGION_NO_DISPONIBLE` | El pack no declara la región o no hay regiones activas | Revisar `identity.pack_regiones` y `finance.jurisdicciones.activa` |
 | `REGION_NO_ASIGNADA` | Empresa legacy sin región | `PUT /empresas/{id}/region-tributaria` o backfill |
 | `REGION_PREDETERMINADA_UNICA` | Un pack tiene más de una predeterminada | Dejar una sola con `predeterminada = true` |
+| `REGION_EN_USO` | Se intentó retirar del pack una región que ya usan sus empresas | Cambiar la región de esas empresas o mantenerla declarada |
 | `SIN_JURISDICCION` | Una serie apunta a una región inexistente | Corregir `series_comprobantes.jurisdiccion` o crear la región |
 | `PACK_VERSION_REQUERIDA` | Se consultó el selector con `pack_codigo` y sin versión | Enviar `pack_version` |
 
@@ -137,16 +172,37 @@ comprobantes: la FK lo impide y hacerlo rompería la trazabilidad fiscal.
 - `finance.jurisdicciones` lo administra finance; identity solo lo lee para
   resolver la región y el manifiesto.
 
-## Pendientes conocidos
+## Cierre fiscal
 
-- Series fiscales por región/tenant (hoy la serie declara su jurisdicción y el
-  seed es `NI`).
-- CRUD de regiones de un pack por API (hoy se declaran al crear el pack o por
-  SQL).
-- Formato de moneda por región en notificaciones/PDF.
-- Adaptadores de facturación electrónica concretos por región.
+- **Tasas por región:** `GET/PUT /api/v2/finanzas/jurisdicciones/{codigo}/tasas`.
+  Debe existir `GENERAL` activa; `EXENTA` se usa para líneas sin IVA.
+- **Exención por línea:** el ítem expone `atributos.impuesto_codigo` o la línea
+  envía `impuesto_codigo`. Un código desconocido falla con
+  `IMPUESTO_NO_DISPONIBLE`.
+- **Retención:** se configura en la región (`retencion_activa`,
+  `tasa_retencion`, `retencion_codigo`). El comprobante guarda el monto y el
+  PDF lo desglosa.
+- **Series:** `GET/POST /api/v2/finanzas/series` y
+  `PATCH /api/v2/finanzas/series/{serie}`. La emisión prefiere la serie del
+  tenant y su región.
+- **Declaraciones:** el planificador genera la de plataforma y una por tenant
+  con comprobantes. También se puede forzar con
+  `POST /api/v2/finanzas/declaraciones/generar` y `empresa_id` (admin).
+- **Moneda:** notificaciones resuelve el símbolo por ISO/símbolo y deja el
+  código visible si no lo conoce.
+- **DGI:** `proveedor_electronico=dgi` usa el adaptador XML de referencia
+  contra el gateway configurado. La certificación y credenciales son
+  operativas del proveedor autorizado.
 
-Estos puntos están priorizados en [`docs/backlog-plataforma.md`](./backlog-plataforma.md).
+## Verificación de cierre
+
+```bash
+npm run rules:check
+npm run multi-vertical:check
+```
+
+Los pendientes fiscales del bloque de regiones quedaron cerrados en ADR-0049 y
+en [`docs/backlog-plataforma.md`](./backlog-plataforma.md).
 
 ## Documentación relacionada
 

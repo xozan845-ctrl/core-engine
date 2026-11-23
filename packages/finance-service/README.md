@@ -76,9 +76,9 @@
 | `finance.plan_cuentas` | Plan contable (código jerárquico, nombre, tipo, estado) |
 | `finance.asientos`, `asiento_detalles` | Cabecera y líneas debe/haber |
 | `finance.asientos_vista`, `libro_mayor_mv` | Proyecciones de lectura |
-| `finance.comprobantes`, `series_comprobantes` | Facturación fiscal |
-| `finance.jurisdicciones`, `regimenes_fiscales`, `sujetos_fiscales` | Configuración tributaria |
-| `finance.declaraciones` | IVA/IR/cuota por periodo |
+| `finance.comprobantes`, `series_comprobantes` | Facturación fiscal (retención y series por empresa/región) |
+| `finance.jurisdicciones`, `tasas_impuesto`, `regimenes_fiscales`, `sujetos_fiscales` | Configuración tributaria |
+| `finance.declaraciones` | IVA/IR/cuota por periodo y tenant |
 | `finance.credito_cuentas` | Límite y estado de crédito por parte |
 | `finance.workspace_registros` | 16 recursos de comercio en JSONB con ámbito tenant/vendedor |
 | `finance.proyecciones` | Supuestos y resultados |
@@ -137,29 +137,45 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
   opcionalmente, por negocio. La resolución es negocio → empresa → región
   elegida por el tenant (`identity.empresas.region_tributaria`) → primera
   activa (solo compatibilidad legacy); no depende del orden alfabético.
+- **Catálogo de tasas**: `finance.tasas_impuesto` guarda `GENERAL`, `EXENTA` y
+  tasas adicionales por región. `GET/PUT
+  /finanzas/jurisdicciones/{codigo}/tasas` lo administra; `tasa_default_codigo`
+  define la tasa por defecto.
 - **Comprobantes**: la moneda y el IVA salen de la jurisdicción de la serie; si
   la región no existe, la emisión falla con `SIN_JURISDICCION` (sin asumir
-  15 %/NIO); el
-  IVA se calcula **por línea** con el precio, cantidad y descuento de la orden
-  (no sobre un total ciego). La serie por negocio sigue mandando. Si la orden
-  trae snapshot `impuesto_cents`/`total_linea_cents`, finance lo reutiliza para
-  que el total del comprobante coincida con checkout (ADR-0038).
+  15 %/NIO). El IVA se calcula **por línea** con el precio, cantidad,
+  descuento y `impuesto_codigo` (o `EXENTA`); si el código no existe, falla con
+  `IMPUESTO_NO_DISPONIBLE`. La serie por empresa/negocio/región manda; la
+  global queda como fallback. Si la orden trae snapshot
+  `impuesto_cents`/`total_linea_cents`, finance lo reutiliza para que el total
+  del comprobante coincida con checkout (ADR-0038).
+- **Retenciones**: `retencion_activa`, `tasa_retencion` y `retencion_codigo`
+  por región. El comprobante guarda `retencion_cents`/`retencion_tasa_bps` y
+  el PDF lo desglosa.
+- **Series por tenant/región**: `GET/POST /finanzas/series` y
+  `PATCH /finanzas/series/{serie}`; `empresa_id` + `jurisdiccion` permiten
+  secuenciales propios por región. La emisión prefiere la serie del tenant y
+  cae a la global solo si no hay una compatible.
 - **Impuesto configurable por tenant**: `impuesto_activo` (default `false`) y
   `precios_con_impuesto` (default `true`) se guardan en
   `finance.configuracion_fiscal`; orders los consume por el endpoint interno
-  `GET /internal/finance/configuracion-fiscal`.
+  `GET /internal/finance/configuracion-fiscal`, que también entrega el catálogo
+  de tasas y la retención.
 - **Regímenes fiscales** por jurisdicción (RAMPRA, cuota fija, etc.).
 - **Sujetos tributarios** por usuario (RUC, razón social, régimen, estado).
 - **Declaraciones**: `IVA`, `IR` y `CUOTA_FIJA` informativa.
   - `POST /finanzas/declaraciones/generar` calcula ingresos/gastos del periodo.
-  - Idempotente por `(jurisdiccion, tipo, periodo_inicio)`.
+  - Con `empresa_id` (o el tenant del empresario) el IVA sale de los
+    comprobantes EMITIDOS del tenant; sin él se conserva la declaración de
+    plataforma sobre el libro mayor.
+  - Idempotente por `(empresa_id, jurisdiccion, tipo, periodo_inicio)`.
   - Estados: `GENERADA`, `PRESENTADA`, `PAGADA`.
   - `POST /declaraciones/{id}/presentar` y `/pagar`.
-  - **Límite actual:** el libro mayor no tiene `empresa_id`; las declaraciones
-    siguen siendo de plataforma. La configuración por tenant ya aplica a
-    comprobantes y a `jurisdiccion_de`.
+  - **Límite:** la declaración de plataforma sigue sobre el libro mayor; la del
+    tenant usa comprobantes y los gastos registrados en `workspace_registros`.
 - **Planificador**: el día **1** a partir de las **00:10** genera las
-  declaraciones del mes anterior (una sola vez por periodo, en hora local).
+  declaraciones del mes anterior (plataforma + una por tenant con comprobantes)
+  una sola vez por periodo, en hora local.
 
 > La moneda de facturación sale del descriptor de la región configurada; no hay
 > un país por defecto. El servicio no convierte automáticamente salvo que se
@@ -281,7 +297,7 @@ fecha esperada. Genera `TableroAlerta` con estado `ok`/`alerta`/`sin_dato`.
 | Área | Rutas |
 |---|---|
 | Contabilidad | `GET/POST /finanzas/cuentas`, `POST /cuentas/{codigo}/estado`, `GET/POST /asientos`, `POST /asientos/{id}/anular`, `GET /libro-mayor/{cuenta}`, `GET /libro-ventas[/negocios]`, `GET /libro-compras` |
-| Fiscal | `GET/POST /comprobantes`, `GET /comprobantes/series`, `POST /comprobantes/{id}/anular`, `GET/POST /jurisdicciones`, `GET/PUT /configuracion-fiscal`, `GET/POST /regimenes`, `GET/POST /sujetos`, `POST /sujetos/{id}/baja`, `GET /declaraciones`, `POST /declaraciones/generar`, `POST /declaraciones/{id}/presentar`, `POST /declaraciones/{id}/pagar`, `GET /vendedores/me/fiscal`, `GET /tipos-cambio`, `POST /admin/tipos-cambio` |
+| Fiscal | `GET/POST /comprobantes`, `GET/POST /series`, `PATCH /series/{serie}`, `GET /comprobantes/series`, `POST /comprobantes/{id}/anular`, `GET/POST /jurisdicciones`, `PATCH /jurisdicciones/{codigo}`, `GET/PUT /jurisdicciones/{codigo}/tasas`, `GET/PUT /configuracion-fiscal`, `GET/POST /regimenes`, `GET/POST /sujetos`, `POST /sujetos/{id}/baja`, `GET /declaraciones`, `POST /declaraciones/generar`, `POST /declaraciones/{id}/presentar`, `POST /declaraciones/{id}/pagar`, `GET /vendedores/me/fiscal`, `GET /tipos-cambio`, `POST /admin/tipos-cambio` |
 | Planeación | `GET/POST /proyecciones`, `GET /proyecciones/{id}`, `/sensibilidad`, `/plan-bienal`, `GET /punto-equilibrio`, `/kpis`, `/tablero` |
 | Bancos/créditos | `GET/POST /comercio/bancos-cuentas`, `PATCH/DELETE .../{id}`, `GET/POST /comercio/creditos`, `POST .../{id}/pagar`, `/abonar`, `DELETE .../{id}`, `GET /comercio/credito-cuentas`, `PUT .../{parteId}` |
 | Gastos/compras | `GET/POST /comercio/gastos`, `PATCH/DELETE .../{id}`, `POST .../{id}/{pagar,cancelar}`, `GET/POST /comercio/cuentas-por-pagar`, `POST .../{id}/pagar`, `GET/POST /comercio/proveedores`, `GET/POST /comercio/compras`, `POST /compras/{directas,producto-nuevo}`, `POST /compras/{id}/anular`, `GET/POST /comercio/ordenes-compra`, `POST .../{id}/{convertir,anular}` |
@@ -393,5 +409,7 @@ cargo test
   mismo proveedor electrónico configurado para facturas.
 - `POST /internal/{servicio}/tenant/purgar` anonimiza `datos_cliente`, borra PDFs y
   configuración fiscal; conserva comprobantes y asientos por retención legal.
-- El proveedor HTTP se configura con `FACTURACION_PROVEEDOR_URL` y
-  `FACTURACION_PROVEEDOR_KEY`; DGI concreta se conecta detrás de esa URL.
+- El proveedor HTTP y el adaptador DGI de referencia se configuran con
+  `FACTURACION_PROVEEDOR_URL` y `FACTURACION_PROVEEDOR_KEY`. El adaptador DGI
+  genera el XML fiscal; la firma, certificados y certificación los provee el
+  gateway autorizado del país.

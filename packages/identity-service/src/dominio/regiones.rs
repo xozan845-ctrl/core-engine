@@ -507,7 +507,7 @@ const SELECT_REGION_SIMPLE: &str = "SELECT j.codigo_pais, j.nombre, j.pais_iso, 
         false AS predeterminada
    FROM finance.jurisdicciones j";
 
-fn region_de_fila(fila: &sqlx::postgres::PgRow) -> Result<RegionTributaria, ApiError> {
+pub fn region_de_fila(fila: &sqlx::postgres::PgRow) -> Result<RegionTributaria, ApiError> {
     let vigente_desde: Option<NaiveDate> = fila.try_get("vigente_desde").map_err(interno)?;
     Ok(RegionTributaria {
         codigo: fila.try_get("codigo_pais").map_err(interno)?,

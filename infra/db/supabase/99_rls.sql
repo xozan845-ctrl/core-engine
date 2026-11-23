@@ -1819,3 +1819,39 @@ CREATE POLICY empresa_region_historial_tenant ON identity.empresa_region_histori
 CREATE POLICY empresa_region_historial_tenant_insert ON identity.empresa_region_historial
   FOR INSERT TO authenticated
   WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── finance declaraciones y tasas por región (ADR-0049) ───────────────────
+ALTER TABLE finance.declaraciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS declaraciones_admin ON finance.declaraciones;
+DROP POLICY IF EXISTS declaraciones_tenant ON finance.declaraciones;
+CREATE POLICY declaraciones_admin ON finance.declaraciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY declaraciones_tenant ON finance.declaraciones
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE finance.tasas_impuesto ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tasas_impuesto_lectura ON finance.tasas_impuesto;
+DROP POLICY IF EXISTS tasas_impuesto_admin ON finance.tasas_impuesto;
+CREATE POLICY tasas_impuesto_lectura ON finance.tasas_impuesto
+  FOR SELECT TO anon, authenticated USING (activa);
+CREATE POLICY tasas_impuesto_admin ON finance.tasas_impuesto
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+DROP POLICY IF EXISTS series_comprobantes_empresa_restrictiva ON finance.series_comprobantes;
+CREATE POLICY series_comprobantes_empresa_restrictiva ON finance.series_comprobantes
+  AS RESTRICTIVE FOR ALL TO authenticated
+  USING (
+    empresa_id IS NULL
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+    OR auth.rol() IN ('super_admin', 'admin')
+  )
+  WITH CHECK (
+    empresa_id IS NULL
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+    OR auth.rol() IN ('super_admin', 'admin')
+  );

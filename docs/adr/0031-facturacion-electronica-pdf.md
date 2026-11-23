@@ -39,8 +39,10 @@ El negocio debe poder activar la función y elegir proveedor/ambiente.
 - **Contrato:** configuración fiscal extendida, campos electrónicos en el
   comprobante y ruta PDF.
 - **Datos:** migración `99_facturacion_electronica.sql`; RLS existente.
-- **Pendiente:** adaptador DGI concreto, firma/certificados, XML UBL y envío
-  automático de notas de crédito.
+- **Implementado (2026-11-23):** `proveedor_electronico=dgi` con adaptador de
+  referencia que genera XML fiscal, publica en el gateway configurado y cubre
+  notas de crédito. **Operativo pendiente:** endpoint, credenciales, firma y
+  certificación del proveedor autorizado de cada país (no es código del núcleo).
 
 ## Criterios de aceptación
 
@@ -61,5 +63,6 @@ tenant sea la que aporta el contexto electrónico:
 - El proveedor sigue siendo un ACL genérico (`simulado|http`) seleccionable por
   tenant; un adaptador DGI u otro proveedor nacional se conecta detrás de esa
   URL, sin hardcodear el país en el núcleo.
-- Pendiente: adaptadores concretos por región, firma/certificados y XML/UBL
-  específicos.
+- Implementado el adaptador XML de referencia (`proveedor_electronico=dgi`).
+  La firma, certificados y el XML/UBL específico del proveedor autorizado son
+  operativos de cada país, no código del núcleo.

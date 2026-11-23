@@ -1078,6 +1078,32 @@ async fn debe_gestionar_packs_y_verticales() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(obtenido["data"]["vertical_codigo"], vertical);
 
+    let (status, regiones) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(regiones["data"]
+        .as_array()
+        .expect("regiones")
+        .iter()
+        .any(|region| region["codigo"] == "NI" && region["predeterminada"] == true));
+
+    let (status, actualizado) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        json!({ "regiones": [{ "codigo": "NI", "predeterminada": true }] }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizado["data"]["regiones"][0]["codigo"], "NI");
+
     let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
     let (status, _) = enviar(
         &ctx.app,
