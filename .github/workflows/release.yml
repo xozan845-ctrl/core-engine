@@ -119,6 +119,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -186,6 +187,7 @@ jobs:
           push: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run == false }}
           tags: ${{ steps.tags.outputs.tags }}
           provenance: true
+          sbom: true
           labels: |
             org.opencontainers.image.title=core-engine-${{ matrix.service }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -193,6 +195,27 @@ jobs:
             org.opencontainers.image.version=${{ needs.gate.outputs.tag }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: 🛡️ Escanear la imagen (HIGH/CRITICAL)
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run == false
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/core-engine-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: "HIGH,CRITICAL"
+
+      - name: 🔐 Firmar la imagen (cosign keyless)
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run == false
+        uses: sigstore/cosign-installer@v3
+
+      - name: 🔐 cosign sign
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run == false
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/core-engine-${{ matrix.service }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
       - name: 🧾 Publish digest in the run summary (R-CD-4)
         run: |
