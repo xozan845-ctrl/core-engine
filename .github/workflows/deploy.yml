@@ -102,11 +102,28 @@ jobs:
           docker compose $FILES $DIGEST up -d $BUILD
 
       - name: ⏳ Wait for gateway readiness (R-CD-12)
+        env:
+          INTERNAL_KEY: ${{ secrets.INTERNAL_API_KEY }}
         run: |
-          for i in $(seq 1 60); do
-            if curl -fsS "http://localhost:${{ steps.cfg.outputs.port }}/health" >/dev/null; then
-              echo "healthy"
-              exit 0
+          URL="http://localhost:${{ steps.cfg.outputs.port }}"
+          for i in $(seq 1 90); do
+            if curl -fsS "$URL/health" >/dev/null; then
+              # En prod /ready exige clave interna y puede no estar configurada
+              # en el runner; alli basta el liveness del gateway.
+              if [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+                echo "healthy"
+                exit 0
+              fi
+              if [ -n "${INTERNAL_KEY:-}" ]; then
+                READY=$(curl -sS -H "x-internal-key: $INTERNAL_KEY" "$URL/ready" || true)
+              else
+                READY=$(curl -sS "$URL/ready" || true)
+              fi
+              if printf '%s' "$READY" | grep -q '"status":"ok"'; then
+                echo "ready: $READY"
+                exit 0
+              fi
+              echo "esperando servicios: $READY"
             fi
             sleep 5
           done
