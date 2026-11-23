@@ -153,7 +153,7 @@ async function main() {
   const correoEmpresario = `empresario.${suf}@core-engine.test`;
   const correoVendedor = `vendedor.${suf}@core-engine.test`;
   const correoComprador = `comprador.${suf}@core-engine.test`;
-  const contrasena = 'Contrasena123!';
+  const contrasena = 'Fuego-Laguna-2026!';
 
   paso('Administrador: login (RF-01, seed del arranque)');
   const loginAdmin = await api('POST', '/api/v2/auth/login', {

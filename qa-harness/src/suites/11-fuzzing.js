@@ -38,13 +38,13 @@ export async function suite11Fuzzing(client, cfg, adminToken, vendedorToken) {
     const xss = await client.post('/api/v2/auth/registro', {
       nombre: '<script>alert(1)</script>',
       correo: `xss.${suf}@test.com`,
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'comprador',
     });
     resultados.push({ test: 'XSS en nombre → 201/400', status: xss.status, pass: acepta(xss.status, [201, 400]) });
 
     const vacio = await client.post('/api/v2/auth/registro', {
-      nombre: '', correo: `vacio.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'comprador',
+      nombre: '', correo: `vacio.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador',
     });
     resultados.push({ test: 'Nombre vacío registro → 400', status: vacio.status, pass: vacio.status === 400 });
 

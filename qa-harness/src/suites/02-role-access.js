@@ -86,7 +86,7 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
     // 14. 400: logistica NO es auto-registrable (rol de sistema, como admin)
     const regL = await client.post('/api/v2/auth/registro', {
       nombre: 'Log ext', correo: `log.${Date.now()}@test.com`,
-      contrasena: 'Contrasena123!', rol: 'logistica',
+      contrasena: 'Fuego-Laguna-2026!', rol: 'logistica',
     });
     resultados.push({ test: 'Registro publico con rol logistica → 400 (solo empresario/comprador)', status: regL.status, pass: regL.status === 400 });
 
