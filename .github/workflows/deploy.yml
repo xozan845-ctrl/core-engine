@@ -146,7 +146,13 @@ jobs:
         if: github.event.inputs.environment != 'prod'
         env:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
-        run: npm run demo
+        run: |
+          # El admin se siembra con las credenciales del .env del stack; el
+          # demo debe usar esas mismas, no sus defaults.
+          set -a
+          . ./.env
+          set +a
+          npm run demo
 
       - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
         if: github.event.inputs.environment != 'prod' && success()
