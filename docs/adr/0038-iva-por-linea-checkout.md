@@ -3,7 +3,8 @@
 - **Fecha:** 2026-11-19
 - **Estado:** Aceptado (implementado; opt-in por tenant)
 - **Relacionado:** [ADR-0026](./0026-fiscalidad-por-tenant.md),
-  [ADR-0028](./0028-cupones.md)
+  [ADR-0028](./0028-cupones.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -58,3 +59,18 @@ elegir si sus precios incluían IVA.
 - Con precios sin IVA, el total suma el impuesto.
 - El comprobante usa el mismo total que la orden.
 - El cupón reduce base e IVA de forma proporcional.
+
+## Actualización (2026-11-23)
+
+[ADR-0049](./0049-regiones-tributarias.md) conecta este desglose con la región
+elegida por el tenant:
+
+- La tasa, la moneda y el flag `impuesto_activo` se resuelven con la
+  jurisdicción efectiva de finance, que ahora incluye
+  `identity.empresas.region_tributaria` como fallback.
+- `finance.configuracion_fiscal` sigue siendo el override explícito por empresa
+  o negocio; la región es el valor por defecto.
+- Si la serie del comprobante apunta a una región inexistente, finance responde
+  `SIN_JURISDICCION` en lugar de aplicar `15 %`/`NIO` por su cuenta.
+- Pendiente: formato de moneda por región en notificaciones/PDF y series
+  fiscales por región/tenant.

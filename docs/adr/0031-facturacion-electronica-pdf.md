@@ -3,7 +3,8 @@
 - **Fecha:** 2026-11-18
 - **Estado:** Aceptado (implementado)
 - **Relacionado:** [ADR-0014](./0014-finance-service-en-rust.md),
-  [ADR-0026](./0026-fiscalidad-por-tenant.md)
+  [ADR-0026](./0026-fiscalidad-por-tenant.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -49,3 +50,16 @@ El negocio debe poder activar la función y elegir proveedor/ambiente.
 - Con `formato_pdf=true`, el PDF descarga con `application/pdf`.
 - Sin `formato_pdf`, el PDF responde `PDF_NO_ACTIVADO`.
 - El proveedor HTTP se configura por entorno y no por código de país.
+
+## Actualización (2026-11-23)
+
+[ADR-0049](./0049-regiones-tributarias.md) hace que la región tributaria del
+tenant sea la que aporta el contexto electrónico:
+
+- `documento_fiscal`, `locale`, `zona_horaria` y las features `fiscal.*` viven
+  en el descriptor de la región, no en código.
+- El proveedor sigue siendo un ACL genérico (`simulado|http`) seleccionable por
+  tenant; un adaptador DGI u otro proveedor nacional se conecta detrás de esa
+  URL, sin hardcodear el país en el núcleo.
+- Pendiente: adaptadores concretos por región, firma/certificados y XML/UBL
+  específicos.

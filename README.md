@@ -167,7 +167,9 @@ La región tributaria es **configuración del tenant**, no un servicio nuevo:
 **Piloto Nicaragua.** `NI` queda activa con IVA 15 %, moneda `NIO`/`C$`, RUC
 como documento fiscal y `America/Managua`. Para añadir otro país: se inserta la
 fila fiscal, se declara en los packs y, si aplica, se configura su proveedor
-electrónico. No se toca el dominio.
+electrónico. No se toca el dominio. Ver
+[ADR-0049](docs/adr/0049-regiones-tributarias.md) y el
+[runbook de regiones](docs/runbook-regiones-tributarias.md).
 
 ### Niveles de extensibilidad
 
@@ -357,19 +359,24 @@ curl -X POST http://localhost:8080/api/v2/packs/verticales \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"codigo":"tecnologia_reparacion","nombre":"Tecnología y reparación","modelo_operacion":"mixto"}'
 
-# 2) consultar verticales, packs y capacidades disponibles
+# 2) consultar verticales, packs y regiones disponibles
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/packs/verticales
 curl -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v2/packs?vertical_id=tecnologia_reparacion"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/v2/regiones-tributarias?pack_codigo=pack_tecnologia_reparacion&pack_version=1"
 
-# 3) crear la empresa eligiendo vertical + pack
+# 3) crear la empresa eligiendo vertical + pack + región tributaria
 curl -X POST http://localhost:8080/api/v2/empresas \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"nombre":"TechFix","slug":"techfix","vertical_id":"tecnologia_reparacion",
-       "pack_codigo":"pack_tecnologia_reparacion","pack_version":1}'
+       "pack_codigo":"pack_tecnologia_reparacion","pack_version":1,
+       "region_tributaria":"NI"}'
 
-# 4) verificar capacidades efectivas del tenant
+# 4) verificar capacidades y región efectivas del tenant
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/v2/empresas/<empresaId>/capacidades
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v2/empresas/<empresaId>/features
 ```
 
 Alternativa de una sola llamada para el frontend (idempotente y con token

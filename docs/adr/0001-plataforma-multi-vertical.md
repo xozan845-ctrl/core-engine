@@ -4,6 +4,9 @@
 - **Estado**: Aceptado
 - **Ámbito**: arquitectura, tenancy, contratos, catálogo, órdenes,
   fulfillment y scheduling
+- **Actualización**: [ADR-0049](./0049-regiones-tributarias.md) añade la
+  región tributaria como dimensión de configuración (pack → región → tenant)
+  sin cambiar el modelo de capacidades.
 
 ## Contexto
 
@@ -343,3 +346,19 @@ Cada fase se implementará en una rama/PR separado: `feat/tenancy-capacidades`,
 - p95 permanece dentro de la línea base y no aparecen hallazgos altos o
   críticos nuevos.
 - ADR, matriz, runbooks y OpenAPI se actualizan en la misma fase que el cambio.
+
+## Enmienda (2026-11-23)
+
+El paquete `vertical → pack → capacidades → empresa` no cubría la fiscalidad:
+el país seguía repartido entre defaults de código, seeds y configuración
+posterior al alta. [ADR-0049](./0049-regiones-tributarias.md) agrega una cuarta
+dimensión, **región tributaria**, con estas reglas:
+
+- el pack declara qué regiones admite (`identity.pack_regiones`);
+- el dueño elige una al aplicar el pack (`identity.empresas.region_tributaria`);
+- finance la usa como jurisdicción efectiva y el manifiesto expone sus
+  features fiscales;
+- agregar un país es datos + adaptador, no un servicio ni un fork.
+
+Las capacidades siguen siendo la autoridad booleana. La región no enciende
+módulos por sí sola: solo aporta las reglas con las que operan.

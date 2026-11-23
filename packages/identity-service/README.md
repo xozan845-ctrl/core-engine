@@ -510,7 +510,8 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
   PostgreSQL real (`TEST_DATABASE_URL`).
 - Cobertura de referencia del gate Rust: 79/75 (medida 81,65/76,98).
 - Casos cubiertos: seed idempotente, slugs con historial, capacidades por
-  negocio, invitaciones, extensiones, registros y API keys.
+  negocio, invitaciones, extensiones, registros, API keys y selección/cambio de
+  región tributaria con historial (ADR-0049).
 
 ---
 
@@ -518,6 +519,7 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 
 - [ADR-0017 · identity-service en Rust](../../docs/adr/0017-identity-service-en-rust.md)
 - [ADR-0021 · negocios por empresa](../../docs/adr/0021-negocios-por-empresa.md)
+- [ADR-0049 · regiones tributarias](../../docs/adr/0049-regiones-tributarias.md)
 - [ADR-0005 · autenticación de gateway sin gate de borde](../../docs/adr/0005-autenticacion-gateway-sin-gate-de-borde.md)
 - [Runbook multi-vertical](../../docs/runbook-multi-vertical.md)
 - [Runbook de autenticación del gateway](../../docs/runbook-gateway-auth.md)

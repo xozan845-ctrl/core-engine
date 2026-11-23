@@ -126,7 +126,8 @@ Migración aditiva `99_regiones_tributarias.sql`:
   cambiar de región no recalcula documentos ya emitidos ni migra series
   históricas.
 - **Pendiente:** series fiscales por región/tenant, adaptadores electrónicos
-  concretos, retenciones por región y edición de regiones de un pack desde API.
+  concretos, retenciones por región, edición de regiones de un pack desde API,
+  formato de moneda por región en notificaciones/PDF y declaraciones por tenant.
 
 ## Criterios de aceptación
 
@@ -142,3 +143,23 @@ Migración aditiva `99_regiones_tributarias.sql`:
 - Cambiar región deja historial y auditoría.
 - `npm run multi-vertical:check` falla si una empresa o pack activo queda sin
   región.
+
+## Documentación relacionada
+
+- Runbook operativo:
+  [`docs/runbook-regiones-tributarias.md`](../runbook-regiones-tributarias.md).
+- Onboarding: [ADR-0047](./0047-onboarding-idempotente.md).
+- Fiscalidad por tenant y override: [ADR-0026](./0026-fiscalidad-por-tenant.md).
+- IVA por línea: [ADR-0038](./0038-iva-por-linea-checkout.md).
+- Facturación electrónica: [ADR-0031](./0031-facturacion-electronica-pdf.md).
+- Pendientes de escala: [`docs/backlog-plataforma.md`](../backlog-plataforma.md).
+
+## Verificación
+
+- `cargo test` en `identity-service`: unitarios, HTTP y PostgreSQL desde cero
+  con la migración `99_regiones_tributarias.sql`.
+- `cargo test` en `finance-service`: unitarios y PostgreSQL con el fallback a
+  la región del tenant y `SIN_JURISDICCION`.
+- `npm run rules:check`: agnosticismo, migraciones, RLS y contrato OpenAPI.
+- `npm run multi-vertical:check`: toda empresa y pack activo con región; una
+  sola predeterminada por pack.

@@ -357,8 +357,9 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-- `tests/finance_pg.rs` (~865 líneas): contabilidad, tributación,
-  facturación, créditos, caja, compras y proyecciones contra PostgreSQL real.
+- `tests/finance_pg.rs` (~875 líneas): contabilidad, tributación,
+  facturación, créditos, caja, compras, proyecciones y fallback a la región del
+  tenant (ADR-0049) contra PostgreSQL real.
 - `comercio/tests.rs`: normalización de compras, ámbitos y totales.
 - Casos puros de proyecciones (VAN/TIR/payback) y alertas.
 

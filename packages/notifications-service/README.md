@@ -107,7 +107,9 @@ Cola única `notifications.todos` con 7 routing keys:
 ## 4. Plantillas y correo
 
 - Asunto y cuerpo se generan en `plantillas.rs` como funciones **puras**.
-- Montos: `C$`/`US$` con dos decimales, calculados desde `total_cents`.
+- Montos: símbolo recibido en el evento (`C$`/`US$`) con dos decimales,
+  calculados desde `total_cents`. Hoy el formateador asume `US$` para USD y `C$`
+  para el resto; el símbolo por región está en el backlog (ADR-0049).
 - HTML escapado (`&`, `<`, `>`, `"`, `'`); se envía `text/plain` + `text/html`.
 - El número de pedido se muestra corto (8 caracteres).
 - El estado se traduce a texto legible (`pagada`, `enviada`, …).

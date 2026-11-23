@@ -127,3 +127,34 @@ UPDATE identity.empresas SET region_tributaria = 'NI' WHERE id = '<uuid>';
 
 No eliminar `finance.jurisdicciones` referenciadas por empresas, series o
 comprobantes: la FK lo impide y hacerlo rompería la trazabilidad fiscal.
+
+## Seguridad y RLS
+
+- `identity.pack_regiones` es catálogo de plataforma: lectura para cualquier
+  autenticado con pack activo; escritura solo `super_admin`/`admin`.
+- `identity.empresa_region_historial` tiene política por `empresa_id`; un
+  empresario solo ve el historial de su tenant.
+- `finance.jurisdicciones` lo administra finance; identity solo lo lee para
+  resolver la región y el manifiesto.
+
+## Pendientes conocidos
+
+- Series fiscales por región/tenant (hoy la serie declara su jurisdicción y el
+  seed es `NI`).
+- CRUD de regiones de un pack por API (hoy se declaran al crear el pack o por
+  SQL).
+- Formato de moneda por región en notificaciones/PDF.
+- Adaptadores de facturación electrónica concretos por región.
+
+Estos puntos están priorizados en [`docs/backlog-plataforma.md`](./backlog-plataforma.md).
+
+## Documentación relacionada
+
+- [ADR-0049](./adr/0049-regiones-tributarias.md) — decisión y criterios.
+- [ADR-0026](./adr/0026-fiscalidad-por-tenant.md) — configuración fiscal por
+  tenant y override.
+- [ADR-0031](./adr/0031-facturacion-electronica-pdf.md) — facturación
+  electrónica y PDF.
+- [ADR-0038](./adr/0038-iva-por-linea-checkout.md) — IVA por línea.
+- [ADR-0047](./adr/0047-onboarding-idempotente.md) — onboarding que recibe la
+  región.
