@@ -60,7 +60,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-core_engine}
       POSTGRES_USER: ${POSTGRES_USER:-core_engine}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
-      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:-}
+      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
     volumes:
       - pg_data:/var/lib/postgresql/data
       # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
@@ -85,7 +85,7 @@ services:
       PGDATABASE: ${POSTGRES_DB:-core_engine}
       PGUSER: ${POSTGRES_USER:-core_engine}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
-      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:-}
+      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
       MIGRATIONS_DIR: /migrations
       APPLY_RLS: "false"
     volumes:
