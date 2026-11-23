@@ -14,6 +14,10 @@ con dinero real. No contiene secretos: cada valor se inyecta en el entorno.
 | Credenciales | `TILOPAY_APIUSER`, `TILOPAY_PASSWORD`, `TILOPAY_KEY` | `PAGADITO_UID`, `PAGADITO_WSK` |
 | Moneda | ISO 4217 de la orden | `config.currency` o la moneda de la orden |
 
+`PAGO_PROVEEDOR_URL` solo aplica al proveedor **global**. Si usas el catálogo
+por tenant (`orders.proveedores_pago`), la URL va en `config.base_url` del
+proveedor y las credenciales en los nombres de variable (`*_env`).
+
 > **Tilopay no tiene host de sandbox.** Testing y producción comparten
 > `app.tilopay.com`; el modo se cambia en la cuenta. Antes de probar, confirma
 > que la cuenta está en **Test mode** y que `consult` devuelve
