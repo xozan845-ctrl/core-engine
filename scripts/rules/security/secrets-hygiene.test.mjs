@@ -54,7 +54,7 @@ export default defineSuite({
 
     test('R-DS-1: el seed no conserva una contraseña por defecto', () => {
       assert.ok(
-        !SEED.includes('AdminCore Engine2026!'),
+        !SEED.includes('Fuego-Laguna-2026!'),
         'el seed conserva la contraseña por defecto',
       );
       assert.ok(

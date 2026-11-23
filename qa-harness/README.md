@@ -119,7 +119,7 @@ El harness lee `.env` del proyecto padre (`../../.env`). Variables relevantes:
 ```env
 BASE_URL=http://localhost:8080
 ADMIN_EMAIL=admin@core-engine.test
-ADMIN_PASSWORD=AdminCore Engine2026!
+ADMIN_PASSWORD=Fuego-Laguna-2026!
 DATABASE_URL=postgres://core_engine:core_engine_dev@postgres:5432/core_engine
 INTERNAL_API_KEY=dev_internal_key
 QA_TIMEOUT=30000

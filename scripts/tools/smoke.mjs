@@ -12,7 +12,7 @@ import { corteLiquidacionesValido } from './smoke-contract.mjs';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@core-engine.test';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'AdminCore Engine2026!';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Fuego-Laguna-2026!';
 const FIELD_TENANT_ID = process.env.PLATFORM_LOGISTICS_TENANT_ID ?? '00000000-0000-4000-8000-000000000001';
 const REQUEST_TIMEOUT_MS = Number(process.env.SMOKE_REQUEST_TIMEOUT_MS ?? 10_000);
 const WAIT_TIMEOUT_MS = Number(process.env.SMOKE_WAIT_TIMEOUT_MS ?? 30_000);
@@ -153,7 +153,7 @@ async function main() {
   const correoEmpresario = `empresario.${suf}@core-engine.test`;
   const correoVendedor = `vendedor.${suf}@core-engine.test`;
   const correoComprador = `comprador.${suf}@core-engine.test`;
-  const contrasena = 'Contrasena123!';
+  const contrasena = 'Fuego-Laguna-2026!';
 
   paso('Administrador: login (RF-01, seed del arranque)');
   const loginAdmin = await api('POST', '/api/v2/auth/login', {

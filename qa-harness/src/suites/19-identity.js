@@ -41,7 +41,7 @@ export async function suite19Identity({ client, pg, config }) {
   };
   const login = (correo, pass) => loginRaw({ correo, contrasena: pass });
   const adminEmail = config.adminEmail || 'admin@core-engine.test';
-  const adminPassword = config.adminPassword || 'AdminCore Engine2026!';
+  const adminPassword = config.adminPassword || 'Fuego-Laguna-2026!';
   const suf = (config.sufijo || 'qa') + '-' + Date.now().toString().slice(-6);
 
   const loginAdmin = await login(adminEmail, adminPassword);
@@ -51,27 +51,27 @@ export async function suite19Identity({ client, pg, config }) {
 
   // ── registro (Tabla 21) ──────────────────────────────────────────────────
   const vCorreo = `vend.${suf}@test.com`;
-  const regV = await client.post('/api/v2/auth/registro', { nombre: 'Vendedor QA', correo: vCorreo, contrasena: 'Contrasena123!', rol: 'vendedor' });
+  const regV = await client.post('/api/v2/auth/registro', { nombre: 'Vendedor QA', correo: vCorreo, contrasena: 'Fuego-Laguna-2026!', rol: 'vendedor' });
   T('registro: vendedor por vía pública → 400 (ADR-25)', assert(regV, regV.status === 400), JSON.stringify(regV.status));
   const eCorreo = `emp.${suf}@test.com`;
-  const regE = await client.post('/api/v2/auth/registro', { nombre: 'Empresario QA', correo: eCorreo, contrasena: 'Contrasena123!', rol: 'empresario' });
+  const regE = await client.post('/api/v2/auth/registro', { nombre: 'Empresario QA', correo: eCorreo, contrasena: 'Fuego-Laguna-2026!', rol: 'empresario' });
   T('registro: empresario válido → 201 + tokens', assert(regE, regE.status === 201 && !!regE.body?.access_token && !!regE.body?.refresh_token), JSON.stringify(regE.status));
   const cCorreo = `comp.${suf}@test.com`;
-  const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: cCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
+  const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: cCorreo, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador' });
   T('registro: comprador válido → 201', assert(regC, regC.status === 201), JSON.stringify(regC.status));
-  const dup = await client.post('/api/v2/auth/registro', { nombre: 'Dupe', correo: cCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
+  const dup = await client.post('/api/v2/auth/registro', { nombre: 'Dupe', correo: cCorreo, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador' });
   T('registro: correo duplicado → 409', assert(dup, dup.status === 409), JSON.stringify(dup.status));
-  const badRol = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `x.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'admin' });
+  const badRol = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `x.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'admin' });
   T('registro: rol no registrable (admin) → 400', assert(badRol, badRol.status === 400), JSON.stringify(badRol.status));
   const shortPass = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: `sp.${suf}@test.com`, contrasena: 'corto', rol: 'comprador' });
   T('registro: contraseña corta → 400', assert(shortPass, shortPass.status === 400), JSON.stringify(shortPass.status));
-  const badCorreo = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: 'no-es-correo', contrasena: 'Contrasena123!', rol: 'comprador' });
+  const badCorreo = await client.post('/api/v2/auth/registro', { nombre: 'X', correo: 'no-es-correo', contrasena: 'Fuego-Laguna-2026!', rol: 'comprador' });
   T('registro: correo inválido → 400', assert(badCorreo, badCorreo.status === 400), JSON.stringify(badCorreo.status));
 
   // ── login ────────────────────────────────────────────────────────────────
   const badPass = await login(adminEmail, 'incorrecta');
   T('login: contraseña incorrecta → 401', assert(badPass, badPass.status === 401), JSON.stringify(badPass.status));
-  const badUser = await login(`noexiste.${suf}@test.com`, 'Contrasena123!');
+  const badUser = await login(`noexiste.${suf}@test.com`, 'Fuego-Laguna-2026!');
   T('login: usuario inexistente → 401', assert(badUser, badUser.status === 401), JSON.stringify(badUser.status));
   const noBody = await loginRaw({});
   T('login: cuerpo vacío → 400', assert(noBody, noBody.status === 400), JSON.stringify(noBody.status));
@@ -91,18 +91,18 @@ export async function suite19Identity({ client, pg, config }) {
   T('refresh: sin token → 400', assert(refreshEmpty, refreshEmpty.status === 400), JSON.stringify(refreshEmpty.status));
 
   // ── crear-usuario (alta administrativa) ───────────────────────────────────
-  const cuv = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta V', correo: `altav.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'vendedor' }, authA);
+  const cuv = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta V', correo: `altav.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'vendedor' }, authA);
   T('crear-usuario: vendedor → 201 + id', assert(cuv, cuv.status === 201 && !!cuv.body?.id), JSON.stringify(cuv.status));
-  const cul = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta L', correo: `altal.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'logistica' }, authA);
+  const cul = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta L', correo: `altal.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'logistica' }, authA);
   T('crear-usuario: logistica sin tenant → 400 (TENANT_REQUERIDO)', assert(cul, cul.status === 400 && (cul.body?.codigo === 'TENANT_REQUERIDO' || cul.body?.codigo === 'SOLICITUD_INVALIDA')), JSON.stringify({ s: cul.status, c: cul.body?.codigo }));
-  const cult = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta LT', correo: `altalt.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'logistica', tenant_id: '11111111-1111-1111-1111-111111111111' }, authA);
+  const cult = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Alta LT', correo: `altalt.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'logistica', tenant_id: '11111111-1111-1111-1111-111111111111' }, authA);
   T('crear-usuario: logistica con tenant → 201', assert(cult, cult.status === 201 && !!cult.body?.id), JSON.stringify(cult.status));
-  const cuBadRol = await client.post('/api/v2/auth/crear-usuario', { nombre: 'X', correo: `xr.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'rol_inexistente' }, authA);
+  const cuBadRol = await client.post('/api/v2/auth/crear-usuario', { nombre: 'X', correo: `xr.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'rol_inexistente' }, authA);
   T('crear-usuario: rol inválido → 400', assert(cuBadRol, cuBadRol.status === 400), JSON.stringify(cuBadRol.status));
-  const cuDup = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Dupe', correo: `altav.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'vendedor' }, authA);
+  const cuDup = await client.post('/api/v2/auth/crear-usuario', { nombre: 'Dupe', correo: `altav.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'vendedor' }, authA);
   T('crear-usuario: correo duplicado → 409', assert(cuDup, cuDup.status === 409), JSON.stringify(cuDup.status));
   // RBAC: crear-usuario exige token de administrador.
-  const cuSinToken = await client.post('/api/v2/auth/crear-usuario', { nombre: 'SinTok', correo: `sintok.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'vendedor' }, {});
+  const cuSinToken = await client.post('/api/v2/auth/crear-usuario', { nombre: 'SinTok', correo: `sintok.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'vendedor' }, {});
   T('crear-usuario: SIN token → 401 (authz requerida)', assert(cuSinToken, cuSinToken.status === 401), JSON.stringify(cuSinToken.status));
 
   // ── cambiar-contrasena ─────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ export async function suite19Identity({ client, pg, config }) {
   const ccToken = ccReg.body?.access_token;
   const ccAuth = { authorization: `Bearer ${ccToken}` };
   // Un comprador (no admin) debe recibir 403 al intentar crear usuarios.
-  const cuNoAdmin = await client.post('/api/v2/auth/crear-usuario', { nombre: 'NoAdmin', correo: `noadmin.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'vendedor' }, ccAuth);
+  const cuNoAdmin = await client.post('/api/v2/auth/crear-usuario', { nombre: 'NoAdmin', correo: `noadmin.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'vendedor' }, ccAuth);
   T('crear-usuario: rol no admin → 403 (Forbidden)', assert(cuNoAdmin, cuNoAdmin.status === 403), JSON.stringify(cuNoAdmin.status));
   const ccSin = await client.post('/api/v2/auth/cambiar-contrasena', { actual: 'x', nueva: 'y' }, {});
   T('cambiar-contrasena: sin token → 401', assert(ccSin, ccSin.status === 401), JSON.stringify(ccSin.status));

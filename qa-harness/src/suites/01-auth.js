@@ -10,7 +10,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
   const resultados = [];
   const errores = [];
   const adminEmail = cfg?.adminEmail ?? 'admin@core-engine.test';
-  const adminPassword = cfg?.adminPassword ?? 'AdminCore Engine2026!';
+  const adminPassword = cfg?.adminPassword ?? 'Fuego-Laguna-2026!';
 
   try {
     let token = adminToken;
@@ -29,7 +29,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
     const regV = await client.post('/api/v2/auth/registro', {
       nombre: 'Vendedora Prueba',
       correo: `vendedor.${sufijo}@test.com`,
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'vendedor',
     });
     resultados.push({ test: 'Registro vendedor por vía pública → 400 (ADR-25)', status: regV.status, pass: regV.status === 400 });
@@ -37,7 +37,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
     const regE = await client.post('/api/v2/auth/registro', {
       nombre: 'Empresario Prueba',
       correo: `empresario.${sufijo}@test.com`,
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'empresario',
     });
     resultados.push({ test: 'Registro empresario', status: regE.status, pass: [200, 201].includes(regE.status) });
@@ -45,7 +45,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
     const regC = await client.post('/api/v2/auth/registro', {
       nombre: 'Compradora Prueba',
       correo: `compradora.${sufijo}@test.com`,
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'comprador',
     });
     resultados.push({ test: 'Registro comprador', status: regC.status, pass: regC.status === 201 || regC.status === 200 });
@@ -68,7 +68,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
       const dup = await client.post('/api/v2/auth/registro', {
         nombre: 'Usuario Duplicado',
         correo: adminEmail,
-        contrasena: 'Contrasena123!',
+        contrasena: 'Fuego-Laguna-2026!',
         rol: 'comprador',
       });
       resultados.push({ test: 'Registro email duplicado → 409', status: dup.status, pass: dup.status === 409 });
@@ -82,14 +82,14 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
       const badRol = await client.post('/api/v2/auth/registro', {
         nombre: 'Usuario Inválido',
         correo: `invalid.${sufijo}@test.com`,
-        contrasena: 'Contrasena123!',
+        contrasena: 'Fuego-Laguna-2026!',
         rol: 'superadmin',
       });
       resultados.push({ test: 'Registro rol inválido → 400', status: badRol.status, pass: badRol.status === 400 });
 
       const badCorreo = await client.post('/api/v2/auth/login', {
         correo: 'no-email',
-        contrasena: 'Contrasena123!',
+        contrasena: 'Fuego-Laguna-2026!',
       });
       resultados.push({ test: 'Login email inválido → 400', status: badCorreo.status, pass: badCorreo.status === 400 });
 
