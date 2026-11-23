@@ -156,6 +156,7 @@ jobs:
           DIGEST: ${{ steps.cfg.outputs.digest }}
         run: |
           docker compose $FILES $DIGEST exec -T postgres sh -lc             'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT correo, rol FROM identity.usuarios WHERE rol = '"'"'super_admin'"'"';"'
+          docker compose $FILES $DIGEST logs --no-color --tail=160 identity-service
 
       - name: 🧪 Smoke E2E del stack (R-CD-12)
         if: github.event.inputs.environment != 'prod'
