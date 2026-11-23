@@ -141,6 +141,7 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
                 patron(r"^/api/v2/orders(/|$)", &["*"]),
                 patron(r"^/api/v2/carrito(/|$)", &["*"]),
                 patron(r"^/api/v2/pagos/webhook$", &["POST"]),
+                patron(r"^/api/v2/pagos/(tilopay|pagadito)/webhook$", &["POST"]),
                 patron(r"^/api/v2/contratos(/|$)", &["*"]),
                 patron(r"^/api/v2/suscripciones(/|$)", &["*"]),
                 patron(r"^/api/v2/mesas(/|$)", &["*"]),

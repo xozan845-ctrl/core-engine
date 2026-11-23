@@ -418,6 +418,7 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          referencia_proveedor text NOT NULL DEFAULT '',
           proveedor text NOT NULL DEFAULT 'simulado',
           monto_reembolsado_cents integer NOT NULL DEFAULT 0,
           motivo_rechazo text NOT NULL DEFAULT '',
@@ -1096,6 +1097,244 @@ async fn debe_reembolsar_conciliar_y_contracargar_un_pago() {
             .await
             .expect("eventos");
     assert_eq!(eventos, 3);
+}
+
+#[tokio::test]
+async fn debe_dejar_pendiente_un_cargo_de_pasarela_real() {
+    use axum::extract::Json as AxumJson;
+    use axum::routing::post;
+    use axum::Router;
+
+    async fn cargos(AxumJson(cuerpo): AxumJson<Value>) -> AxumJson<Value> {
+        let id = cuerpo["orden_id"].as_str().unwrap_or("sin-orden");
+        AxumJson(json!({ "referencia": format!("ext-{id}") }))
+    }
+
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let app = Router::new().route("/cargos", post(cargos));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("puerto mock");
+    let base = format!("http://{}", listener.local_addr().expect("direccion mock"));
+    let servidor = tokio::spawn(async move {
+        axum::serve(listener, app).await.expect("servidor mock");
+    });
+
+    sqlx::query(
+        "INSERT INTO orders.metodos_pago
+           (codigo, nombre, requiere_confirmacion, activo, config)
+         VALUES ('tarjeta', 'Tarjeta', false, true, '{\"cargo_externo\":true}'::jsonb)",
+    )
+    .execute(db.pool())
+    .await
+    .expect("metodo tarjeta");
+    sqlx::query(
+        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
+         VALUES ('http_mock', 'HTTP Mock', 'http', true, jsonb_build_object('url', $1))",
+    )
+    .bind(&base)
+    .execute(db.pool())
+    .await
+    .expect("proveedor http");
+    sqlx::query(
+        "INSERT INTO orders.configuracion_pagos
+           (empresa_id, proveedor_codigo, activo, config)
+         VALUES ($1::uuid, 'http_mock', true, '{}'::jsonb)",
+    )
+    .bind(EMPRESA)
+    .execute(db.pool())
+    .await
+    .expect("configuracion pagos");
+
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert!(orden.pago_url.is_none());
+
+    let (estado, proveedor, referencia): (String, String, String) = sqlx::query_as(
+        "SELECT estado, proveedor, referencia FROM orders.pagos
+          WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("pago");
+    assert_eq!(estado, "pendiente");
+    assert_eq!(proveedor, "http_mock");
+    assert!(!referencia.is_empty());
+
+    // Sin pasarela configurada no se puede cobrar con tarjeta usando el simulado.
+    sqlx::query("DELETE FROM orders.configuracion_pagos WHERE empresa_id = $1::uuid")
+        .bind(EMPRESA)
+        .execute(db.pool())
+        .await
+        .expect("quitar configuracion");
+    let error = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect_err("no debe cobrar sin pasarela");
+    assert_eq!(error.codigo, "PAGO_SIMULADO_NO_PERMITIDO");
+
+    servidor.abort();
+}
+
+#[tokio::test]
+async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
+    use axum::extract::Json as AxumJson;
+    use axum::routing::post;
+    use axum::Router;
+    use orders_service::conciliacion::ConciliacionPagos;
+    use orders_service::pagos_flujo::FlujoPagos;
+
+    async fn login() -> AxumJson<Value> {
+        AxumJson(json!({ "access_token": "tok", "expires_in": 3600 }))
+    }
+    async fn link() -> AxumJson<Value> {
+        AxumJson(json!({ "type": "200", "url": "https://pago.example/1" }))
+    }
+    async fn consult() -> AxumJson<Value> {
+        AxumJson(json!({ "type": "200", "response": [{ "code": "1" }] }))
+    }
+
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let app = Router::new()
+        .route("/api/v1/login", post(login))
+        .route("/api/v1/createLinkPayment", post(link))
+        .route("/api/v1/consult", post(consult));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("puerto mock");
+    let base = format!("http://{}", listener.local_addr().expect("direccion mock"));
+    let servidor = tokio::spawn(async move {
+        axum::serve(listener, app).await.expect("servidor mock");
+    });
+
+    std::env::set_var("TILOPAY_TEST_RECON_USER", "usuario");
+    std::env::set_var("TILOPAY_TEST_RECON_PASSWORD", "secreto");
+    std::env::set_var("TILOPAY_TEST_RECON_KEY", "llave");
+    let configuracion = json!({
+        "base_url": base,
+        "apiuser_env": "TILOPAY_TEST_RECON_USER",
+        "password_env": "TILOPAY_TEST_RECON_PASSWORD",
+        "key_env": "TILOPAY_TEST_RECON_KEY",
+    });
+    sqlx::query(
+        "INSERT INTO orders.metodos_pago
+           (codigo, nombre, requiere_confirmacion, activo, config)
+         VALUES ('tarjeta', 'Tarjeta', false, true, '{\"cargo_externo\":true}'::jsonb)",
+    )
+    .execute(db.pool())
+    .await
+    .expect("metodo tarjeta");
+    sqlx::query(
+        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
+         VALUES ('tilopay', 'Tilopay', 'tilopay', true, $1::jsonb)",
+    )
+    .bind(configuracion.to_string())
+    .execute(db.pool())
+    .await
+    .expect("proveedor tilopay");
+    sqlx::query(
+        "INSERT INTO orders.configuracion_pagos
+           (empresa_id, proveedor_codigo, activo, config)
+         VALUES ($1::uuid, 'tilopay', true, '{}'::jsonb)",
+    )
+    .bind(EMPRESA)
+    .execute(db.pool())
+    .await
+    .expect("configuracion pagos");
+
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert!(orden.pago_url.is_some());
+
+    let conciliacion = ConciliacionPagos::nueva(
+        Arc::new(Pagos::nueva(Arc::clone(&db))),
+        Arc::new(FlujoPagos::nuevo(Arc::clone(&checkout))),
+        0,
+        200,
+    );
+    let resumen = conciliacion.ejecutar().await.expect("conciliacion");
+    assert_eq!(resumen.confirmados, 1);
+
+    let estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(estado, "confirmado");
+    let orden_estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden vista");
+    assert_eq!(orden_estado, "pagada");
+
+    // Carrera de expiración: la orden se cancela antes de que llegue el pago.
+    let orden_tardia = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden tardia");
+    checkout
+        .transicionar(
+            &orden_tardia.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect("cancelar orden");
+    let resumen_tardio = conciliacion.ejecutar().await.expect("conciliacion tardia");
+    assert_eq!(
+        (
+            resumen_tardio.revisados,
+            resumen_tardio.confirmados,
+            resumen_tardio.rechazados,
+            resumen_tardio.errores
+        ),
+        (1, 1, 0, 0),
+        "resumen tardio"
+    );
+
+    let estado_tardio: String =
+        sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago tardio");
+    assert_eq!(estado_tardio, "confirmado");
+    let orden_tardia_estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden tardia vista");
+    assert_eq!(orden_tardia_estado, "cancelada");
+    let incidentes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+           FROM orders.pagos_eventos e
+           JOIN orders.pagos p ON p.id = e.pago_id
+          WHERE p.order_id = $1::uuid AND e.tipo = 'pago.tardio'",
+    )
+    .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("incidencias");
+    assert_eq!(incidentes, 1);
+
+    servidor.abort();
 }
 
 #[tokio::test]
