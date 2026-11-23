@@ -57,6 +57,8 @@ pub struct Tilopay {
     key: String,
     callback_url: Option<String>,
     webhook_url: Option<String>,
+    /// `test` exige que Tilopay reporte `environment=Test` en `consult`.
+    ambiente: Option<String>,
 }
 
 impl Tilopay {
@@ -87,6 +89,11 @@ impl Tilopay {
                 .and_then(Value::as_str)
                 .filter(|valor| !valor.is_empty())
                 .map(str::to_string),
+            ambiente: config
+                .get("ambiente")
+                .and_then(Value::as_str)
+                .map(|valor| valor.trim().to_ascii_lowercase())
+                .filter(|valor| !valor.is_empty()),
         })
     }
 
@@ -292,10 +299,27 @@ impl ProveedorPagos for Tilopay {
         if valor.get("type").and_then(Value::as_str) != Some("200") {
             return Ok(EstadoExterno::Pendiente);
         }
-        let codigo = valor
+        let fila = valor
             .get("response")
             .and_then(Value::as_array)
-            .and_then(|filas| filas.first())
+            .and_then(|filas| filas.first());
+        if self.ambiente.as_deref() == Some("test") {
+            if let Some(ambiente) = fila
+                .and_then(|fila| fila.get("environment"))
+                .and_then(Value::as_str)
+                .filter(|valor| !valor.trim().is_empty())
+            {
+                if !ambiente.trim().eq_ignore_ascii_case("test") {
+                    return Err(ApiError::dominio(
+                        "TILOPAY_AMBIENTE_INESPERADO",
+                        format!(
+                            "Tilopay reporta environment={ambiente}; la configuración exige Test. No se confirma la orden."
+                        ),
+                    ));
+                }
+            }
+        }
+        let codigo = fila
             .and_then(|fila| fila.get("code"))
             .map(|codigo| {
                 codigo
@@ -330,6 +354,7 @@ mod pruebas {
         login: Arc<AtomicUsize>,
         reembolso_ok: Arc<AtomicBool>,
         consulta_codigo: Arc<Mutex<String>>,
+        ambiente: Arc<Mutex<String>>,
     }
 
     async fn responder(State(registro): State<Registro>, peticion: Request<Body>) -> Json<Value> {
@@ -364,7 +389,10 @@ mod pruebas {
             }
             "/api/v1/consult" => json!({
                 "type": "200",
-                "response": [{"code": registro.consulta_codigo.lock().expect("consulta").clone()}]
+                "response": [{
+                    "code": registro.consulta_codigo.lock().expect("consulta").clone(),
+                    "environment": registro.ambiente.lock().expect("ambiente").clone()
+                }]
             }),
             _ => json!({"type": "999"}),
         };
@@ -397,6 +425,7 @@ mod pruebas {
             "key_env": llave,
             "webhook_url": "https://hooks.example/tilopay",
             "callback_url": "https://app.example/pago/retorno",
+            "ambiente": "test",
         })
     }
 
@@ -470,6 +499,27 @@ mod pruebas {
             .await
             .expect_err("contracargo no soportado");
         assert_eq!(error.codigo, "PROVEEDOR_NO_SOPORTA_CONTRACARGO");
+    }
+
+    #[tokio::test]
+    async fn debe_fallar_si_tilopay_no_esta_en_test() {
+        let registro = Registro::default();
+        let base = levantar(registro.clone()).await;
+        let proveedor = Tilopay::nuevo(&config(&base, "ambiente")).expect("proveedor");
+
+        *registro.consulta_codigo.lock().expect("consulta") = "1".to_string();
+        *registro.ambiente.lock().expect("ambiente") = "Test".to_string();
+        assert_eq!(
+            proveedor.consultar("o-1", None).await.expect("consulta"),
+            EstadoExterno::Aprobado
+        );
+
+        *registro.ambiente.lock().expect("ambiente") = "Production".to_string();
+        let error = proveedor
+            .consultar("o-1", None)
+            .await
+            .expect_err("debe rechazar produccion");
+        assert_eq!(error.codigo, "TILOPAY_AMBIENTE_INESPERADO");
     }
 
     #[test]
