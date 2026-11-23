@@ -1787,3 +1787,35 @@ ALTER TABLE identity.provisioning_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS provisioning_jobs_app ON identity.provisioning_jobs;
 CREATE POLICY provisioning_jobs_app ON identity.provisioning_jobs
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity regiones tributarias (ADR-0049) ──────────────────────────────
+ALTER TABLE identity.pack_regiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pack_regiones_lectura ON identity.pack_regiones;
+DROP POLICY IF EXISTS pack_regiones_admin ON identity.pack_regiones;
+CREATE POLICY pack_regiones_lectura ON identity.pack_regiones
+  FOR SELECT TO anon, authenticated
+  USING (activo AND EXISTS (
+    SELECT 1 FROM identity.packs p
+     WHERE p.codigo = pack_codigo
+       AND p.version = pack_version
+       AND p.activo
+  ));
+CREATE POLICY pack_regiones_admin ON identity.pack_regiones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.empresa_region_historial ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS empresa_region_historial_admin ON identity.empresa_region_historial;
+DROP POLICY IF EXISTS empresa_region_historial_tenant ON identity.empresa_region_historial;
+DROP POLICY IF EXISTS empresa_region_historial_tenant_insert ON identity.empresa_region_historial;
+CREATE POLICY empresa_region_historial_admin ON identity.empresa_region_historial
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY empresa_region_historial_tenant ON identity.empresa_region_historial
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY empresa_region_historial_tenant_insert ON identity.empresa_region_historial
+  FOR INSERT TO authenticated
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));

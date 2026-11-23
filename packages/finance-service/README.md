@@ -128,14 +128,18 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
 
 ## 5. Tributación
 
-- **Jurisdicciones** configurables (`codigo_pais`, moneda, `tasa_iva`,
-  `tasa_ir`, periodicidad, leyes, activa). Nicaragua sembrada con IVA 15 % e IR
-  mensual (Ley 822).
+- **Regiones tributarias** configurables (`codigo_pais`, país ISO, moneda y
+  moneda ISO, `tasa_iva`, `tasa_ir`, periodicidad, locale, zona horaria,
+  documento fiscal, perfil, leyes, activa). Nicaragua sembrada con IVA 15 % e
+  IR mensual (Ley 822).
 - **Configuración fiscal por tenant** (`finance.configuracion_fiscal`):
   `GET/PUT /finanzas/configuracion-fiscal` fija la jurisdicción por empresa y,
-  opcionalmente, por negocio. La resolución es negocio → empresa → primera
-  activa (compatibilidad legacy); ya no depende del orden alfabético.
-- **Comprobantes**: la moneda y el IVA salen de la jurisdicción de la serie; el
+  opcionalmente, por negocio. La resolución es negocio → empresa → región
+  elegida por el tenant (`identity.empresas.region_tributaria`) → primera
+  activa (solo compatibilidad legacy); no depende del orden alfabético.
+- **Comprobantes**: la moneda y el IVA salen de la jurisdicción de la serie; si
+  la región no existe, la emisión falla con `SIN_JURISDICCION` (sin asumir
+  15 %/NIO); el
   IVA se calcula **por línea** con el precio, cantidad y descuento de la orden
   (no sobre un total ciego). La serie por negocio sigue mandando. Si la orden
   trae snapshot `impuesto_cents`/`total_linea_cents`, finance lo reutiliza para
@@ -157,8 +161,8 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
 - **Planificador**: el día **1** a partir de las **00:10** genera las
   declaraciones del mes anterior (una sola vez por periodo, en hora local).
 
-> La moneda de facturación sale de la jurisdicción configurada (por defecto
-> `NIO` para Nicaragua); el servicio no convierte automáticamente salvo que se
+> La moneda de facturación sale del descriptor de la región configurada; no hay
+> un país por defecto. El servicio no convierte automáticamente salvo que se
 > registre un tipo de cambio.
 
 ---

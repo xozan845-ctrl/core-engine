@@ -4819,6 +4819,18 @@
                         },
                         "precios_con_impuesto": {
                           "type": "boolean"
+                        },
+                        "moneda_iso": {
+                          "type": "string",
+                          "example": "NIO"
+                        },
+                        "locale": {
+                          "type": "string",
+                          "example": "es-NI"
+                        },
+                        "zona_horaria": {
+                          "type": "string",
+                          "example": "America/Managua"
                         }
                       },
                       "required": [
@@ -15347,6 +15359,172 @@
         "summary": "Consultar el estado del onboarding",
         "tags": [
           "Onboarding"
+        ]
+      }
+    },
+    "/api/v2/regiones-tributarias": {
+      "get": {
+        "operationId": "RegionesTributariasController_listar",
+        "parameters": [
+          {
+            "name": "pack_codigo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pack_version",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regiones tributarias disponibles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RegionTributariaResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar regiones tributarias (selector del onboarding)",
+        "tags": [
+          "Regiones tributarias"
+        ]
+      }
+    },
+    "/api/v2/empresas/{empresa_id}/region-tributaria": {
+      "get": {
+        "operationId": "RegionesTributariasController_obtener",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Región efectiva de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RegionEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar la región tributaria de la empresa",
+        "tags": [
+          "Regiones tributarias"
+        ]
+      },
+      "put": {
+        "operationId": "RegionesTributariasController_actualizar",
+        "parameters": [
+          {
+            "name": "empresa_id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarRegionTributariaRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Región actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RegionEmpresaResponseDto"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaRespuesta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar la región tributaria (con historial y auditoría)",
+        "tags": [
+          "Regiones tributarias"
         ]
       }
     },
@@ -32360,6 +32538,35 @@
           "leyes": {
             "type": "object",
             "description": "Leyes aplicables (clave→texto)"
+          },
+          "pais_iso": {
+            "type": "string",
+            "description": "País ISO 3166-1 alpha-2",
+            "example": "NI"
+          },
+          "subdivision": {
+            "type": "string",
+            "nullable": true,
+            "description": "Subdivisión administrativa opcional"
+          },
+          "moneda_iso": {
+            "type": "string",
+            "description": "Código ISO 4217",
+            "example": "NIO"
+          },
+          "locale": {
+            "type": "string",
+            "example": "es-NI"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "documento_fiscal": {
+            "type": "object"
+          },
+          "perfil": {
+            "type": "object"
           }
         },
         "required": [
@@ -33576,7 +33783,7 @@
           },
           "moneda": {
             "type": "string",
-            "description": "Moneda",
+            "description": "Símbolo de moneda usado en comprobantes (p. ej. C$)",
             "example": "NIO"
           },
           "simbolo_moneda": {
@@ -33610,6 +33817,42 @@
             "type": "boolean",
             "description": "Jurisdicción activa",
             "example": true
+          },
+          "pais_iso": {
+            "type": "string",
+            "description": "País ISO 3166-1 alpha-2",
+            "example": "NI"
+          },
+          "subdivision": {
+            "type": "string",
+            "nullable": true,
+            "description": "Subdivisión administrativa opcional"
+          },
+          "moneda_iso": {
+            "type": "string",
+            "description": "Código ISO 4217",
+            "example": "NIO"
+          },
+          "locale": {
+            "type": "string",
+            "example": "es-NI"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "documento_fiscal": {
+            "type": "object",
+            "description": "Descriptor del documento fiscal (RUC, NIT, etc.)"
+          },
+          "perfil": {
+            "type": "object",
+            "description": "Descriptor extensible de la región (features, presentación)"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-01-01"
           }
         },
         "required": [
@@ -33621,7 +33864,15 @@
           "tasa_ir",
           "periodicidad_declaracion",
           "leyes",
-          "activa"
+          "activa",
+          "pais_iso",
+          "subdivision",
+          "moneda_iso",
+          "locale",
+          "zona_horaria",
+          "documento_fiscal",
+          "perfil",
+          "vigente_desde"
         ]
       },
       "KpisFinancierosResponseDto": {
@@ -36081,6 +36332,12 @@
             "example": [
               "fidelizacion"
             ]
+          },
+          "region_tributaria": {
+            "type": "string",
+            "maxLength": 16,
+            "example": "NI",
+            "description": "Región tributaria elegida. Si se omite, se usa la predeterminada del pack."
           }
         },
         "required": [
@@ -36312,6 +36569,29 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PackBuilderItemRequestDto"
+            }
+          },
+          "regiones": {
+            "type": "array",
+            "description": "Regiones tributarias admitidas por el pack. Si se omite, se asignan las regiones activas.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string",
+                  "maxLength": 16,
+                  "example": "NI"
+                },
+                "predeterminada": {
+                  "type": "boolean"
+                },
+                "activo": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "codigo"
+              ]
             }
           }
         },
@@ -36896,6 +37176,61 @@
             "items": {
               "type": "string"
             }
+          },
+          "region_tributaria": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "pais_iso": {
+                "type": "string"
+              },
+              "moneda": {
+                "type": "string"
+              },
+              "moneda_iso": {
+                "type": "string"
+              },
+              "simbolo_moneda": {
+                "type": "string"
+              },
+              "locale": {
+                "type": "string"
+              },
+              "zona_horaria": {
+                "type": "string"
+              },
+              "tasa_iva": {
+                "type": "number"
+              },
+              "documento_fiscal": {
+                "type": "object"
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "codigo",
+              "nombre",
+              "pais_iso",
+              "moneda",
+              "moneda_iso",
+              "simbolo_moneda",
+              "locale",
+              "zona_horaria",
+              "tasa_iva",
+              "documento_fiscal",
+              "features"
+            ]
           }
         },
         "required": [
@@ -37073,6 +37408,16 @@
           "actualizado_en": {
             "type": "string",
             "format": "date-time"
+          },
+          "region_tributaria": {
+            "type": "string",
+            "nullable": true,
+            "example": "NI"
+          },
+          "region_tributaria_desde": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-01-01"
           }
         },
         "required": [
@@ -37630,6 +37975,12 @@
             "items": {
               "$ref": "#/components/schemas/PackCapacidadResponseDto"
             }
+          },
+          "regiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegionTributariaResponseDto"
+            }
           }
         },
         "required": [
@@ -37640,7 +37991,8 @@
           "descripcion",
           "config",
           "modelos",
-          "capacidades"
+          "capacidades",
+          "regiones"
         ]
       },
       "ParteResponseDto": {
@@ -38530,6 +38882,135 @@
         },
         "required": [
           "personal_id"
+        ]
+      },
+      "RegionTributariaResponseDto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "example": "NI",
+            "description": "Código de la región tributaria"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Nicaragua"
+          },
+          "pais_iso": {
+            "type": "string",
+            "example": "NI"
+          },
+          "subdivision": {
+            "type": "string",
+            "nullable": true,
+            "example": "CA"
+          },
+          "moneda": {
+            "type": "string",
+            "example": "C$",
+            "description": "Símbolo usado en comprobantes"
+          },
+          "moneda_iso": {
+            "type": "string",
+            "example": "NIO"
+          },
+          "simbolo_moneda": {
+            "type": "string",
+            "example": "C$"
+          },
+          "locale": {
+            "type": "string",
+            "example": "es-NI"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "tasa_iva": {
+            "type": "number",
+            "example": 0.15
+          },
+          "tasa_ir": {
+            "type": "number",
+            "example": 0.3
+          },
+          "periodicidad_declaracion": {
+            "type": "string",
+            "example": "MENSUAL"
+          },
+          "documento_fiscal": {
+            "type": "object"
+          },
+          "perfil": {
+            "type": "object"
+          },
+          "leyes": {
+            "type": "object"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-01-01"
+          },
+          "predeterminada": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "pais_iso",
+          "moneda",
+          "moneda_iso",
+          "simbolo_moneda",
+          "locale",
+          "zona_horaria",
+          "tasa_iva",
+          "tasa_ir",
+          "periodicidad_declaracion",
+          "documento_fiscal",
+          "perfil",
+          "leyes",
+          "predeterminada"
+        ]
+      },
+      "RegionEmpresaResponseDto": {
+        "type": "object",
+        "properties": {
+          "empresa_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "region": {
+            "$ref": "#/components/schemas/RegionTributariaResponseDto"
+          },
+          "desde": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-01-01"
+          }
+        },
+        "required": [
+          "empresa_id",
+          "region"
+        ]
+      },
+      "CambiarRegionTributariaRequestDto": {
+        "type": "object",
+        "properties": {
+          "region_tributaria": {
+            "type": "string",
+            "maxLength": 16,
+            "example": "NI",
+            "description": "Código de la región soportada por el pack"
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "region_tributaria"
         ]
       },
       "Envelope": {

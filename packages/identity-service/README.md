@@ -107,6 +107,7 @@ src/
     ├── partes.rs               personas/organizaciones y relaciones
     ├── password_reset.rs       token de un uso, 30 min, hash SHA-256
     ├── personal.rs             roles, puestos, asignaciones, invitaciones
+    ├── regiones.rs             regiones tributarias por pack y tenant
     ├── registros.rs            historia clínica, recetas, expedientes
     ├── sesiones.rs             refresh persistido y revocable
     ├── slug.rs                 normalización, reservados, UUID
@@ -207,8 +208,14 @@ internos son objetos concretos (`Storage`, `Stores`).
 ### Empresa
 
 - `POST /api/v2/empresas` crea la empresa y el negocio **`principal`** en la
-  misma operación, con `vertical_id` y `pack_codigo`/`pack_version`.
+  misma operación, con `vertical_id`, `pack_codigo`/`pack_version` y
+  `region_tributaria` (si se omite, la predeterminada del pack).
 - Acepta `capacidades_extra` para add-ons (p. ej. `fidelizacion`).
+- `GET /regiones-tributarias?pack_codigo=&pack_version=` lista las regiones que
+  el pack admite (selector del onboarding).
+- `GET/PUT /empresas/{id}/region-tributaria` consulta o cambia la región con
+  validación contra el pack, historial y auditoría. El manifiesto de features
+  expone `region_tributaria` y sus features `fiscal.*`.
 - `GET /empresas/{id}` resuelve por UUID **o slug**; solo miembros o admins.
 - `PATCH /empresas/{id}/perfil` actualiza datos comerciales/fiscales y logo.
 - `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en

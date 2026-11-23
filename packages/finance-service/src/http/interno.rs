@@ -165,6 +165,7 @@ pub async fn configuracion_fiscal(
         "negocio_id": negocio,
         "jurisdiccion": config.jurisdiccion.codigo_pais,
         "moneda": config.jurisdiccion.moneda,
+        "moneda_iso": config.jurisdiccion.moneda_iso,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,

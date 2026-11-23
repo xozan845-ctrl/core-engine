@@ -16,6 +16,7 @@ pub mod packs;
 pub mod partes;
 pub mod password_reset;
 pub mod personal;
+pub mod regiones;
 pub mod registros;
 pub mod sesiones;
 pub mod slug;

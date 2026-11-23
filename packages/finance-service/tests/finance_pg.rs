@@ -103,6 +103,13 @@ async fn provisionar(url: &str) {
           eliminado_en timestamptz
         );
 
+        -- Región tributaria elegida por el tenant (ADR-0049). El esquema de
+        -- prueba es mínimo: finance solo lee id + región como fallback.
+        CREATE TABLE IF NOT EXISTS identity.empresas (
+          id uuid PRIMARY KEY,
+          region_tributaria text
+        );
+
         CREATE TABLE finance.tipos_cambio (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           base text NOT NULL,
@@ -253,7 +260,15 @@ async fn provisionar(url: &str) {
           tasa_ir double precision NOT NULL,
           periodicidad_declaracion text NOT NULL DEFAULT 'MENSUAL',
           leyes jsonb NOT NULL DEFAULT '{}',
-          activa boolean NOT NULL DEFAULT true
+          activa boolean NOT NULL DEFAULT true,
+          pais_iso text,
+          subdivision text,
+          moneda_iso text,
+          locale text NOT NULL DEFAULT 'es',
+          zona_horaria text NOT NULL DEFAULT 'UTC',
+          documento_fiscal jsonb NOT NULL DEFAULT '{}',
+          perfil jsonb NOT NULL DEFAULT '{}',
+          vigente_desde date
         );
         CREATE TABLE finance.configuracion_fiscal (
           empresa_id uuid NOT NULL,
@@ -412,8 +427,11 @@ async fn provisionar(url: &str) {
           ('5.1', 'Gastos operativos', 'GASTO', 'DEUDORA', 1);
 
         INSERT INTO finance.jurisdicciones
-          (codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir, leyes)
-        VALUES ('NI', 'Nicaragua', 'NIO', 'C$', 0.15, 0.30, '{"iva":"Ley 822"}');
+          (codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir, leyes,
+           pais_iso, moneda_iso, locale, zona_horaria, perfil)
+        VALUES ('NI', 'Nicaragua', 'NIO', 'C$', 0.15, 0.30, '{"iva":"Ley 822"}',
+                'NI', 'NIO', 'es-NI', 'America/Managua',
+                '{"features":["fiscal.iva","fiscal.declaraciones"]}');
 
         INSERT INTO finance.series_comprobantes
           (serie, tipo, prefijo, secuencial_actual, ruc_emisor, jurisdiccion)

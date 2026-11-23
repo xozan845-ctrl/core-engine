@@ -141,6 +141,7 @@
   "99_onboarding_jobs.sql": "44063bd9e9a0b7b691ed5dcccef498105671974821d253168a993cc06e487526",
   "99_orders_impuestos.sql": "7aea50e7ace675db4e97ce1dce331b364e519c0fbe13e88f105dc4bda3fc1da3",
   "99_pagos_configurables.sql": "8f5d75a6112af0a37676da0e0076775b5f154389c8c32d85478cb9999775868a",
+  "99_regiones_tributarias.sql": "9bcaae3493efd50e9c5a4620a60737d2001eae51e04d65c6a77c56c402ebe2d0",
   "99_resenas_wishlist.sql": "bd304020779542ef5fdec98cf6bcafe81e1806e8e9a8c9cfda0696b33343da81",
   "99_rma.sql": "53f86262f1e5e429ce1c748e3bcb5a49d1e3687f27633f7a02241cf10b047b65",
   "99_rma_reembolsos.sql": "616e46b03e87c898a3d35b7937ddd361739454d0b9a3a9f0b3252bcd4af1f5a6",

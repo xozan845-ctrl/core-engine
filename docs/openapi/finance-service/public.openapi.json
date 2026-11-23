@@ -958,6 +958,18 @@
                         },
                         "precios_con_impuesto": {
                           "type": "boolean"
+                        },
+                        "moneda_iso": {
+                          "type": "string",
+                          "example": "NIO"
+                        },
+                        "locale": {
+                          "type": "string",
+                          "example": "es-NI"
+                        },
+                        "zona_horaria": {
+                          "type": "string",
+                          "example": "America/Managua"
                         }
                       },
                       "required": [
@@ -6414,6 +6426,35 @@
           "leyes": {
             "type": "object",
             "description": "Leyes aplicables (clave→texto)"
+          },
+          "pais_iso": {
+            "type": "string",
+            "description": "País ISO 3166-1 alpha-2",
+            "example": "NI"
+          },
+          "subdivision": {
+            "type": "string",
+            "nullable": true,
+            "description": "Subdivisión administrativa opcional"
+          },
+          "moneda_iso": {
+            "type": "string",
+            "description": "Código ISO 4217",
+            "example": "NIO"
+          },
+          "locale": {
+            "type": "string",
+            "example": "es-NI"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "documento_fiscal": {
+            "type": "object"
+          },
+          "perfil": {
+            "type": "object"
           }
         },
         "required": [
@@ -7630,7 +7671,7 @@
           },
           "moneda": {
             "type": "string",
-            "description": "Moneda",
+            "description": "Símbolo de moneda usado en comprobantes (p. ej. C$)",
             "example": "NIO"
           },
           "simbolo_moneda": {
@@ -7664,6 +7705,42 @@
             "type": "boolean",
             "description": "Jurisdicción activa",
             "example": true
+          },
+          "pais_iso": {
+            "type": "string",
+            "description": "País ISO 3166-1 alpha-2",
+            "example": "NI"
+          },
+          "subdivision": {
+            "type": "string",
+            "nullable": true,
+            "description": "Subdivisión administrativa opcional"
+          },
+          "moneda_iso": {
+            "type": "string",
+            "description": "Código ISO 4217",
+            "example": "NIO"
+          },
+          "locale": {
+            "type": "string",
+            "example": "es-NI"
+          },
+          "zona_horaria": {
+            "type": "string",
+            "example": "America/Managua"
+          },
+          "documento_fiscal": {
+            "type": "object",
+            "description": "Descriptor del documento fiscal (RUC, NIT, etc.)"
+          },
+          "perfil": {
+            "type": "object",
+            "description": "Descriptor extensible de la región (features, presentación)"
+          },
+          "vigente_desde": {
+            "type": "string",
+            "nullable": true,
+            "example": "2026-01-01"
           }
         },
         "required": [
@@ -7675,7 +7752,15 @@
           "tasa_ir",
           "periodicidad_declaracion",
           "leyes",
-          "activa"
+          "activa",
+          "pais_iso",
+          "subdivision",
+          "moneda_iso",
+          "locale",
+          "zona_horaria",
+          "documento_fiscal",
+          "perfil",
+          "vigente_desde"
         ]
       },
       "KpisFinancierosResponseDto": {

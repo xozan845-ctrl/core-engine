@@ -598,6 +598,9 @@ pub async fn configuracion_fiscal_obtener(
         "ambiente_electronico": config.ambiente_electronico,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
+        "moneda_iso": config.jurisdiccion.moneda_iso,
+        "locale": config.jurisdiccion.locale,
+        "zona_horaria": config.jurisdiccion.zona_horaria,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,
     })))
@@ -653,6 +656,9 @@ pub async fn configuracion_fiscal_guardar(
         "ambiente_electronico": config.ambiente_electronico,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
+        "moneda_iso": config.jurisdiccion.moneda_iso,
+        "locale": config.jurisdiccion.locale,
+        "zona_horaria": config.jurisdiccion.zona_horaria,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,
     })))

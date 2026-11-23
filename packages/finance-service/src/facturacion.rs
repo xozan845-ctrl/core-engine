@@ -410,14 +410,23 @@ impl Facturacion {
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?;
-        let (tasa_iva, moneda) = match fila_jurisdiccion {
-            Some(fila) => (
-                fila.try_get::<f64, _>("tasa_iva").unwrap_or(0.15),
-                fila.try_get::<String, _>("moneda")
-                    .unwrap_or_else(|_| "NIO".to_string()),
-            ),
-            None => (0.15, "NIO".to_string()),
+        // La tasa y la moneda salen de la región de la serie. Sin región no se
+        // inventa un IVA: fallar cerrado es parte del contrato fiscal.
+        let Some(fila_jurisdiccion) = fila_jurisdiccion else {
+            return Err(ApiError::dominio(
+                "SIN_JURISDICCION",
+                format!(
+                    "La serie {} apunta a la región {} que no existe.",
+                    serie.serie, serie.jurisdiccion
+                ),
+            ));
         };
+        let tasa_iva = fila_jurisdiccion
+            .try_get::<f64, _>("tasa_iva")
+            .map_err(error_db)?;
+        let moneda = fila_jurisdiccion
+            .try_get::<String, _>("moneda")
+            .map_err(error_db)?;
         let (base, iva) = if orden.items.is_empty() {
             let base = money::desde_centavos(orden.total_cents)?;
             let iva = money::multiplicar_por(base, tasa_iva)?;
@@ -731,7 +740,15 @@ impl Facturacion {
         .await
         .map_err(error_db)?
         .or(dto.moneda.clone())
-        .unwrap_or_else(|| "NIO".to_string());
+        .ok_or_else(|| {
+            ApiError::dominio(
+                "SIN_JURISDICCION",
+                format!(
+                    "La serie {} apunta a la región {} que no existe.",
+                    serie.serie, serie.jurisdiccion
+                ),
+            )
+        })?;
         let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
         let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
         let datos_cliente = json!({

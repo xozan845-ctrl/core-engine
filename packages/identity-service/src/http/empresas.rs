@@ -98,6 +98,11 @@ pub(crate) const CREAR: &[ReglaCampo] = &[
         &[Regla::Texto, Regla::Coincide("segmento")],
     ),
     campo("pack_version", false, &[Regla::Entero, Regla::Min(1.0)]),
+    campo(
+        "region_tributaria",
+        false,
+        &[Regla::Texto, Regla::MaxLongitud(16)],
+    ),
     campo("capacidades_extra", false, &[Regla::Arreglo]),
 ];
 
@@ -185,6 +190,10 @@ pub async fn crear(
                 .get("pack_version")
                 .and_then(Value::as_i64)
                 .and_then(|valor| i32::try_from(valor).ok()),
+            region_tributaria: dto
+                .get("region_tributaria")
+                .and_then(Value::as_str)
+                .map(str::to_string),
             capacidades_extra: capacidades_extra(&dto)?,
         })
         .await?;

@@ -16,12 +16,24 @@ use std::sync::Arc;
 pub struct Jurisdiccion {
     pub codigo_pais: String,
     pub nombre: String,
+    /// País ISO 3166-1 alpha-2 (p. ej. `NI`).
+    pub pais_iso: String,
+    /// Subdivisión opcional para regiones subnacionales (p. ej. `CA`).
+    pub subdivision: Option<String>,
+    /// Símbolo histórico que usan los comprobantes (p. ej. `C$`).
     pub moneda: String,
+    /// Código ISO 4217 de operación (p. ej. `NIO`).
+    pub moneda_iso: String,
     pub simbolo_moneda: String,
+    pub locale: String,
+    pub zona_horaria: String,
     pub tasa_iva: f64,
     pub tasa_ir: f64,
     pub periodicidad_declaracion: String,
+    pub documento_fiscal: Value,
+    pub perfil: Value,
     pub leyes: Value,
+    pub vigente_desde: Option<String>,
     pub activa: bool,
 }
 
@@ -101,6 +113,20 @@ pub struct CrearJurisdiccion {
     pub periodicidad_declaracion: Option<String>,
     #[serde(default)]
     pub leyes: Option<Value>,
+    #[serde(default)]
+    pub pais_iso: Option<String>,
+    #[serde(default)]
+    pub subdivision: Option<String>,
+    #[serde(default)]
+    pub moneda_iso: Option<String>,
+    #[serde(default)]
+    pub locale: Option<String>,
+    #[serde(default)]
+    pub zona_horaria: Option<String>,
+    #[serde(default)]
+    pub documento_fiscal: Option<Value>,
+    #[serde(default)]
+    pub perfil: Option<Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -140,6 +166,20 @@ pub struct FiltrosDeclaracion {
     pub estado: Option<String>,
 }
 
+/// Columnas del descriptor de región. Se comparten entre las consultas para
+/// que añadir un campo no obligue a tocar cada `SELECT`.
+const COLUMNAS_JURISDICCION: &str = "codigo_pais, nombre, pais_iso, subdivision, moneda,
+    moneda_iso, simbolo_moneda, locale, zona_horaria, tasa_iva, tasa_ir,
+    periodicidad_declaracion, documento_fiscal, perfil, leyes, vigente_desde, activa";
+
+fn columnas_jurisdiccion(alias: &str) -> String {
+    COLUMNAS_JURISDICCION
+        .split(',')
+        .map(|columna| format!("{}.{}", alias, columna.trim()))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 pub struct Tributacion {
     db: Arc<Db>,
     outbox: Outbox,
@@ -158,11 +198,11 @@ impl Tributacion {
     // ── jurisdicciones ─────────────────────────────────────────────────────
 
     pub async fn jurisdiccion_activa(&self) -> Result<Option<Jurisdiccion>, ApiError> {
-        let fila = sqlx::query(
-            "SELECT codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,
-                    periodicidad_declaracion, leyes, activa
-             FROM finance.jurisdicciones WHERE activa ORDER BY codigo_pais LIMIT 1",
-        )
+        let fila = sqlx::query(&format!(
+            "SELECT {COLUMNAS_JURISDICCION}
+               FROM finance.jurisdicciones WHERE activa
+              ORDER BY codigo_pais LIMIT 1"
+        ))
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?;
@@ -176,22 +216,41 @@ impl Tributacion {
         empresa_id: &str,
         negocio_id: Option<&str>,
     ) -> Result<Option<Jurisdiccion>, ApiError> {
-        let fila = sqlx::query(
-            "SELECT j.codigo_pais, j.nombre, j.moneda, j.simbolo_moneda, j.tasa_iva,
-                    j.tasa_ir, j.periodicidad_declaracion, j.leyes, j.activa
+        let fila = sqlx::query(&format!(
+            "SELECT {}
                FROM finance.configuracion_fiscal c
                JOIN finance.jurisdicciones j ON j.codigo_pais = c.jurisdiccion
               WHERE c.empresa_id = $1::uuid
                 AND (c.negocio_id = $2::uuid OR c.negocio_id IS NULL)
               ORDER BY (c.negocio_id IS NOT NULL) DESC
               LIMIT 1",
-        )
+            columnas_jurisdiccion("j")
+        ))
         .bind(empresa_id)
         .bind(negocio_id)
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?;
-        match fila {
+        if let Some(fila) = fila {
+            return Ok(Some(jurisdiccion_de_fila(&fila)));
+        }
+
+        // La selección del onboarding vive en identity; finance la usa como
+        // fallback cuando no hay override explícito de negocio/empresa. No se
+        // exige `activa`: desactivar una región impide elegirla de nuevo, pero
+        // no debe cambiar el régimen de un tenant existente en silencio.
+        let region = sqlx::query(&format!(
+            "SELECT {}
+               FROM identity.empresas e
+               JOIN finance.jurisdicciones j ON j.codigo_pais = e.region_tributaria
+              WHERE e.id = $1::uuid",
+            columnas_jurisdiccion("j")
+        ))
+        .bind(empresa_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        match region {
             Some(fila) => Ok(Some(jurisdiccion_de_fila(&fila))),
             None => self.jurisdiccion_activa().await,
         }
@@ -424,11 +483,10 @@ impl Tributacion {
     }
 
     pub async fn listar_jurisdicciones(&self) -> Result<Vec<Jurisdiccion>, ApiError> {
-        let filas = sqlx::query(
-            "SELECT codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,
-                    periodicidad_declaracion, leyes, activa
-             FROM finance.jurisdicciones ORDER BY codigo_pais",
-        )
+        let filas = sqlx::query(&format!(
+            "SELECT {COLUMNAS_JURISDICCION}
+               FROM finance.jurisdicciones ORDER BY codigo_pais"
+        ))
         .fetch_all(self.db.pool())
         .await
         .map_err(error_db)?;
@@ -450,14 +508,18 @@ impl Tributacion {
                 {"campo": "tasa_ir_por_mil", "restricciones": ["min:0"]}
             ])));
         }
-        let fila = sqlx::query(
+        let fila = sqlx::query(&format!(
             "INSERT INTO finance.jurisdicciones
                (codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,
-                periodicidad_declaracion, leyes)
-             VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'MENSUAL'), COALESCE($8::jsonb, '{}'))
-             RETURNING codigo_pais, nombre, moneda, simbolo_moneda, tasa_iva, tasa_ir,
-                       periodicidad_declaracion, leyes, activa",
-        )
+                periodicidad_declaracion, leyes, pais_iso, subdivision, moneda_iso,
+                locale, zona_horaria, documento_fiscal, perfil)
+             VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'MENSUAL'),
+                     COALESCE($8::jsonb, '{{}}'), $9, $10, $11,
+                     COALESCE($12, 'es'), COALESCE($13, 'UTC'),
+                     COALESCE($14::jsonb, '{{}}'::jsonb),
+                     COALESCE($15::jsonb, '{{}}'::jsonb))
+             RETURNING {COLUMNAS_JURISDICCION}"
+        ))
         .bind(datos.codigo_pais.to_uppercase())
         .bind(datos.nombre)
         .bind(datos.moneda)
@@ -466,6 +528,13 @@ impl Tributacion {
         .bind(datos.tasa_ir_por_mil as f64 / 1000.0)
         .bind(datos.periodicidad_declaracion)
         .bind(datos.leyes.map(sqlx::types::Json))
+        .bind(datos.pais_iso)
+        .bind(datos.subdivision)
+        .bind(datos.moneda_iso)
+        .bind(datos.locale)
+        .bind(datos.zona_horaria)
+        .bind(datos.documento_fiscal.map(sqlx::types::Json))
+        .bind(datos.perfil.map(sqlx::types::Json))
         .fetch_optional(self.db.pool())
         .await
         .map_err(|error| {
@@ -921,15 +990,32 @@ fn fecha_utc(fecha: &str) -> Result<DateTime<Utc>, ApiError> {
 }
 
 fn jurisdiccion_de_fila(fila: &sqlx::postgres::PgRow) -> Jurisdiccion {
+    let vigente_desde: Option<NaiveDate> = fila.try_get("vigente_desde").unwrap_or(None);
     Jurisdiccion {
         codigo_pais: fila.try_get("codigo_pais").unwrap_or_default(),
         nombre: fila.try_get("nombre").unwrap_or_default(),
+        pais_iso: fila
+            .try_get::<Option<String>, _>("pais_iso")
+            .unwrap_or(None)
+            .unwrap_or_default(),
+        subdivision: fila.try_get("subdivision").unwrap_or(None),
         moneda: fila.try_get("moneda").unwrap_or_default(),
+        moneda_iso: fila
+            .try_get::<Option<String>, _>("moneda_iso")
+            .unwrap_or(None)
+            .unwrap_or_default(),
         simbolo_moneda: fila.try_get("simbolo_moneda").unwrap_or_default(),
+        locale: fila.try_get("locale").unwrap_or_else(|_| "es".into()),
+        zona_horaria: fila
+            .try_get("zona_horaria")
+            .unwrap_or_else(|_| "UTC".into()),
         tasa_iva: fila.try_get::<f64, _>("tasa_iva").unwrap_or(0.0),
         tasa_ir: fila.try_get::<f64, _>("tasa_ir").unwrap_or(0.0),
         periodicidad_declaracion: fila.try_get("periodicidad_declaracion").unwrap_or_default(),
+        documento_fiscal: jsonb(fila, "documento_fiscal").unwrap_or_else(|_| json!({})),
+        perfil: jsonb(fila, "perfil").unwrap_or_else(|_| json!({})),
         leyes: jsonb(fila, "leyes").unwrap_or_else(|_| json!({})),
+        vigente_desde: vigente_desde.map(|fecha| fecha.to_string()),
         activa: fila.try_get("activa").unwrap_or(false),
     }
 }
