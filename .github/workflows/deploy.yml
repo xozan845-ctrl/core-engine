@@ -150,8 +150,12 @@ jobs:
           # El admin se siembra con las credenciales del .env del stack; el
           # demo debe usar esas mismas, no sus defaults. No se hace `source`
           # porque los valores pueden contener espacios.
-          ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' .env | cut -d= -f2-)"
-          ADMIN_PASSWORD="$(grep -E '^ADMIN_PASSWORD=' .env | cut -d= -f2-)"
+          ADMIN_EMAIL="$(sed -n 's/^ADMIN_EMAIL=//p' .env | head -1)"
+          ADMIN_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' .env | head -1)"
+          if [ -z "$ADMIN_EMAIL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+            echo "ADMIN_EMAIL/ADMIN_PASSWORD vacios en .env" >&2
+            exit 1
+          fi
           export ADMIN_EMAIL ADMIN_PASSWORD
           npm run demo
 
