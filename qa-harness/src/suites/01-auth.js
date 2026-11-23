@@ -10,7 +10,7 @@ export async function suite01Autenticacion(client, cfg, adminToken) {
   const resultados = [];
   const errores = [];
   const adminEmail = cfg?.adminEmail ?? 'admin@core-engine.test';
-  const adminPassword = cfg?.adminPassword ?? 'AdminCore Engine2026!';
+  const adminPassword = cfg?.adminPassword ?? 'Fuego-Laguna-2026!';
 
   try {
     let token = adminToken;
