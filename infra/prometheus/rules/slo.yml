@@ -1,0 +1,53 @@
+# SLO/SLI de Core Engine (piloto).
+# Disponibilidad objetivo 99,5% mensual; latencia p95 < 1,5 s; error budget 0,5%.
+groups:
+  - name: core-engine-slo
+    interval: 30s
+    rules:
+      - record: job:slo_availability:ratio_rate5m
+        expr: |
+          sum(rate(core_engine_http_requests_total{job="core-engine-servicios",estado!~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(core_engine_http_requests_total{job="core-engine-servicios"}[5m])), 1)
+
+      - record: job:slo_availability:ratio_rate1h
+        expr: |
+          sum(rate(core_engine_http_requests_total{job="core-engine-servicios",estado!~"5.."}[1h]))
+          /
+          clamp_min(sum(rate(core_engine_http_requests_total{job="core-engine-servicios"}[1h])), 1)
+
+      - record: job:slo_latency:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(core_engine_http_request_duration_seconds_bucket{job="core-engine-servicios"}[5m]))
+          )
+
+      - alert: SloDisponibilidadBurn5m
+        expr: job:slo_availability:ratio_rate5m < 0.995
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Quema de error budget (5m): disponibilidad {{ $value | humanizePercentage }}"
+          description: "La disponibilidad de los últimos 5 minutos está por debajo del 99,5%."
+          runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-incidentes.md"
+
+      - alert: SloDisponibilidadBurn1h
+        expr: job:slo_availability:ratio_rate1h < 0.995
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Quema de error budget (1h): disponibilidad {{ $value | humanizePercentage }}"
+          description: "La disponibilidad de la última hora está por debajo del 99,5%."
+          runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-incidentes.md"
+
+      - alert: SloLatenciaP95Alta
+        expr: job:slo_latency:p95_5m > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 global > 1,5 s"
+          description: "La latencia p95 global lleva 10 minutos por encima del objetivo."
+          runbook_url: "https://github.com/xozan845-ctrl/core-engine/blob/develop/docs/runbook-incidentes.md"
