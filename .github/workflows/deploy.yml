@@ -22,6 +22,10 @@ on:
           - dev
           - stage
           - prod
+      source:
+        description: 'Tag a fijar por digest (vacío = stage/prod del entorno)'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy-${{ github.event.inputs.environment }}
@@ -64,10 +68,20 @@ jobs:
         id: cfg
         run: |
           case "${{ github.event.inputs.environment }}" in
-            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT" ;;
-            stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
-            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
+            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT"; echo "digest=" >> "$GITHUB_OUTPUT" ;;
+            stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT"; echo "digest=-f docker-compose.digest.yml" >> "$GITHUB_OUTPUT" ;;
+            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT"; echo "digest=-f docker-compose.digest.yml" >> "$GITHUB_OUTPUT" ;;
           esac
+
+      - name: 🔒 Fijar imágenes por digest (R-CD-3)
+        if: github.event.inputs.environment != 'dev'
+        env:
+          SOURCE: ${{ github.event.inputs.source }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          TAG="${SOURCE:-$ENVIRONMENT}"
+          node scripts/tools/render-compose-digest.mjs \
+            --source "$TAG" --environment "$ENVIRONMENT" --output docker-compose.digest.yml
 
       - name: 🧰 Prepare environment file
         # Dev y stage levantan un stack efímero en el runner: si no hay `.env`
@@ -80,11 +94,12 @@ jobs:
       - name: 🚀 Bring the stack up
         env:
           FILES: ${{ steps.cfg.outputs.files }}
+          DIGEST: ${{ steps.cfg.outputs.digest }}
           BUILD: ${{ steps.cfg.outputs.build }}
         run: |
           # En dev se construye; en stage/prod se consumen las imágenes de GHCR
-          # promovidas por `promote.yml` (R-CD-3), sin `build`.
-          docker compose $FILES up -d $BUILD
+          # fijadas por digest (R-CD-3), sin `build`.
+          docker compose $FILES $DIGEST up -d $BUILD
 
       - name: ⏳ Wait for gateway readiness (R-CD-12)
         run: |

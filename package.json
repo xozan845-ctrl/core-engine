@@ -21,6 +21,7 @@
     "multi-vertical:check": "node scripts/tools/multi-vertical-check.mjs",
     "baseline:guard": "node scripts/tools/baseline-guard.mjs",
     "swagger:export": "node scripts/cli.mjs swagger",
+    "deploy:digest": "node scripts/tools/render-compose-digest.mjs",
     "demo:verticals": "node scripts/tools/smoke-verticals.mjs"
   },
   "engines": {
