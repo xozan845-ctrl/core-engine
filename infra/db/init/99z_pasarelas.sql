@@ -5,14 +5,6 @@
 -- error; se activa después de configurar una pasarela real.
 BEGIN;
 
--- El catalogo original solo permitia simulado/http/manual (99_pagos_configurables).
--- Se amplia antes de sembrar los proveedores concretos.
-ALTER TABLE orders.proveedores_pago
-  DROP CONSTRAINT IF EXISTS proveedores_pago_tipo_check;
-ALTER TABLE orders.proveedores_pago
-  ADD CONSTRAINT proveedores_pago_tipo_check
-  CHECK (tipo IN ('simulado', 'http', 'manual', 'tilopay', 'pagadito'));
-
 ALTER TABLE orders.pagos
   ADD COLUMN IF NOT EXISTS referencia_proveedor text NOT NULL DEFAULT '';
 
