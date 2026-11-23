@@ -175,6 +175,13 @@ jobs:
           export ADMIN_EMAIL ADMIN_PASSWORD
           npm run demo
 
+      - name: 🔎 Logs de orders al fallar
+        if: failure() && github.event.inputs.environment != 'prod'
+        env:
+          FILES: ${{ steps.cfg.outputs.files }}
+          DIGEST: ${{ steps.cfg.outputs.digest }}
+        run: docker compose $FILES $DIGEST logs --no-color --tail=160 orders-service
+
       - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
         if: github.event.inputs.environment != 'prod' && success()
         run: |
