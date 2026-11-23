@@ -6,6 +6,7 @@
 
 use crate::db::{iso_ms, uuid_opcional, uuid_texto, Db};
 use crate::errors::ApiError;
+use crate::pasarelas::{pagadito::Pagadito, tilopay::Tilopay};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
@@ -19,10 +20,19 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CargoExterno {
     pub referencia: String,
+    /// URL de pago alojada cuando la pasarela la devuelve (Tilopay/Pagadito).
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EstadoExterno {
+    Aprobado,
+    Rechazado,
+    Pendiente,
 }
 
 /// ACL de la pasarela de pagos (R-AR-6). El dominio solo conoce esta interfaz;
-/// un adaptador HTTP real o el simulado se inyectan desde `main.rs`.
+/// los adaptadores concretos se seleccionan por configuración.
 #[async_trait]
 pub trait ProveedorPagos: Send + Sync {
     fn nombre(&self) -> String;
@@ -39,6 +49,15 @@ pub trait ProveedorPagos: Send + Sync {
         monto_cents: i64,
         motivo: &str,
     ) -> Result<(), ApiError>;
+    /// Consulta el estado real en la pasarela. El webhook solo es una señal;
+    /// la decisión se toma con esta llamada.
+    async fn consultar(
+        &self,
+        _referencia: &str,
+        _datos: Option<&Value>,
+    ) -> Result<EstadoExterno, ApiError> {
+        Ok(EstadoExterno::Pendiente)
+    }
 }
 
 pub struct ProveedorSimulado;
@@ -57,6 +76,7 @@ impl ProveedorPagos for ProveedorSimulado {
     ) -> Result<CargoExterno, ApiError> {
         Ok(CargoExterno {
             referencia: format!("sim-{}", Uuid::new_v4()),
+            url: None,
         })
     }
 
@@ -180,7 +200,10 @@ impl ProveedorPagos for ProveedorHttp {
             .filter(|valor| !valor.is_empty())
             .ok_or_else(ApiError::interno)?
             .to_string();
-        Ok(CargoExterno { referencia })
+        Ok(CargoExterno {
+            referencia,
+            url: None,
+        })
     }
 
     async fn reembolsar(&self, referencia: &str, monto_cents: i64) -> Result<(), ApiError> {
@@ -264,6 +287,11 @@ pub struct Pago {
     pub monto_cents: i64,
     pub moneda: String,
     pub referencia: String,
+    /// Identificador de la transacción en la pasarela (orderNumber de
+    /// Tilopay, token de Pagadito). Vacío hasta que la pasarela lo informa.
+    /// No se expone en la API: es un detalle operativo de la pasarela.
+    #[serde(default, skip_serializing)]
+    pub referencia_proveedor: String,
     pub proveedor: String,
     pub monto_reembolsado_cents: i64,
     pub motivo_rechazo: String,
@@ -286,22 +314,48 @@ impl Pagos {
         }
     }
 
-    pub fn con_config(db: Arc<Db>, config: &crate::config::Config) -> Self {
-        let proveedor: Arc<dyn ProveedorPagos> = if config
-            .pago_proveedor
-            .eq_ignore_ascii_case("http")
-        {
-            match config.pago_proveedor_url.clone() {
-                Some(url) => Arc::new(ProveedorHttp::nuevo(url, config.pago_proveedor_key.clone())),
-                None => Arc::new(ProveedorSimulado),
+    /// Proveedor global de fallback. Falla si la configuración declarada no
+    /// puede construirse: arrancar simulando pagos cuando se pidió una pasarela
+    /// real sería peor que no arrancar.
+    pub fn con_config(db: Arc<Db>, config: &crate::config::Config) -> Result<Self, ApiError> {
+        let tipo = config.pago_proveedor.trim().to_ascii_lowercase();
+        let proveedor: Arc<dyn ProveedorPagos> = match tipo.as_str() {
+            "http" => {
+                let url = config.pago_proveedor_url.clone().ok_or_else(|| {
+                    ApiError::dominio(
+                        "PROVEEDOR_PAGO_INCOMPLETO",
+                        "PAGO_PROVEEDOR=http requiere PAGO_PROVEEDOR_URL.",
+                    )
+                })?;
+                Arc::new(ProveedorHttp::nuevo(url, config.pago_proveedor_key.clone()))
             }
-        } else {
-            Arc::new(ProveedorSimulado)
+            "tilopay" => {
+                let mut configuracion = json!({});
+                if let Some(url) = config.pago_proveedor_url.clone() {
+                    configuracion["base_url"] = json!(url);
+                }
+                Arc::new(Tilopay::nuevo(&configuracion)?)
+            }
+            "pagadito" => {
+                let mut configuracion = json!({});
+                if let Some(url) = config.pago_proveedor_url.clone() {
+                    configuracion["base_url"] = json!(url);
+                }
+                Arc::new(Pagadito::nuevo(&configuracion)?)
+            }
+            "manual" => Arc::new(ProveedorManual),
+            "simulado" => Arc::new(ProveedorSimulado),
+            otro => {
+                return Err(ApiError::dominio(
+                    "PROVEEDOR_PAGO_DESCONOCIDO",
+                    format!("PAGO_PROVEEDOR={otro} no es un tipo de proveedor válido."),
+                ))
+            }
         };
-        Self {
+        Ok(Self {
             db,
             proveedor_default: proveedor,
-        }
+        })
     }
 
     pub async fn listar_proveedores(&self) -> Result<Vec<ProveedorPago>, ApiError> {
@@ -622,6 +676,12 @@ impl Pagos {
             .map(|config| config.config)
             .unwrap_or_else(|| json!({}));
         let config = fusionar_config_tenant(&proveedor.config, &tenant_config);
+        if proveedor.tipo == "tilopay" {
+            return Ok(Arc::new(Tilopay::nuevo(&config)?));
+        }
+        if proveedor.tipo == "pagadito" {
+            return Ok(Arc::new(Pagadito::nuevo(&config)?));
+        }
         let Some(url) = config
             .get("url")
             .and_then(Value::as_str)
@@ -687,6 +747,153 @@ impl Pagos {
         }
     }
 
+    /// Resuelve un webhook sin confiar en su contenido: busca el pago por la
+    /// referencia y consulta el estado real a la pasarela. Devuelve el pago y
+    /// la decisión; el llamador mueve la orden con la saga existente.
+    pub async fn resolver_webhook(
+        &self,
+        proveedor: &str,
+        referencia: &str,
+        datos: Option<&Value>,
+    ) -> Result<(Pago, EstadoExterno), ApiError> {
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let fila = sqlx::query(
+            "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                    motivo_rechazo, confirmado_por, conciliado_en, confirmado_en, creado_en
+               FROM orders.pagos
+              WHERE referencia = $1 AND proveedor = $2
+              ORDER BY creado_en DESC LIMIT 1",
+        )
+        .bind(referencia)
+        .bind(proveedor)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        let Some(fila) = fila else {
+            return Err(ApiError::no_encontrado("Pago", referencia));
+        };
+        let pago = fila_pago(&fila)?;
+        let pago = self
+            .guardar_referencia_proveedor(pago, proveedor, datos)
+            .await?;
+        if matches!(
+            pago.estado.as_str(),
+            "confirmado" | "reembolsado" | "reembolsado_parcial"
+        ) {
+            return Ok((pago, EstadoExterno::Aprobado));
+        }
+        let proveedor = self.proveedor_de_pago(&pago).await?;
+        let estado = proveedor
+            .consultar(referencia_operativa(&pago), datos)
+            .await?;
+        Ok((pago, estado))
+    }
+
+    /// Persiste el identificador de la transacción que informa la pasarela.
+    /// Tilopay lo necesita para consultar y reembolsar; Pagadito usa el token
+    /// de la transacción para consultar el estado.
+    async fn guardar_referencia_proveedor(
+        &self,
+        mut pago: Pago,
+        proveedor: &str,
+        datos: Option<&Value>,
+    ) -> Result<Pago, ApiError> {
+        if !pago.referencia_proveedor.is_empty() {
+            return Ok(pago);
+        }
+        let Some(valor) = referencia_proveedor_de(proveedor, datos) else {
+            return Ok(pago);
+        };
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        sqlx::query(
+            "UPDATE orders.pagos
+                SET referencia_proveedor = $2, actualizado_en = NOW()
+              WHERE id = $1::uuid AND referencia_proveedor = ''",
+        )
+        .bind(&pago.id)
+        .bind(&valor)
+        .execute(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        pago.referencia_proveedor = valor;
+        Ok(pago)
+    }
+
+    /// Consulta el estado real de un pago ya cargado. Lo usa el job de
+    /// conciliación para no volver a buscar la fila por referencia.
+    pub async fn consultar_pago(
+        &self,
+        pago: &Pago,
+        datos: Option<&Value>,
+    ) -> Result<EstadoExterno, ApiError> {
+        let proveedor = self.proveedor_de_pago(pago).await?;
+        proveedor.consultar(referencia_operativa(pago), datos).await
+    }
+
+    /// Pagos pendientes con proveedor externo que ya superaron la ventana de
+    /// gracia. El job los consulta y decide; nunca confirma por el webhook.
+    /// Solo mira los últimos 30 días para acotar links abandonados.
+    pub async fn pendientes_de_conciliacion(
+        &self,
+        minutos_gracia: u64,
+        limite: i64,
+    ) -> Result<Vec<Pago>, ApiError> {
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        let filas = sqlx::query(
+            "SELECT p.id, p.order_id, p.empresa_id, p.metodo_codigo, p.estado, p.monto_cents,
+                    p.moneda, p.referencia, p.referencia_proveedor, p.proveedor,
+                    p.monto_reembolsado_cents, p.motivo_rechazo, p.confirmado_por,
+                    p.conciliado_en, p.confirmado_en, p.creado_en
+               FROM orders.pagos p
+              WHERE p.estado = 'pendiente'
+                AND p.referencia <> ''
+                AND p.proveedor NOT IN ('manual')
+                AND (
+                      EXISTS (
+                            SELECT 1
+                              FROM orders.proveedores_pago pr
+                             WHERE pr.codigo = p.proveedor
+                               AND pr.tipo IN ('tilopay', 'pagadito')
+                      )
+                      OR (
+                            p.proveedor = $3
+                            AND NOT EXISTS (
+                                  SELECT 1
+                                    FROM orders.proveedores_pago pr2
+                                   WHERE pr2.codigo = p.proveedor
+                            )
+                      )
+                )
+                AND p.creado_en < NOW() - ($1::int * INTERVAL '1 minute')
+                AND p.creado_en > NOW() - INTERVAL '30 days'
+              ORDER BY p.creado_en
+              LIMIT $2",
+        )
+        .bind(minutos_gracia as i32)
+        .bind(limite)
+        .bind(self.proveedor_default.nombre())
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        filas.iter().map(fila_pago).collect()
+    }
+
     pub async fn listar_metodos(&self) -> Result<Vec<MetodoPago>, ApiError> {
         let mut tx = self
             .db
@@ -712,7 +919,7 @@ impl Pagos {
             .map_err(crate::event_store::error_db)?;
         let filas = sqlx::query(
             "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                    moneda, referencia, proveedor, monto_reembolsado_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
                     motivo_rechazo, confirmado_por, conciliado_en,
                     confirmado_en, creado_en
                FROM orders.pagos
@@ -735,7 +942,7 @@ impl Pagos {
             .map_err(crate::event_store::error_db)?;
         let fila = sqlx::query(
             "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                    moneda, referencia, proveedor, monto_reembolsado_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
                     motivo_rechazo, confirmado_por, conciliado_en,
                     confirmado_en, creado_en
                FROM orders.pagos WHERE id = $1::uuid",
@@ -782,7 +989,7 @@ impl Pagos {
                     actualizado_en = NOW()
               WHERE id = $1::uuid AND estado = 'pendiente'
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )
@@ -809,6 +1016,34 @@ impl Pagos {
         };
         tx.commit().await.map_err(crate::event_store::error_db)?;
         fila_pago(&fila)
+    }
+
+    /// Deja constancia de un pago aprobado que no pudo aplicarse (por ejemplo,
+    /// capturado después de que la orden expirara). No cambia su estado; un
+    /// operador decide el reembolso con el flujo existente.
+    pub async fn registrar_incidencia(
+        &self,
+        pago: &Pago,
+        tipo: &str,
+        motivo: &str,
+    ) -> Result<(), ApiError> {
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        self.registrar_evento(
+            &mut tx,
+            &pago.id,
+            tipo,
+            pago.monto_cents,
+            motivo,
+            None,
+            json!({ "estado": pago.estado }),
+        )
+        .await?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        Ok(())
     }
 
     /// Método activo por código; `None` si no existe o está inactivo.
@@ -843,18 +1078,34 @@ impl Pagos {
         metodo: &MetodoPago,
         monto_cents: i64,
         moneda: &str,
-    ) -> Result<(), ApiError> {
-        let estado = if metodo.requiere_confirmacion {
-            "pendiente"
-        } else {
-            "confirmado"
-        };
+    ) -> Result<Option<String>, ApiError> {
         let cargo_externo = metodo
             .config
             .get("cargo_externo")
             .and_then(Value::as_bool)
             .unwrap_or(metodo.codigo == "simulado");
         let (proveedor_codigo, proveedor) = self.proveedor_para(empresa_id, negocio_id).await?;
+        let simulado_permitido = metodo.codigo == "simulado"
+            || metodo
+                .config
+                .get("simulado")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+        if cargo_externo && proveedor.nombre() == "simulado" && !simulado_permitido {
+            return Err(ApiError::dominio(
+                "PAGO_SIMULADO_NO_PERMITIDO",
+                "El método de pago requiere una pasarela real configurada.",
+            ));
+        }
+        // Una pasarela real nunca nace confirmada: el dinero todavía no se ha
+        // cobrado. Solo el simulado puede dar por pagada la orden al instante.
+        let estado = if metodo.requiere_confirmacion
+            || (cargo_externo && proveedor.nombre() != "simulado")
+        {
+            "pendiente"
+        } else {
+            "confirmado"
+        };
         let cargo = if cargo_externo {
             Some(proveedor.crear_cargo(order_id, monto_cents, moneda).await?)
         } else {
@@ -865,7 +1116,11 @@ impl Pagos {
         } else {
             "manual".to_string()
         };
-        let referencia = cargo.map(|cargo| cargo.referencia).unwrap_or_default();
+        let referencia = cargo
+            .as_ref()
+            .map(|cargo| cargo.referencia.clone())
+            .unwrap_or_default();
+        let pago_url = cargo.and_then(|cargo| cargo.url);
         let mut tx = self
             .db
             .transaccion_servicio()
@@ -890,7 +1145,7 @@ impl Pagos {
         .await
         .map_err(crate::event_store::error_db)?;
         tx.commit().await.map_err(crate::event_store::error_db)?;
-        Ok(())
+        Ok(pago_url)
     }
 
     /// Reembolso total o parcial. Actualiza el acumulado y deja auditoría.
@@ -920,7 +1175,7 @@ impl Pagos {
         if !pago.referencia.is_empty() {
             self.proveedor_de_pago(&pago)
                 .await?
-                .reembolsar(&pago.referencia, monto_cents)
+                .reembolsar(referencia_operativa(&pago), monto_cents)
                 .await?;
         }
         let total_reembolsado = pago.monto_reembolsado_cents + monto_cents;
@@ -967,7 +1222,7 @@ impl Pagos {
         if !pago.referencia.is_empty() {
             self.proveedor_de_pago(&pago)
                 .await?
-                .contracargar(&pago.referencia, monto_cents, motivo)
+                .contracargar(referencia_operativa(&pago), monto_cents, motivo)
                 .await?;
         }
         let total_reembolsado = (pago.monto_reembolsado_cents + monto_cents).min(pago.monto_cents);
@@ -999,7 +1254,7 @@ impl Pagos {
                 SET conciliado_en = COALESCE(conciliado_en, NOW()), actualizado_en = NOW()
               WHERE id = $1::uuid
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )
@@ -1043,7 +1298,7 @@ impl Pagos {
                 SET estado = $2, monto_reembolsado_cents = $3, actualizado_en = NOW()
               WHERE id = $1::uuid
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )
@@ -1175,6 +1430,30 @@ impl Pagos {
     }
 }
 
+/// Identificador de la transacción en la pasarela, si el aviso lo trae.
+fn referencia_proveedor_de(proveedor: &str, datos: Option<&Value>) -> Option<String> {
+    let datos = datos?;
+    let valor = match proveedor {
+        "tilopay" => datos.get("orderNumber").and_then(Value::as_str),
+        "pagadito" => datos
+            .get("resource")
+            .and_then(|recurso| recurso.get("token"))
+            .and_then(Value::as_str),
+        _ => None,
+    }?
+    .trim();
+    (!valor.is_empty()).then(|| valor.to_string())
+}
+
+/// Referencia que espera la pasarela para consultar o modificar el pago.
+fn referencia_operativa(pago: &Pago) -> &str {
+    if pago.referencia_proveedor.is_empty() {
+        &pago.referencia
+    } else {
+        &pago.referencia_proveedor
+    }
+}
+
 fn fila_pago(fila: &sqlx::postgres::PgRow) -> Result<Pago, ApiError> {
     let confirmado_en: Option<DateTime<Utc>> = fila
         .try_get("confirmado_en")
@@ -1204,6 +1483,9 @@ fn fila_pago(fila: &sqlx::postgres::PgRow) -> Result<Pago, ApiError> {
             .map_err(crate::event_store::error_db)?,
         referencia: fila
             .try_get("referencia")
+            .map_err(crate::event_store::error_db)?,
+        referencia_proveedor: fila
+            .try_get("referencia_proveedor")
             .map_err(crate::event_store::error_db)?,
         proveedor: fila
             .try_get("proveedor")
@@ -1274,7 +1556,20 @@ fn fusionar_config(base: &Value, extra: &Value) -> Value {
 /// Claves que solo puede definir la plataforma (admin), nunca el tenant:
 /// permitir que el tenant las sobrescriba convierte la configuración de pagos
 /// en un SSRF con exfiltración de variables de entorno.
-const CONFIG_RESERVADA: [&str; 3] = ["url", "clave_env", "webhook_secreto_env"];
+const CONFIG_RESERVADA: [&str; 12] = [
+    "url",
+    "base_url",
+    "clave_env",
+    "apiuser_env",
+    "password_env",
+    "key_env",
+    "uid_env",
+    "wsk_env",
+    "webhook_secreto_env",
+    "webhook_url",
+    "callback_url",
+    "return_url",
+];
 
 /// Fusiona la config del proveedor con la del tenant, ignorando las claves
 /// reservadas en la parte del tenant.
@@ -1312,7 +1607,7 @@ fn configuracion_de(datos: &Value) -> Value {
 }
 
 fn validar_tipo_proveedor(tipo: &str) -> Result<(), ApiError> {
-    if ["simulado", "http", "manual"].contains(&tipo) {
+    if ["simulado", "http", "manual", "tilopay", "pagadito"].contains(&tipo) {
         Ok(())
     } else {
         Err(ApiError::validacion(json!([
@@ -1444,7 +1739,13 @@ mod tests {
 
     #[test]
     fn debe_rechazar_url_y_claves_de_entorno_del_tenant() {
-        for clave in ["url", "clave_env", "webhook_secreto_env"] {
+        for clave in [
+            "url",
+            "clave_env",
+            "webhook_secreto_env",
+            "callback_url",
+            "return_url",
+        ] {
             let config = json!({ clave: "https://attacker.tld" });
             assert!(
                 validar_config_tenant(&config).is_err(),
@@ -1470,6 +1771,23 @@ mod tests {
         assert_eq!(fusionada["url"], "https://pasarela.example");
         assert_eq!(fusionada["clave_env"], "PAGO_PROVEEDOR_KEY");
         assert_eq!(fusionada["timeout_ms"], 9000);
+    }
+
+    #[test]
+    fn debe_extraer_la_referencia_del_proveedor() {
+        assert_eq!(
+            referencia_proveedor_de("tilopay", Some(&json!({"orderNumber": " T-1 "}))),
+            Some("T-1".to_string())
+        );
+        assert_eq!(
+            referencia_proveedor_de("pagadito", Some(&json!({"resource": {"token": "tok"}}))),
+            Some("tok".to_string())
+        );
+        assert_eq!(
+            referencia_proveedor_de("pagadito", Some(&json!({"resource": {"ern": "o-1"}}))),
+            None
+        );
+        assert_eq!(referencia_proveedor_de("tilopay", None), None);
     }
 
     #[tokio::test]

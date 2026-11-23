@@ -66,6 +66,7 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/auth/verificar-correo$", &["POST"], None),
             p(r"^/api/v2/auth/reenviar-verificacion$", &["POST"], None),
             p(r"^/api/v2/pagos/webhook$", &["POST"], None),
+            p(r"^/api/v2/pagos/(tilopay|pagadito)/webhook$", &["POST"], None),
             p(r"^/api/v2/auth/mfa(/|$)", &["POST"], Some(todos.clone())),
             p(r"^/api/v2/auth/sesiones(/|$)", &["GET", "DELETE"], Some(todos.clone())),
             p(r"^/api/v2/packs(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),

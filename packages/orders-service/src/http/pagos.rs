@@ -2,9 +2,9 @@
 
 use super::{created, ok, Cuerpo};
 use crate::auth::{exigir_clave_interna, UsuarioContexto};
-use crate::checkout::PAYMENT_PROCESADO;
 use crate::errors::ApiError;
-use crate::pagos::Pago;
+use crate::pagos::{EstadoExterno, Pago};
+use crate::pagos_flujo::FlujoPagos;
 use crate::state::AppState;
 use axum::extract::{Path, Query, Request, State};
 use axum::http::HeaderMap;
@@ -50,6 +50,8 @@ pub fn rutas() -> Router<AppState> {
         .route("/api/v2/admin/pagos/{id}/conciliar", post(conciliar_pago))
         .route("/internal/pagos/webhook", post(webhook_pago_interno))
         .route("/api/v2/pagos/webhook", post(webhook_pago_publico))
+        .route("/api/v2/pagos/tilopay/webhook", post(webhook_tilopay))
+        .route("/api/v2/pagos/pagadito/webhook", post(webhook_pagadito))
 }
 
 /// `GET /api/v2/orders/metodos-pago` (cualquier usuario autenticado).
@@ -310,6 +312,77 @@ fn negocio_de(query: &HashMap<String, String>) -> Result<Option<&str>, ApiError>
     Ok(negocio)
 }
 
+/// `POST /api/v2/pagos/tilopay/webhook`
+pub async fn webhook_tilopay(
+    State(state): State<AppState>,
+    Query(query): Query<HashMap<String, String>>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let referencia = query
+        .get("order_id")
+        .map(String::as_str)
+        .or_else(|| dto.get("orderNumber").and_then(Value::as_str))
+        .or_else(|| dto.get("reference").and_then(Value::as_str))
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "orderNumber", "restricciones": ["isString"]}]))
+        })?;
+    procesar_webhook_pasarela(state, "tilopay", referencia, &dto).await
+}
+
+/// `POST /api/v2/pagos/pagadito/webhook`
+pub async fn webhook_pagadito(
+    State(state): State<AppState>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let referencia = dto
+        .get("resource")
+        .and_then(|recurso| recurso.get("ern"))
+        .or_else(|| dto.get("ern"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "resource.ern", "restricciones": ["isString"]}]))
+        })?;
+    procesar_webhook_pasarela(state, "pagadito", referencia, &dto).await
+}
+
+async fn procesar_webhook_pasarela(
+    state: AppState,
+    proveedor: &str,
+    referencia: &str,
+    datos: &Value,
+) -> Result<Response, ApiError> {
+    let actor = "00000000-0000-4000-8000-000000000000";
+    let (pago, estado) = state
+        .pagos()?
+        .resolver_webhook(proveedor, referencia, Some(datos))
+        .await?;
+    match estado {
+        EstadoExterno::Aprobado => {
+            if pago.estado != "pendiente" {
+                return ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?);
+            }
+            confirmar_pago_y_orden(&state, pago, actor).await
+        }
+        EstadoExterno::Rechazado => {
+            if pago.estado != "pendiente" {
+                return ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?);
+            }
+            let motivo = "rechazado por la pasarela";
+            let rechazado = state.pagos()?.rechazar(&pago.id, motivo, actor).await?;
+            rechazar_y_cancelar(&state, rechazado, motivo, actor).await
+        }
+        EstadoExterno::Pendiente => ok(json!({
+            "proveedor": proveedor,
+            "referencia": referencia,
+            "estado": "pendiente",
+        })),
+    }
+}
+
 /// `POST /internal/pagos/webhook` (servicio→servicio; clave interna + HMAC).
 pub async fn webhook_pago_interno(
     State(state): State<AppState>,
@@ -427,8 +500,15 @@ async fn procesar_webhook(
         .unwrap_or("00000000-0000-4000-8000-000000000000");
     match estado {
         "confirmado" => {
-            let pago = state.pagos()?.confirmar(pago_id, actor).await?;
-            confirmar_y_avanzar(&state, pago, actor).await
+            let pago = state
+                .pagos()?
+                .obtener(pago_id)
+                .await?
+                .ok_or_else(|| ApiError::no_encontrado("Pago", pago_id))?;
+            if pago.estado != "pendiente" {
+                return ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?);
+            }
+            confirmar_pago_y_orden(&state, pago, actor).await
         }
         "rechazado" => {
             let motivo = motivo_de(&dto);
@@ -455,36 +535,22 @@ async fn confirmar_y_avanzar(
     pago: Pago,
     actor_id: &str,
 ) -> Result<Response, ApiError> {
-    let vista = state
-        .vistas()?
-        .encontrar(state.db()?, &pago.order_id)
-        .await?
-        .ok_or_else(|| ApiError::no_encontrado("Orden", &pago.order_id))?;
-    state
-        .checkout()?
-        .transicionar(
-            &pago.order_id,
-            "pagada",
-            Some("pago_confirmado"),
-            Some(actor_id),
-            Some((
-                PAYMENT_PROCESADO,
-                json!({
-                    "order_id": pago.order_id,
-                    "monto_cents": pago.monto_cents,
-                    "moneda": pago.moneda,
-                    "estado": "procesado",
-                    "metodo": pago.metodo_codigo,
-                    "items": vista.items.iter().map(|item| json!({
-                        "sku": item.sku,
-                        "cantidad": item.cantidad,
-                        "empresa_id": item.empresa_id,
-                    })).collect::<Vec<_>>(),
-                }),
-            )),
-        )
-        .await?;
+    let flujo = FlujoPagos::nuevo(std::sync::Arc::clone(state.checkout()?));
+    flujo.confirmar(&pago, actor_id).await?;
     ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
+}
+
+/// Confirma el pago y avanza la orden en el orden que permite reintentar: si la
+/// transición falla, la fila sigue `pendiente` y la conciliación la recupera.
+async fn confirmar_pago_y_orden(
+    state: &AppState,
+    pago: Pago,
+    actor_id: &str,
+) -> Result<Response, ApiError> {
+    let flujo = FlujoPagos::nuevo(std::sync::Arc::clone(state.checkout()?));
+    flujo.confirmar(&pago, actor_id).await?;
+    let confirmado = state.pagos()?.confirmar(&pago.id, actor_id).await?;
+    ok(serde_json::to_value(confirmado).map_err(|_| ApiError::interno())?)
 }
 
 async fn rechazar_y_cancelar(
@@ -496,16 +562,8 @@ async fn rechazar_y_cancelar(
     // `transicionar` emite `order.cancelled` para liberar stock. Un rechazo de
     // pago ocurre antes de que exista una venta, así que no corresponde emitir
     // `devolucion.solicitada` ni revertir asientos contables.
-    state
-        .checkout()?
-        .transicionar(
-            &pago.order_id,
-            "cancelada",
-            Some(motivo),
-            Some(actor_id),
-            None,
-        )
-        .await?;
+    let flujo = FlujoPagos::nuevo(std::sync::Arc::clone(state.checkout()?));
+    flujo.rechazar(&pago, motivo, actor_id).await?;
     ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?)
 }
 

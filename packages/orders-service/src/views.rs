@@ -42,6 +42,8 @@ pub struct OrderView {
     pub actualizado_en: String,
     pub tipo_orden: String,
     pub metodo_pago: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pago_url: Option<String>,
     pub fulfillment_config: Value,
     pub pagada_en: Option<String>,
     pub enviada_en: Option<String>,
@@ -308,6 +310,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
             .map_err(error_db)?,
         tipo_orden: fila.try_get("tipo_orden").map_err(error_db)?,
         metodo_pago: fila.try_get("metodo_pago").map_err(error_db)?,
+        pago_url: None,
         fulfillment_config: fila
             .try_get("fulfillment_config")
             .unwrap_or(Value::Object(Default::default())),
@@ -361,6 +364,7 @@ mod tests {
             actualizado_en: "2026-01-01T00:00:00.000Z".into(),
             tipo_orden: "compra".into(),
             metodo_pago: "simulado".into(),
+            pago_url: None,
             fulfillment_config: Value::Object(Default::default()),
             pagada_en: None,
             enviada_en: None,
