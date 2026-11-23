@@ -77,6 +77,22 @@ services:
     networks:
       - core-engine
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env"
+    environment:
+      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:-http://127.0.0.1:9095/alerts}
+    volumes:
+      - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    depends_on:
+      - prometheus
+    networks:
+      - core-engine
+
   grafana:
     image: grafana/grafana:11.3.0
     environment:
@@ -86,7 +102,7 @@ services:
     volumes:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     networks:
