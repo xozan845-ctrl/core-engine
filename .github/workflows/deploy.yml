@@ -148,10 +148,11 @@ jobs:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
         run: |
           # El admin se siembra con las credenciales del .env del stack; el
-          # demo debe usar esas mismas, no sus defaults.
-          set -a
-          . ./.env
-          set +a
+          # demo debe usar esas mismas, no sus defaults. No se hace `source`
+          # porque los valores pueden contener espacios.
+          ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' .env | cut -d= -f2-)"
+          ADMIN_PASSWORD="$(grep -E '^ADMIN_PASSWORD=' .env | cut -d= -f2-)"
+          export ADMIN_EMAIL ADMIN_PASSWORD
           npm run demo
 
       - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
