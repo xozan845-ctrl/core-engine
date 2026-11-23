@@ -664,7 +664,11 @@ impl Checkout {
         entregas: &[EntregaPlan],
         vaciar_carrito: Option<&str>,
     ) -> Result<(), ApiError> {
-        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        // El checkout lo inicia un comprador sin tenant. La proyección
+        // `orders.orden_vista` y las entregas tienen `empresa_id`; con la
+        // política RLS del comprador el INSERT falla. Se usa el claim de
+        // servicio, igual que el registro de pagos.
+        let mut tx = self.db.transaccion_servicio().await.map_err(error_db)?;
         OrderEventStore
             .append_en_transaccion(&mut tx, order_id, "OrderCreatedEvent", evento_payload)
             .await?;
