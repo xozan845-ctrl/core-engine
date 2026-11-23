@@ -459,9 +459,9 @@ mod tests {
 
     #[test]
     fn debe_hashear_y_verificar_contrasenas() {
-        let hash = hash_contrasena("Contrasena123!").expect("hash");
+        let hash = hash_contrasena("Fuego-Laguna-2026!").expect("hash");
         assert!(hash.starts_with("$2"));
-        assert!(verificar_contrasena("Contrasena123!", &hash));
+        assert!(verificar_contrasena("Fuego-Laguna-2026!", &hash));
         assert!(!verificar_contrasena("otra", &hash));
     }
 

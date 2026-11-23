@@ -53,10 +53,10 @@ export async function suite18Field(client, cfg, adminToken, compradorToken, logi
 
   // Usuario comprador propio (fresco, evita token nulo por rate-limit del runner)
   const compCorreo = `comprador.qa.${suf}@test.com`;
-  const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: compCorreo, contrasena: 'Contrasena123!', rol: 'comprador' });
+  const regC = await client.post('/api/v2/auth/registro', { nombre: 'Comprador QA', correo: compCorreo, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador' });
   let compToken = regC.body?.access_token;
   if (!compToken) {
-    const lc = await client.post('/api/v2/auth/login', { correo: compCorreo, contrasena: 'Contrasena123!' });
+    const lc = await client.post('/api/v2/auth/login', { correo: compCorreo, contrasena: 'Fuego-Laguna-2026!' });
     compToken = lc.body?.access_token;
   }
   const authC = { authorization: `Bearer ${compToken}` };

@@ -16,7 +16,7 @@ pub const PUERTO_IDENTITY: u16 = 3001;
 pub const JWT_ACCESS_TTL_DEFAULT: &str = "900s";
 pub const JWT_REFRESH_TTL_DEFAULT: &str = "7d";
 pub const ADMIN_EMAIL_DEFAULT: &str = "admin@core-engine.test";
-pub const ADMIN_PASSWORD_DEFAULT: &str = "AdminCore Engine2026!";
+pub const ADMIN_PASSWORD_DEFAULT: &str = "Fuego-Laguna-2026!";
 pub const JWT_SECRET_DEFAULT: &str = "dev_secret";
 
 #[derive(Debug, Clone, PartialEq, Eq)]

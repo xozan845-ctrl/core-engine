@@ -88,13 +88,13 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
     // setup para no chocar con la ventana de rate-limit de /auth/login)
     const correoB = 'idor.comprador@test.com';
     const regB = await client.post('/api/v2/auth/registro', {
-      nombre: 'Comprador IDOR', correo: correoB, contrasena: 'Contrasena123!', rol: 'comprador',
+      nombre: 'Comprador IDOR', correo: correoB, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador',
     });
     let cBToken = null;
     if (regB.status === 200 || regB.status === 201) {
       cBToken = regB.body.access_token;
     } else {
-      const lgB = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
+      const lgB = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Fuego-Laguna-2026!' });
       if (lgB.status === 200 || lgB.status === 201) cBToken = lgB.body.access_token;
     }
     const cB = cBToken ? { authorization: `Bearer ${cBToken}` } : {};
@@ -103,7 +103,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
       // Si el token del comprador B no era valido (p. ej. ventana de rate-limit),
       // reintentar una vez con login fresco antes de concluir
       if (idor.status === 401) {
-        const lgB2 = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Contrasena123!' });
+        const lgB2 = await client.post('/api/v2/auth/login', { correo: correoB, contrasena: 'Fuego-Laguna-2026!' });
         if (lgB2.status === 200 || lgB2.status === 201) {
           idor = await client.get(`/api/v2/orders/${setup.orden.body.id}`, { authorization: `Bearer ${lgB2.body.access_token}` });
         }
@@ -170,7 +170,7 @@ export async function suite16Owas(client, cfg, adminToken, vendedorToken, compra
 
     // ── A04 Insecure Design / Mass Assignment ────────────────────────────
     const ma = await client.post('/api/v2/auth/registro', {
-      nombre: 'MA Probe', correo: `ma.${suf}@test.com`, contrasena: 'Contrasena123!',
+      nombre: 'MA Probe', correo: `ma.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!',
       rol: 'comprador', es_admin: true, saldo_usd: 999999,
     });
     const maMe = ma.status === 201 ? await client.get('/api/v2/auth/me', { authorization: `Bearer ${ma.body.access_token}` }) : null;

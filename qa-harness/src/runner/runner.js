@@ -145,7 +145,7 @@ export class Runner {
     const datos = {
       nombre: 'Vendedor QA',
       correo: 'vendedor.qa@test.com',
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       participacion_porcentaje: 10,
     };
     const auth = { authorization: `Bearer ${this.empresarioToken}` };
@@ -188,13 +188,13 @@ export class Runner {
     const regC = await this.client.post('/api/v2/auth/registro', {
       nombre: 'Comprador QA',
       correo: 'comprador.qa@test.com',
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'comprador',
     });
     if (regC.status === 200 || regC.status === 201) {
       this.compradorToken = regC.body.access_token;
     } else {
-      const loginC = await this.loginConReintento('comprador.qa@test.com', 'Contrasena123!');
+      const loginC = await this.loginConReintento('comprador.qa@test.com', 'Fuego-Laguna-2026!');
       if (loginC.status === 200 || loginC.status === 201) {
         this.compradorToken = loginC.body.access_token;
       }
