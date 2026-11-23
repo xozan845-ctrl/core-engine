@@ -96,7 +96,7 @@ async fn debe_consumir_lotes_en_orden_fefo_y_descontar_stock() {
             "empresa_id": EMPRESA,
             "item_id": ITEM,
             "codigo_lote": "L-TARDE",
-            "vence_en": "2026-12-31",
+            "vence_en": "2027-12-31",
             "cantidad_inicial": 5
         }))
         .await
@@ -106,7 +106,7 @@ async fn debe_consumir_lotes_en_orden_fefo_y_descontar_stock() {
             "empresa_id": EMPRESA,
             "item_id": ITEM,
             "codigo_lote": "L-PRONTO",
-            "vence_en": "2026-11-20",
+            "vence_en": "2027-11-20",
             "cantidad_inicial": 10
         }))
         .await
