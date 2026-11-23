@@ -78,7 +78,7 @@ services:
       # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
       interval: 5s
       timeout: 5s
       retries: 12
