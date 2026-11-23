@@ -276,6 +276,7 @@ mod tests {
             actualizado_en: "2026-01-01T00:00:00.000Z".into(),
             tipo_orden: "compra".into(),
             metodo_pago: "simulado".into(),
+            pago_url: None,
             fulfillment_config: json!({}),
             pagada_en: None,
             enviada_en: None,

@@ -44,6 +44,8 @@ libre.
   `monto_reembolsado_cents` y `conciliado_en`; se añaden tres rutas admin.
 - **Pendiente:** conciliación automática contra el estado de la pasarela,
   webhooks de reembolso/contracargo y asiento contable automático del reembolso.
+  Ver [ADR-0048](./0048-pasarelas-tilopay-pagadito.md) para los adaptadores
+  concretos y la conciliación programada.
 
 ## Criterios de aceptación
 

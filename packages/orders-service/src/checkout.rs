@@ -613,7 +613,8 @@ impl Checkout {
                 None
             }
         };
-        self.pagos
+        let pago_url = self
+            .pagos
             .registrar(
                 &order_id,
                 empresa_pago.as_deref(),
@@ -645,6 +646,7 @@ impl Checkout {
             actualizado_en: creado_en,
             tipo_orden: tipo_orden.to_string(),
             metodo_pago: metodo_pago.to_string(),
+            pago_url,
             fulfillment_config: resumen,
             pagada_en: None,
             enviada_en: None,
@@ -774,14 +776,24 @@ impl Checkout {
         });
         self.insertar_outbox(&mut tx, &evento).await?;
         if liberar_stock {
-            // Un pago manual que seguía pendiente ya no puede confirmarse:
-            // se rechaza en la misma transacción que la cancelación.
+            // Un pago manual que seguía pendiente ya no puede confirmarse: se
+            // rechaza en la misma transacción que la cancelación. Los cargos
+            // de una pasarela externa se dejan pendientes: el comprador pudo
+            // pagar en el checkout alojado después del TTL y la conciliación
+            // debe detectarlo y registrar un pago tardío.
             sqlx::query(
-                "UPDATE orders.pagos
+                "UPDATE orders.pagos AS p
                     SET estado = 'rechazado',
                         motivo_rechazo = COALESCE(NULLIF(motivo_rechazo, ''), $2),
                         actualizado_en = NOW()
-                  WHERE order_id = $1::uuid AND estado = 'pendiente'",
+                  WHERE p.order_id = $1::uuid
+                    AND p.estado = 'pendiente'
+                    AND NOT EXISTS (
+                          SELECT 1
+                            FROM orders.proveedores_pago pr
+                           WHERE pr.codigo = p.proveedor
+                             AND pr.tipo IN ('tilopay', 'pagadito')
+                    )",
             )
             .bind(order_id)
             .bind(motivo_cancelacion)

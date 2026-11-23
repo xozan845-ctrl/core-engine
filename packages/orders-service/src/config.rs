@@ -13,6 +13,8 @@ pub const TASA_COMISION_DEFAULT: f64 = 0.12;
 pub const CARRITO_EXPIRACION_MS: i64 = 30 * 60 * 1000;
 pub const ORDEN_PAGO_TTL_MINUTOS_DEFAULT: u64 = 30;
 pub const ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT: u64 = 60;
+pub const PAGOS_CONCILIACION_INTERVALO_SEGUNDOS_DEFAULT: u64 = 900;
+pub const PAGOS_CONCILIACION_MINUTOS_DEFAULT: u64 = 10;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
@@ -39,6 +41,10 @@ pub struct Config {
     /// el barrido.
     pub orden_pago_ttl_minutos: u64,
     pub orden_expiracion_intervalo_segundos: u64,
+    /// Cada cuántos segundos se consultan los pagos pendientes con pasarela.
+    pub pagos_conciliacion_intervalo_segundos: u64,
+    /// Ventana de gracia antes de consultar un pago pendiente.
+    pub pagos_conciliacion_minutos: u64,
 }
 
 impl Config {
@@ -130,6 +136,13 @@ impl Config {
                 .and_then(|valor| valor.parse::<u64>().ok())
                 .filter(|segundos| *segundos > 0)
                 .unwrap_or(ORDEN_EXPIRACION_INTERVALO_SEGUNDOS_DEFAULT),
+            pagos_conciliacion_intervalo_segundos: leer("PAGOS_CONCILIACION_INTERVALO_SEGUNDOS")
+                .and_then(|valor| valor.parse::<u64>().ok())
+                .filter(|segundos| *segundos > 0)
+                .unwrap_or(PAGOS_CONCILIACION_INTERVALO_SEGUNDOS_DEFAULT),
+            pagos_conciliacion_minutos: leer("PAGOS_CONCILIACION_MINUTOS")
+                .and_then(|valor| valor.parse::<u64>().ok())
+                .unwrap_or(PAGOS_CONCILIACION_MINUTOS_DEFAULT),
             tasa_comision: match leer("COMMISSION_RATE") {
                 Some(valor) => valor
                     .parse::<f64>()
