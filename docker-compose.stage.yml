@@ -30,6 +30,23 @@ x-servicio-base: &servicio-base
   networks:
     - core-engine
   restart: unless-stopped
+  stop_grace_period: 30s
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$$PORT/health >/dev/null || exit 1"]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  deploy:
+    resources:
+      limits:
+        cpus: "1.0"
+        memory: 512M
 
 services:
   # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──

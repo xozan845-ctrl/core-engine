@@ -20,7 +20,7 @@ RUN touch packages/logistics-service/src/main.rs \
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /repo/packages/logistics-service/target/release/logistics-service /usr/local/bin/logistics-service
