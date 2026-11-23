@@ -31,6 +31,17 @@ impl Db {
     pub async fn conectar(url: &str) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
             .max_connections(pool_max())
+            // Claim por defecto para jobs y conexiones sin usuario; las
+            // transacciones HTTP lo sobreescriben con el usuario real.
+            .after_connect(|conn, _| {
+                Box::pin(async move {
+                    sqlx::query("SELECT set_config('request.jwt.claims', $1, false)")
+                        .bind(serde_json::json!({ "rol": "super_admin" }).to_string())
+                        .execute(conn)
+                        .await?;
+                    Ok::<(), sqlx::Error>(())
+                })
+            })
             .connect(url)
             .await?;
         sqlx::query("SELECT 1").execute(&pool).await?;
