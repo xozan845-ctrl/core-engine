@@ -45,11 +45,18 @@ capacidad de **fidelización**.
 | `INTERNAL_API_KEY` | Recomendada | — | Internos + clientes |
 | `COMMISSION_RATE` | No | `0.12` | Comisión RN-04 |
 | `PAGO_WEBHOOK_SECRET` | Recomendada | — | Webhook de pagos (`x-webhook-secret`) |
-| `PAGO_PROVEEDOR` | No | `simulado` | Adaptador de pagos (`simulado`/`http`) |
-| `PAGO_PROVEEDOR_URL` | Solo `http` | — | Base de la pasarela (`/cargos`, `/reembolsos`, `/contracargos`) |
-| `PAGO_PROVEEDOR_KEY` | No | — | Bearer de la pasarela |
+| `PAGO_PROVEEDOR` | No | `simulado` | Proveedor global (`simulado`/`http`/`manual`/`tilopay`/`pagadito`) |
+| `PAGO_PROVEEDOR_URL` | Solo `http`/pasarela | — | Base de la pasarela (Tilopay) o endpoint APIPG (Pagadito) |
+| `PAGO_PROVEEDOR_KEY` | No | — | Bearer de la pasarela `http` |
+| `TILOPAY_APIUSER` | Solo `tilopay` | — | Usuario API de Tilopay |
+| `TILOPAY_PASSWORD` | Solo `tilopay` | — | Contraseña API de Tilopay |
+| `TILOPAY_KEY` | Solo `tilopay` | — | Integration key de Tilopay |
+| `PAGADITO_UID` | Solo `pagadito` | — | UID del comercio Pagadito |
+| `PAGADITO_WSK` | Solo `pagadito` | — | WSK del comercio Pagadito |
 | `ORDEN_PAGO_TTL_MINUTOS` | No | `30` | Minutos antes de cancelar una orden impaga (`0` desactiva) |
 | `ORDEN_EXPIRACION_INTERVALO_SEGUNDOS` | No | `60` | Frecuencia del barrido de órdenes impagas |
+| `PAGOS_CONCILIACION_INTERVALO_SEGUNDOS` | No | `900` | Frecuencia de la conciliación con la pasarela |
+| `PAGOS_CONCILIACION_MINUTOS` | No | `10` | Ventana de gracia antes de consultar un pago pendiente |
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Ofertas |
 | `ITEM_SERVICE_URL` | No | `http://item-service:3015` | Items |
 | `PRICING_SERVICE_URL` | No | `http://pricing-service:3014` | Precios |
@@ -241,10 +248,38 @@ Campos: `codigo`, `nombre`, `requiere_confirmacion`, `activo`, `config`.
   `PUT /api/v2/empresas/{id}/configuracion-pagos`; el pago queda `pendiente` y
   un admin lo confirma en `POST /api/v2/admin/pagos/{id}/confirmar`. No exige
   pasarela externa y conserva reembolso/conciliación manuales.
-- Tipos disponibles: `simulado`, `http`, `manual`. Un `http` activo exige
-  `config.url`; la clave y el secreto de webhook se referencian por variable de
-  entorno (`clave_env`, `webhook_secreto_env`) y nunca se guardan en BD.
-- Sin configuración por tenant se usa el proveedor global.
+- Tipos disponibles: `simulado`, `http`, `manual`, `tilopay`, `pagadito`. Un
+  `http` activo exige `config.url`; Tilopay/Pagadito leen URL y credenciales de
+  `config.base_url` y de los nombres de variable (`apiuser_env`,
+  `password_env`, `key_env`, `uid_env`, `wsk_env`), nunca de la base.
+- Los adaptadores concretos viven en `src/pasarelas/`: Tilopay usa la API v1
+  (`/api/v1/login`, `createLinkPayment`, `consult`, `processModification`) y
+  Pagadito usa APIPG (`connect`, `exec_trans`, `get_status`). Añadir otra
+  pasarela es un `tipo` nuevo en la fábrica, sin tocar checkout ni finanzas.
+- URLs de Pagadito: producción
+  `https://comercios.pagadito.com/apipg/charges.php`; sandbox
+  `https://sandbox.pagadito.com/comercios/apipg/charges.php`. Se configura en
+  `config.base_url` del proveedor. Tilopay usa `https://app.tilopay.com` por
+  defecto y las credenciales de prueba se generan en su panel de desarrolladores.
+- Sin configuración por tenant se usa el proveedor global. `PAGO_PROVEEDOR`
+  desconocido o sin credenciales impide el arranque: nunca se degrada a
+  simulado en producción.
+- Los pagos con pasarela real nacen `pendiente`; solo el proveedor `simulado`
+  confirma al instante. Un método con `cargo_externo` que no sea `simulado`
+  falla si el proveedor resuelto es el simulado, salvo opt-in explícito con
+  `config.simulado=true`.
+- Webhooks públicos por pasarela:
+  - `POST /api/v2/pagos/tilopay/webhook`
+  - `POST /api/v2/pagos/pagadito/webhook`
+  Ambos son solo una señal: el handler busca el pago y **consulta el estado
+  real** antes de mover la orden. El identificador de la transacción que
+  informa la pasarela (`orderNumber`/`token`) se guarda en
+  `orders.pagos.referencia_proveedor` para reembolsos y conciliación.
+- Conciliación programada: cada 15 minutos consulta pagos `pendiente` con
+  pasarela y más de 10 minutos de antigüedad. Cubre webhooks perdidos; no
+  confirma nada que la pasarela no informe como aprobado.
+- Un pago aprobado cuando la orden ya expiró no se entrega: se registra
+  `pago.tardio` en `orders.pagos_eventos` y queda para reembolso manual.
 
 Ejemplo de configuración por empresa:
 
