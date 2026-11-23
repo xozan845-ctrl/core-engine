@@ -53,7 +53,7 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
     // 10. JWT truncado (token valido truncado) -> 401
     const loginTmp = await client.post('/api/v2/auth/login', {
       correo: 'admin@core-engine.test',
-      contrasena: 'AdminCore Engine2026!',
+      contrasena: 'Fuego-Laguna-2026!',
     });
     if (loginTmp.status === 200 || loginTmp.status === 201) {
       const truncado = await client.get('/api/v2/orders', { authorization: 'Bearer ' + loginTmp.body.access_token.slice(0, -5) });
@@ -73,7 +73,7 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
     for (let i = 0; i < 12; i++) {
       const r = await client.post('/api/v2/auth/login', {
         correo: 'admin@core-engine.test',
-        contrasena: 'AdminCore Engine2026!',
+        contrasena: 'Fuego-Laguna-2026!',
       });
       if (r.status === 429) rateLimited++;
     }
@@ -86,7 +86,7 @@ export async function suite02Acceso(client, cfg, adminToken, compradorToken, log
     // 14. 400: logistica NO es auto-registrable (rol de sistema, como admin)
     const regL = await client.post('/api/v2/auth/registro', {
       nombre: 'Log ext', correo: `log.${Date.now()}@test.com`,
-      contrasena: 'Contrasena123!', rol: 'logistica',
+      contrasena: 'Fuego-Laguna-2026!', rol: 'logistica',
     });
     resultados.push({ test: 'Registro publico con rol logistica → 400 (solo empresario/comprador)', status: regL.status, pass: regL.status === 400 });
 
