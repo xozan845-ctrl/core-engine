@@ -1,0 +1,59 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "pricing-service",
+    "boundedContext": "pricing",
+    "description": "Listas de precio, escalas, tarifas por fecha, cotizaciones y promociones.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "core",
+      "pricing"
+    ]
+  },
+  "spec": {
+    "profile": "core",
+    "runtime": "rust",
+    "port": 3014,
+    "schema": "pricing",
+    "outboxTable": "pricing.outbox",
+    "capabilities": [
+      "catalogo_items",
+      "cotizaciones"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "item-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/pricing-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 53,
+      "functions": 52
+    }
+  }
+}

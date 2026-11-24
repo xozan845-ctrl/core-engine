@@ -6,6 +6,15 @@
 > anteriores a 2026-10-01 pertenecen al proyecto origen y se conservan como
 > procedencia.
 
+> **Lectura rápida (2026-11-24, estado ejecutable):** el motor tiene **24 suites /
+> 100 tests / 67 de 254 IDs** con check. La suite `services-contract` verifica el
+> manifiesto de los 16 servicios y congela **34 entradas** de deuda
+> arquitectónica (15 `/ready`, 6 lecturas de entorno, 13 acoplamientos de
+> esquema) en `scripts/config/architecture-baseline.json`. El snapshot detallado
+> de abajo es histórico (incluye filas del stack Node anterior); la
+> re-auditoría completa de testing sigue pendiente. La arquitectura declarada y
+> su estado viven en [`docs/architecture/`](../../architecture/README.md).
+
 - **Última auditoría de testing:** 2026-11-11 — **17ª de Core Engine** (cierre del envelope `{data,meta}` y de los ADR de notificaciones).
 - **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR. G-1, G-3, G-4, G-5, G-6, G-7 y G-8 configurados y verdes; G-2 N/A. Deudas restantes: property/fuzz de fechas y fallos de broker, cobertura de `market-intelligence` y `commissions`, 45 warnings `no-explicit-any` y 12 moderates + 1 low de tooling.
 - **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad. Los 21 archivos de deuda de identity, orders, finance, inventory, item, logistics, storage, pricing y stores se dividieron por responsabilidad y el baseline quedó en `debt: {}`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.

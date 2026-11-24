@@ -1,0 +1,72 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "finance-service",
+    "boundedContext": "finance",
+    "description": "Comercio, contabilidad, tributación, facturación, proyecciones y KPIs.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "finance"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3007,
+    "schema": "finance",
+    "outboxTable": "finance.outbox",
+    "capabilities": [
+      "facturacion",
+      "facturacion_electronica"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "orders-service",
+        "storage-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "asiento.registrado",
+        "comprobante.emitido",
+        "declaracion.generada"
+      ],
+      "consumes": [
+        "order.created",
+        "payment.procesado",
+        "comision.acreditada",
+        "devolucion.recibida",
+        "devolucion.reembolsada",
+        "devolucion.solicitada",
+        "venta.directa.acreditada"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/finance-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 52,
+      "functions": 45
+    }
+  }
+}

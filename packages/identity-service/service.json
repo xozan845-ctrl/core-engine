@@ -1,0 +1,57 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "identity-service",
+    "boundedContext": "identity",
+    "description": "Autoridad de tenants, usuarios, negocios, personal, capacidades, packs y sesiones.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "core",
+      "tenancy",
+      "auth"
+    ]
+  },
+  "spec": {
+    "profile": "core",
+    "runtime": "rust",
+    "port": 3001,
+    "schema": "identity",
+    "outboxTable": "identity.outbox",
+    "capabilities": [],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "storage-service",
+        "stores-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/identity-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 79,
+      "functions": 75
+    }
+  }
+}

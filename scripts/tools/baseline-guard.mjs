@@ -21,6 +21,7 @@ const BASELINE_FILES = {
   rls: 'scripts/config/rls-baseline.json',
   migrations: 'scripts/config/db-migrations.json',
   moduleSize: 'scripts/config/module-size-baseline.json',
+  architecture: 'scripts/config/architecture-baseline.json',
 };
 
 function parseArgs(argv) {
@@ -157,6 +158,7 @@ export function compareBaselines(current, previous) {
     ...compareDebtSet('rls', current.rls, previous.rls),
     ...compareMigrations(current.migrations, previous.migrations),
     ...compareModuleSize(current.moduleSize, previous.moduleSize),
+    ...compareDebtSet('architecture', current.architecture?.debt ?? [], previous.architecture?.debt ?? []),
   ];
   return problems;
 }

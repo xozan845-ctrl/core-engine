@@ -1,0 +1,65 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "stores-service",
+    "boundedContext": "stores",
+    "description": "Tienda del vendedor, storefront, tema, contenido, ofertas, reseñas y wishlist.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "consumer",
+      "storefront"
+    ]
+  },
+  "spec": {
+    "profile": "consumer",
+    "runtime": "rust",
+    "port": 3003,
+    "schema": "stores",
+    "outboxTable": "stores.outbox",
+    "capabilities": [
+      "tienda",
+      "resenas_verificadas"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "inventory-service",
+        "item-service",
+        "orders-service",
+        "pricing-service",
+        "storage-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": [
+        "stock.updated"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/stores-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 76,
+      "functions": 76
+    }
+  }
+}
