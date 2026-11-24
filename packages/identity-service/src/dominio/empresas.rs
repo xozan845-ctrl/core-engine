@@ -9,6 +9,7 @@ use crate::dominio::auditoria;
 use crate::dominio::media::{
     background_de, con_background_urls, normalizar_background, validar_background, BackgroundInput,
 };
+use crate::dominio::regiones::{resolver_en, RegionTributaria, Regiones};
 use crate::dominio::slug::{es_uuid, slug_con_sufijo, slug_desde_nombre, validar_slug_solicitado};
 use crate::dominio::tema::{
     es_plantilla, mezclar_tema, normalizar_tema_parcial, plantilla_de, resolver_personalizacion,
@@ -32,6 +33,7 @@ pub struct Empresas {
     usuarios: Arc<Usuarios>,
     storage: Arc<Storage>,
     purga: Arc<PurgaExterna>,
+    regiones: Arc<Regiones>,
     firma_clave: Arc<String>,
 }
 
@@ -53,6 +55,9 @@ pub struct CrearEmpresa {
     pub vertical_id: Option<String>,
     pub pack_codigo: Option<String>,
     pub pack_version: Option<i32>,
+    /// Región tributaria elegida. Si es `None`, se usa la predeterminada del
+    /// pack (fail-closed: sin región el alta falla).
+    pub region_tributaria: Option<String>,
     pub capacidades_extra: Vec<String>,
 }
 
@@ -70,6 +75,7 @@ impl Empresas {
         usuarios: Arc<Usuarios>,
         storage: Arc<Storage>,
         purga: Arc<PurgaExterna>,
+        regiones: Arc<Regiones>,
         firma_clave: String,
     ) -> Self {
         Self {
@@ -77,6 +83,7 @@ impl Empresas {
             usuarios,
             storage,
             purga,
+            regiones,
             firma_clave: Arc::new(firma_clave),
         }
     }
@@ -110,7 +117,24 @@ impl Empresas {
             objeto.insert("logo_objeto_id".into(), Value::Null);
             objeto.insert("background_objeto_id".into(), Value::Null);
         }
-        let meta = self.normalizar_perfil(&perfil_datos, &json!({}));
+        // Pack y región se resuelven antes de normalizar el perfil: país,
+        // moneda y zona horaria heredan la región elegida en vez de un país
+        // hardcodeado.
+        let (pack, region) = {
+            let mut tx = self.db.transaccion().await.map_err(interno)?;
+            let pack =
+                resolver_pack(&mut tx, &pack_codigo, Some(&vertical), input.pack_version).await?;
+            let region = resolver_en(
+                &mut tx,
+                &pack.codigo,
+                pack.version,
+                input.region_tributaria.as_deref(),
+            )
+            .await?;
+            tx.commit().await.map_err(interno)?;
+            (pack, region)
+        };
+        let meta = self.normalizar_perfil(&perfil_datos, &json!({}), Some(&region));
         self.validar_perfil(&meta)?;
         let ruc = texto(&meta, "ruc");
         self.validar_ruc_unico(&ruc, None).await?;
@@ -123,8 +147,6 @@ impl Empresas {
 
         for intento in 1..=max_intentos {
             let mut tx = self.db.transaccion().await.map_err(interno)?;
-            let pack =
-                resolver_pack(&mut tx, &pack_codigo, Some(&vertical), input.pack_version).await?;
             let slug = elegir_slug(&mut tx, &nombre, slug_explicito.as_deref()).await?;
             let plantilla_override = meta.get("plantilla").and_then(Value::as_str);
             let tema_override = meta.get("tema").cloned().unwrap_or_else(|| json!({}));
@@ -134,9 +156,10 @@ impl Empresas {
                     ruc, razon_social, nombre_comercial, descripcion, telefono,
                     correo_contacto, sitio_web, direccion, ciudad, departamento, pais,
                     moneda, zona_horaria, sector, representante_legal, horario_atencion,
-                    plantilla_override, tema_override, logo_objeto_id)
+                    plantilla_override, tema_override, logo_objeto_id,
+                    region_tributaria, region_tributaria_desde)
                  VALUES ($1,$2,$3,$4,$5,$6::uuid,$7,$8,$9,$10,$11,$12,$13,$14,
-                         $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NULL)
+                         $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,NULL,$25,CURRENT_DATE)
                  RETURNING to_jsonb(e) AS datos",
             )
             .bind(&nombre)
@@ -163,6 +186,7 @@ impl Empresas {
             .bind(texto(&meta, "horario_atencion"))
             .bind(plantilla_override)
             .bind(tema_override)
+            .bind(&region.codigo)
             .fetch_optional(&mut *tx)
             .await;
 
@@ -409,6 +433,33 @@ impl Empresas {
         {
             tx.commit().await.map_err(interno)?;
             return Ok(Self::con_urls(&datos));
+        }
+        // El cambio de pack no puede dejar al tenant en una región que el
+        // nuevo pack no admite: sería una empresa fiscalmente inválida.
+        let region_actual = texto(&datos, "region_tributaria");
+        if !region_actual.is_empty() {
+            let soportada = sqlx::query(
+                "SELECT 1 FROM identity.pack_regiones
+                  WHERE pack_codigo = $1 AND pack_version = $2
+                    AND region_codigo = $3 AND activo = true",
+            )
+            .bind(&pack.codigo)
+            .bind(pack.version)
+            .bind(&region_actual)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if soportada.is_none() {
+                return Err(ApiError::dominio(
+                    "REGION_NO_COMPATIBLE_CON_PACK",
+                    "El pack destino no admite la región tributaria actual de la empresa.",
+                )
+                .con_detalles(json!({
+                    "region_actual": region_actual,
+                    "pack_codigo": pack.codigo,
+                    "pack_version": pack.version,
+                })));
+            }
         }
         let antes: i32 = sqlx::query_scalar(
             "SELECT COUNT(*)::int FROM identity.empresa_capacidades WHERE empresa_id = $1::uuid",
@@ -1489,7 +1540,8 @@ impl Empresas {
             self.autorizar_membresia(&empresa_id, usuario_id, Some("empresario"))
                 .await?;
         }
-        let meta = self.normalizar_perfil(cambios, &datos);
+        let region = self.regiones.de_empresa(&empresa_id).await?;
+        let meta = self.normalizar_perfil(cambios, &datos, region.as_ref().map(|r| &r.region));
         self.validar_perfil(&meta)?;
         validar_background(&BackgroundInput::desde(cambios), &background_de(&meta))?;
         let ruc = texto(&meta, "ruc");
@@ -1697,7 +1749,25 @@ impl Empresas {
         Ok(())
     }
 
-    fn normalizar_perfil(&self, datos: &Value, actual: &Value) -> Value {
+    fn normalizar_perfil(
+        &self,
+        datos: &Value,
+        actual: &Value,
+        region: Option<&RegionTributaria>,
+    ) -> Value {
+        let pais_respaldo = region.map(|region| region.nombre.as_str()).unwrap_or("");
+        let moneda_respaldo = region
+            .map(|region| {
+                if region.moneda_iso.is_empty() {
+                    region.moneda.as_str()
+                } else {
+                    region.moneda_iso.as_str()
+                }
+            })
+            .unwrap_or("");
+        let zona_respaldo = region
+            .map(|region| region.zona_horaria.as_str())
+            .unwrap_or("UTC");
         let texto = |clave: &str, respaldo: &str| {
             datos
                 .get(clave)
@@ -1730,15 +1800,17 @@ impl Empresas {
         perfil.insert("departamento".into(), json!(texto("departamento", "")));
         perfil.insert(
             "pais".into(),
-            json!(texto("pais", "Nicaragua").if_empty("Nicaragua")),
+            json!(texto("pais", pais_respaldo).if_empty(pais_respaldo)),
         );
         perfil.insert(
             "moneda".into(),
-            json!(texto("moneda", "NIO").if_empty("NIO").to_uppercase()),
+            json!(texto("moneda", moneda_respaldo)
+                .if_empty(moneda_respaldo)
+                .to_uppercase()),
         );
         perfil.insert(
             "zona_horaria".into(),
-            json!(texto("zona_horaria", "America/Managua").if_empty("America/Managua")),
+            json!(texto("zona_horaria", zona_respaldo).if_empty(zona_respaldo)),
         );
         perfil.insert("sector".into(), json!(texto("sector", "")));
         perfil.insert(

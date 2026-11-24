@@ -23,6 +23,7 @@ use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
+use identity_service::dominio::regiones::Regiones;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
@@ -161,6 +162,7 @@ async fn preparar() -> Option<Contexto> {
     let extensiones = Arc::new(Extensiones::nueva(Arc::clone(&db)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
+    let regiones = Arc::new(Regiones::nueva(Arc::clone(&db)));
     let metrics = Arc::new(Metrics::nueva("identity-service"));
     let estado = AppState::con_servicios(
         config,
@@ -184,6 +186,7 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&usuarios),
                 Arc::clone(&storage),
                 Arc::new(PurgaExterna::vacia()),
+                Arc::clone(&regiones),
                 "clave-export-test".to_string(),
             )),
             extensiones,
@@ -191,6 +194,7 @@ async fn preparar() -> Option<Contexto> {
             onboarding,
             personal,
             partes,
+            regiones,
             registros,
             suscripciones,
             packs: Arc::new(Packs::nueva(Arc::clone(&db))),
@@ -1074,6 +1078,32 @@ async fn debe_gestionar_packs_y_verticales() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(obtenido["data"]["vertical_codigo"], vertical);
 
+    let (status, regiones) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(regiones["data"]
+        .as_array()
+        .expect("regiones")
+        .iter()
+        .any(|region| region["codigo"] == "NI" && region["predeterminada"] == true));
+
+    let (status, actualizado) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        json!({ "regiones": [{ "codigo": "NI", "predeterminada": true }] }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizado["data"]["regiones"][0]["codigo"], "NI");
+
     let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
     let (status, _) = enviar(
         &ctx.app,
@@ -1242,6 +1272,13 @@ async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
     assert!(features.iter().any(|feature| feature == "catalogo.items"));
     assert!(features.iter().any(|feature| feature == "inventario.stock"));
     assert!(!features.iter().any(|feature| feature == "agenda.citas"));
+    // La región se resuelve aunque la empresa sea legacy (sin columna): usa la
+    // predeterminada del pack. Sin `facturacion`, no se exponen features fiscales.
+    assert_eq!(data["region_tributaria"]["codigo"], "NI");
+    assert_eq!(data["region_tributaria"]["moneda_iso"], "NIO");
+    assert!(!features.iter().any(|feature| feature
+        .as_str()
+        .is_some_and(|valor| valor.starts_with("fiscal."))));
 
     let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
     let (status, _) = enviar(
@@ -1857,6 +1894,14 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
     .execute(ctx.db.pool())
     .await
     .expect("pack v2");
+    sqlx::query(
+        "INSERT INTO identity.pack_regiones
+           (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+         VALUES ('pack_retail', 2, 'NI', true, true) ON CONFLICT DO NOTHING",
+    )
+    .execute(ctx.db.pool())
+    .await
+    .expect("region pack v2");
     let admin = autorizacion(&Uuid::new_v4().to_string(), "admin");
     let (status, pack) = enviar(
         &ctx.app,

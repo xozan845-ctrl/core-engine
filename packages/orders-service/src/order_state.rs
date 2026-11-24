@@ -37,6 +37,9 @@ pub struct ItemOrden {
     /// Tasa aplicada en puntos base: 1500 = 15 %.
     #[serde(default)]
     pub tasa_impuesto_bps: i64,
+    /// Código de tasa de la región (`GENERAL`, `EXENTA`, …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub impuesto_codigo: Option<String>,
     /// Total final de la línea, con descuento de cupón e IVA según la
     /// configuración fiscal. `0` en órdenes antiguas.
     #[serde(default)]

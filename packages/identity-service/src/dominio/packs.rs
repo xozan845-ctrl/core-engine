@@ -4,6 +4,7 @@
 //! modelos por pack; la creación valida códigos y referencias activas.
 
 use crate::db::Db;
+use crate::dominio::regiones::{region_de_fila, RegionTributaria};
 use crate::errors::ApiError;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -39,6 +40,8 @@ pub struct Pack {
     pub config: Value,
     pub modelos: Vec<PackModelo>,
     pub capacidades: Vec<PackCapacidad>,
+    /// Regiones tributarias que el pack admite para elegir en el onboarding.
+    pub regiones: Vec<RegionTributaria>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -68,6 +71,14 @@ pub struct CrearPack {
     pub config: Option<Value>,
     pub modelos: Vec<PackModeloInput>,
     pub capacidades: Vec<PackCapacidadInput>,
+    pub regiones: Vec<PackRegionInput>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PackRegionInput {
+    pub codigo: String,
+    pub predeterminada: Option<bool>,
+    pub activo: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -263,6 +274,159 @@ impl Packs {
         })
     }
 
+    pub async fn regiones(
+        &self,
+        codigo: &str,
+        version: i32,
+    ) -> Result<Vec<RegionTributaria>, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let existe = sqlx::query(
+            "SELECT 1 FROM identity.packs WHERE codigo = $1 AND version = $2 AND activo",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado(
+                "Pack",
+                &format!("{codigo}@{version}"),
+            ));
+        }
+        let filas = sqlx::query(
+            "SELECT j.codigo_pais, j.nombre, j.pais_iso, j.subdivision, j.moneda,
+                    j.moneda_iso, j.simbolo_moneda, j.locale, j.zona_horaria,
+                    j.tasa_iva, j.tasa_ir, j.periodicidad_declaracion,
+                    j.documento_fiscal, j.perfil, j.leyes, j.vigente_desde, j.activa,
+                    pr.predeterminada
+               FROM identity.pack_regiones pr
+               JOIN finance.jurisdicciones j ON j.codigo_pais = pr.region_codigo
+              WHERE pr.pack_codigo = $1 AND pr.pack_version = $2
+              ORDER BY pr.predeterminada DESC, j.codigo_pais",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        tx.commit().await.map_err(interno)?;
+        filas.iter().map(region_de_fila).collect()
+    }
+
+    pub async fn reemplazar_regiones(
+        &self,
+        codigo: &str,
+        version: i32,
+        mut regiones: Vec<PackRegionInput>,
+    ) -> Result<Pack, ApiError> {
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let existe = sqlx::query(
+            "SELECT 1 FROM identity.packs WHERE codigo = $1 AND version = $2 AND activo",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(interno)?;
+        if existe.is_none() {
+            return Err(ApiError::no_encontrado(
+                "Pack",
+                &format!("{codigo}@{version}"),
+            ));
+        }
+        if regiones.is_empty() {
+            return Err(ApiError::dominio(
+                "REGION_NO_DISPONIBLE",
+                "El pack debe declarar al menos una región.",
+            ));
+        }
+        if regiones
+            .iter()
+            .filter(|region| region.predeterminada == Some(true))
+            .count()
+            > 1
+        {
+            return Err(ApiError::dominio(
+                "REGION_PREDETERMINADA_UNICA",
+                "Un pack solo puede tener una región predeterminada.",
+            ));
+        }
+        let mut predeterminada_asignada = regiones
+            .iter()
+            .any(|region| region.predeterminada == Some(true));
+        for (indice, region) in regiones.iter_mut().enumerate() {
+            region.codigo = region.codigo.trim().to_uppercase();
+            let existe = sqlx::query(
+                "SELECT 1 FROM finance.jurisdicciones
+                  WHERE codigo_pais = $1 AND activa = true",
+            )
+            .bind(&region.codigo)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if existe.is_none() {
+                return Err(ApiError::no_encontrado("Region tributaria", &region.codigo));
+            }
+            if !predeterminada_asignada && indice == 0 {
+                region.predeterminada = Some(true);
+                predeterminada_asignada = true;
+            }
+        }
+        let usadas = sqlx::query_scalar::<_, String>(
+            "SELECT DISTINCT region_tributaria
+               FROM identity.empresas
+              WHERE pack_codigo = $1 AND pack_version = $2
+                AND region_tributaria IS NOT NULL",
+        )
+        .bind(codigo)
+        .bind(version)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(interno)?;
+        let en_uso: Vec<String> = usadas
+            .into_iter()
+            .filter(|region| {
+                !regiones
+                    .iter()
+                    .any(|nueva| nueva.codigo == *region && nueva.activo.unwrap_or(true))
+            })
+            .collect();
+        if !en_uso.is_empty() {
+            return Err(ApiError::dominio(
+                "REGION_EN_USO",
+                "No se puede retirar una región que ya usan empresas de este pack.",
+            )
+            .con_detalles(json!({ "regiones": en_uso })));
+        }
+        sqlx::query(
+            "DELETE FROM identity.pack_regiones
+              WHERE pack_codigo = $1 AND pack_version = $2",
+        )
+        .bind(codigo)
+        .bind(version)
+        .execute(&mut *tx)
+        .await
+        .map_err(interno)?;
+        for region in &regiones {
+            sqlx::query(
+                "INSERT INTO identity.pack_regiones
+                   (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+                 VALUES ($1, $2, $3, $4, COALESCE($5, true))",
+            )
+            .bind(codigo)
+            .bind(version)
+            .bind(&region.codigo)
+            .bind(region.predeterminada.unwrap_or(false))
+            .bind(region.activo)
+            .execute(&mut *tx)
+            .await
+            .map_err(conflicto_o_interno)?;
+        }
+        tx.commit().await.map_err(interno)?;
+        self.obtener(codigo, i64::from(version)).await
+    }
+
     pub async fn crear(&self, input: CrearPack) -> Result<Pack, ApiError> {
         let codigo = input.codigo.trim().to_lowercase();
         let vertical = codigo_strict(&input.vertical_codigo, "VERTICAL_INVALIDA")?;
@@ -367,6 +531,107 @@ impl Packs {
         .execute(&mut *tx)
         .await
         .map_err(conflicto_o_interno)?;
+
+        // Regiones tributarias del pack. Si el cliente no las declara, se
+        // asignan las regiones activas de la plataforma (compatibilidad y
+        // arranque con un solo país). El admin puede restringirlas después.
+        let mut regiones = input.regiones;
+        if regiones.is_empty() {
+            // Una versión nueva hereda las regiones de la versión anterior.
+            // Si es la primera versión, se usan las regiones activas.
+            let anteriores = sqlx::query(
+                "SELECT region_codigo, predeterminada, activo
+                   FROM identity.pack_regiones
+                  WHERE pack_codigo = $1 AND pack_version < $2 AND activo = true
+                  ORDER BY predeterminada DESC, region_codigo",
+            )
+            .bind(&codigo)
+            .bind(input.version)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if anteriores.is_empty() {
+                let filas = sqlx::query(
+                    "SELECT codigo_pais FROM finance.jurisdicciones
+                      WHERE activa = true ORDER BY codigo_pais",
+                )
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(interno)?;
+                regiones = filas
+                    .iter()
+                    .map(|fila| {
+                        Ok(PackRegionInput {
+                            codigo: fila.try_get("codigo_pais").map_err(interno)?,
+                            predeterminada: None,
+                            activo: None,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, ApiError>>()?;
+            } else {
+                regiones = anteriores
+                    .iter()
+                    .map(|fila| {
+                        Ok(PackRegionInput {
+                            codigo: fila.try_get("region_codigo").map_err(interno)?,
+                            predeterminada: Some(fila.try_get("predeterminada").map_err(interno)?),
+                            activo: Some(fila.try_get("activo").map_err(interno)?),
+                        })
+                    })
+                    .collect::<Result<Vec<_>, ApiError>>()?;
+            }
+        }
+        if regiones.is_empty() {
+            return Err(ApiError::dominio(
+                "REGION_NO_DISPONIBLE",
+                "No hay regiones tributarias activas para asignar al pack.",
+            ));
+        }
+        if regiones
+            .iter()
+            .filter(|region| region.predeterminada == Some(true))
+            .count()
+            > 1
+        {
+            return Err(ApiError::dominio(
+                "REGION_PREDETERMINADA_UNICA",
+                "Un pack solo puede tener una región predeterminada.",
+            ));
+        }
+        let mut predeterminada_asignada = regiones
+            .iter()
+            .any(|region| region.predeterminada == Some(true));
+        for (indice, region) in regiones.iter().enumerate() {
+            let region_codigo = region.codigo.trim().to_uppercase();
+            let existe = sqlx::query(
+                "SELECT 1 FROM finance.jurisdicciones
+                  WHERE codigo_pais = $1 AND activa = true",
+            )
+            .bind(&region_codigo)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(interno)?;
+            if existe.is_none() {
+                return Err(ApiError::no_encontrado("Region tributaria", &region_codigo));
+            }
+            let es_predeterminada =
+                region.predeterminada == Some(true) || (!predeterminada_asignada && indice == 0);
+            predeterminada_asignada |= es_predeterminada;
+            sqlx::query(
+                "INSERT INTO identity.pack_regiones
+                   (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+                 VALUES ($1, $2, $3, $4, COALESCE($5, true))",
+            )
+            .bind(&codigo)
+            .bind(input.version)
+            .bind(&region_codigo)
+            .bind(es_predeterminada)
+            .bind(region.activo)
+            .execute(&mut *tx)
+            .await
+            .map_err(conflicto_o_interno)?;
+        }
+
         tx.commit().await.map_err(interno)?;
         self.obtener(&codigo, input.version).await
     }
@@ -376,7 +641,8 @@ const SQL_LISTAR: &str =
     "SELECT p.codigo, p.version, p.vertical_codigo, p.nombre, p.descripcion, p.config,
         pc.capacidad_codigo, c.nombre AS capacidad_nombre, c.modulo AS capacidad_modulo,
         pc.activo AS capacidad_activo, pc.config AS capacidad_config,
-        COALESCE(modelos.items, '[]'::jsonb) AS modelos
+        COALESCE(modelos.items, '[]'::jsonb) AS modelos,
+        COALESCE(regiones.items, '[]'::jsonb) AS regiones
    FROM identity.packs p
    LEFT JOIN identity.pack_capacidades pc
      ON pc.pack_codigo = p.codigo AND pc.pack_version = p.version
@@ -393,6 +659,31 @@ const SQL_LISTAR: &str =
        JOIN identity.modelos_operacion mo ON mo.codigo = pm.modelo_codigo
       WHERE pm.pack_codigo = p.codigo AND pm.pack_version = p.version
    ) modelos ON true
+   LEFT JOIN LATERAL (
+     SELECT jsonb_agg(jsonb_build_object(
+       'codigo', j.codigo_pais,
+       'nombre', j.nombre,
+       'pais_iso', j.pais_iso,
+       'subdivision', j.subdivision,
+       'moneda', j.moneda,
+       'moneda_iso', j.moneda_iso,
+       'simbolo_moneda', j.simbolo_moneda,
+       'locale', j.locale,
+       'zona_horaria', j.zona_horaria,
+       'tasa_iva', j.tasa_iva,
+       'tasa_ir', j.tasa_ir,
+       'periodicidad_declaracion', j.periodicidad_declaracion,
+       'documento_fiscal', j.documento_fiscal,
+       'perfil', j.perfil,
+       'leyes', j.leyes,
+       'vigente_desde', j.vigente_desde,
+       'predeterminada', pr.predeterminada
+     ) ORDER BY pr.predeterminada DESC, j.codigo_pais) AS items
+       FROM identity.pack_regiones pr
+       JOIN finance.jurisdicciones j ON j.codigo_pais = pr.region_codigo
+      WHERE pr.pack_codigo = p.codigo AND pr.pack_version = p.version
+        AND pr.activo AND j.activa
+   ) regiones ON true
   WHERE p.activo = true
     AND ($1::text IS NULL OR p.vertical_codigo = $1)
   ORDER BY p.vertical_codigo, p.codigo, pc.capacidad_codigo";
@@ -401,7 +692,8 @@ const SQL_OBTENER: &str =
     "SELECT p.codigo, p.version, p.vertical_codigo, p.nombre, p.descripcion, p.config,
         pc.capacidad_codigo, c.nombre AS capacidad_nombre, c.modulo AS capacidad_modulo,
         pc.activo AS capacidad_activo, pc.config AS capacidad_config,
-        COALESCE(modelos.items, '[]'::jsonb) AS modelos
+        COALESCE(modelos.items, '[]'::jsonb) AS modelos,
+        COALESCE(regiones.items, '[]'::jsonb) AS regiones
    FROM identity.packs p
    LEFT JOIN identity.pack_capacidades pc
      ON pc.pack_codigo = p.codigo AND pc.pack_version = p.version
@@ -418,6 +710,31 @@ const SQL_OBTENER: &str =
        JOIN identity.modelos_operacion mo ON mo.codigo = pm.modelo_codigo
       WHERE pm.pack_codigo = p.codigo AND pm.pack_version = p.version
    ) modelos ON true
+   LEFT JOIN LATERAL (
+     SELECT jsonb_agg(jsonb_build_object(
+       'codigo', j.codigo_pais,
+       'nombre', j.nombre,
+       'pais_iso', j.pais_iso,
+       'subdivision', j.subdivision,
+       'moneda', j.moneda,
+       'moneda_iso', j.moneda_iso,
+       'simbolo_moneda', j.simbolo_moneda,
+       'locale', j.locale,
+       'zona_horaria', j.zona_horaria,
+       'tasa_iva', j.tasa_iva,
+       'tasa_ir', j.tasa_ir,
+       'periodicidad_declaracion', j.periodicidad_declaracion,
+       'documento_fiscal', j.documento_fiscal,
+       'perfil', j.perfil,
+       'leyes', j.leyes,
+       'vigente_desde', j.vigente_desde,
+       'predeterminada', pr.predeterminada
+     ) ORDER BY pr.predeterminada DESC, j.codigo_pais) AS items
+       FROM identity.pack_regiones pr
+       JOIN finance.jurisdicciones j ON j.codigo_pais = pr.region_codigo
+      WHERE pr.pack_codigo = p.codigo AND pr.pack_version = p.version
+        AND pr.activo AND j.activa
+   ) regiones ON true
   WHERE p.codigo = $1 AND p.version = $2 AND p.activo = true
   ORDER BY pc.capacidad_codigo";
 
@@ -442,6 +759,7 @@ fn agrupar(filas: Vec<sqlx::postgres::PgRow>) -> Result<Vec<Pack>, ApiError> {
                     config: json!({}),
                     modelos: Vec::new(),
                     capacidades: Vec::new(),
+                    regiones: Vec::new(),
                 });
                 indice
             }
@@ -453,6 +771,7 @@ fn agrupar(filas: Vec<sqlx::postgres::PgRow>) -> Result<Vec<Pack>, ApiError> {
             pack.descripcion = fila.try_get("descripcion").map_err(interno)?;
             pack.config = fila.try_get("config").map_err(interno)?;
             pack.modelos = modelos_de(fila.try_get("modelos").map_err(interno)?)?;
+            pack.regiones = regiones_de(fila.try_get("regiones").map_err(interno)?);
         }
         let capacidad: Option<String> = fila.try_get("capacidad_codigo").map_err(interno)?;
         if let Some(capacidad_codigo) = capacidad {
@@ -496,6 +815,13 @@ fn modelos_de(valor: Value) -> Result<Vec<PackModelo>, ApiError> {
             })
         })
         .collect()
+}
+
+fn regiones_de(valor: Value) -> Vec<RegionTributaria> {
+    valor
+        .as_array()
+        .map(|items| items.iter().map(RegionTributaria::desde_valor).collect())
+        .unwrap_or_default()
 }
 
 fn texto(valor: &Value, clave: &str) -> String {

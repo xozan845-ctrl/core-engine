@@ -4,7 +4,8 @@
 - **Estado:** Aceptado (implementado)
 - **Relacionado:** [ADR-0021](./0021-negocios-por-empresa.md),
   [ADR-0033](./0033-idempotencia-http.md),
-  [ADR-0046](./0046-suscripcion-plataforma-expansion.md)
+  [ADR-0046](./0046-suscripcion-plataforma-expansion.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -59,7 +60,15 @@ se descartó para el MVP.
 7. **Tema personalizado.**
    - `Empresas::crear` ahora persiste `plantilla_override`/`tema_override` del
      perfil de alta; antes se validaban pero se ignoraban.
-8. **Fuera de alcance explícito.**
+8. **Región tributaria (ADR-0049).**
+   - El cuerpo del onboarding acepta `empresa.region_tributaria` (o
+     `region_tributaria` en la raíz, igual que `vertical` y `pack`).
+   - Se valida contra `identity.pack_regiones`; si se omite, se usa la
+     predeterminada del pack. Sin región disponible el alta falla cerrado con
+     `REGION_NO_DISPONIBLE`.
+   - El hash idempotente incluye la región: cambiar solo la región con la misma
+     `Idempotency-Key` devuelve `422 IDEMPOTENCIA_CLAVE_REUTILIZADA`.
+9. **Fuera de alcance explícito.**
    - `datos_demo`, invitaciones de personal y pre-provisión de bucket/dominio.
      Se documentan en [`docs/backlog-plataforma.md`](../backlog-plataforma.md).
 
@@ -83,3 +92,5 @@ se descartó para el MVP.
 - Un reintento tras un fallo recupera la empresa por slug en vez de duplicarla.
 - Un segundo onboarding sin plan devuelve `402 SUSCRIPCION_REQUERIDA`.
 - `GET /onboarding/{id}` devuelve `completado`, `en_proceso` o `fallido`.
+- El alta persiste la `region_tributaria` elegida (o la predeterminada del
+  pack), y el manifiesto la devuelve junto con las features fiscales.

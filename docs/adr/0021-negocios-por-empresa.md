@@ -4,7 +4,8 @@
 - **Estado**: Aceptado (fases 1-4, reportes, liquidaciones, selector, permisos, RLS, inventario, facturación, auditoría, administración, analítica, cohortes y reportes programados en `analytics-service`)
 - **Ámbito**: identidad, tenancy, roles, personal, invitaciones, tiendas
 - **Relacionado**: [ADR-0001](./0001-plataforma-multi-vertical.md),
-  [ADR-0017](./0017-identity-service-en-rust.md)
+  [ADR-0017](./0017-identity-service-en-rust.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -379,3 +380,12 @@ aportar un bounded context distinto.
   suspenderse/archivarse; el personal puede transferirse entre negocios.
 - Los tests de identidad siguen verdes y la migración es reversible por ser
   aditiva.
+
+## Enmienda (2026-11-23)
+
+La **región tributaria** se selecciona a nivel de **empresa**, que sigue siendo
+el tenant fiscal ([ADR-0049](./0049-regiones-tributarias.md)). Un negocio no
+duplica la elección: hereda la región de la empresa y, si necesita una
+jurisdicción distinta, usa el override explícito
+`finance.configuracion_fiscal(negocio_id)` que ya define ADR-0026. Cambiar la
+región de la empresa no reescribe los overrides por negocio.

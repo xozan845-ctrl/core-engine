@@ -70,7 +70,13 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/auth/mfa(/|$)", &["POST"], Some(todos.clone())),
             p(r"^/api/v2/auth/sesiones(/|$)", &["GET", "DELETE"], Some(todos.clone())),
             p(r"^/api/v2/packs(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
+            p(r"^/api/v2/packs/[^/]+/[^/]+/regiones$", &["PUT"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/packs$", &["POST"], Some(vec![SUPER_ADMIN, ADMIN])),
+            p(
+                r"^/api/v2/regiones-tributarias$",
+                &["GET"],
+                Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO, VENDEDOR]),
+            ),
             p(r"^/api/v2/packs/(modelos-operacion|verticales)(/|$)", &["GET"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
             p(r"^/api/v2/packs/(modelos-operacion|verticales)(/|$)", &["POST"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/configuracion/sitio$", &["GET"], None),

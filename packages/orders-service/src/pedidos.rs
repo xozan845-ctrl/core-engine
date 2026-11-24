@@ -236,6 +236,7 @@ mod tests {
             descuento_cents: 0,
             impuesto_cents: 0,
             tasa_impuesto_bps: 0,
+            impuesto_codigo: None,
             total_linea_cents: 0,
             promocion_id: None,
             vendedor_id: Some(vendedor.into()),
