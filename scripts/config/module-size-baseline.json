@@ -52,10 +52,6 @@
       "lines": 1662,
       "publicFns": 5
     },
-    "packages/orders-service/src/fidelizacion.rs": {
-      "lines": 1183,
-      "publicFns": 18
-    },
     "packages/pricing-service/src/precios/mod.rs": {
       "lines": 1267,
       "publicFns": 15
