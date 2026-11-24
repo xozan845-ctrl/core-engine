@@ -10,8 +10,8 @@ PR; cambian por decisión explícita y quedan registradas aquí.
 rules/
 ├── README.md           ← este índice: áreas, estado, convenciones globales
 │
-├── architecture/       ✅ activa (sin auditar) — estilo arquitectónico y nomenclatura (R-AR/R-NC)
-├── microservice/       ✅ activa (sin auditar) — estructura de servicios y excepción OLAP (R-MS/R-MI)
+├── architecture/       ✅ activa (sin auditar) — estilo arquitectónico, nomenclatura y fitness functions (R-AR/R-NC/R-AF)
+├── microservice/       ✅ activa (sin auditar) — estructura, contrato de servicio y excepción OLAP (R-MS/R-MI)
 ├── gateway/            ✅ activa (sin auditar) — perímetro, JWT y contrato externo (R-GW)
 ├── data/               ✅ activa (sin auditar) — integridad y seguridad de los datos (R-DI/R-DS)
 ├── db/                 ✅ activa (sin auditar) — Postgres y Supabase (R-DB/R-SB)
@@ -41,8 +41,8 @@ rules/
 
 | Área | Estado | Índice | Contenido |
 |---|---|---|---|
-| `architecture/` | ✅ **activa** (sin auditar) | [`architecture/README.md`](./architecture/README.md) | Arquitectura: CQRS/Event Sourcing por dominio, coreografía, outbox, DLQ, autonomía, caché TTL; naming de archivos/clases/tablas/commits (IDs `R-AR/R-NC`) |
-| `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de crates Rust (capas `http/` y dominio, DI por `AppState`, DTOs, fail-fast, shutdown, división de módulos, README por paquete) y excepción OLAP de `market-intelligence` (IDs `R-MS/R-MI`) |
+| `architecture/` | ✅ **activa** (sin auditar) | [`architecture/README.md`](./architecture/README.md) | Arquitectura: CQRS/Event Sourcing por dominio, coreografía, outbox, DLQ, autonomía, caché TTL; naming de archivos/clases/tablas/commits; fitness functions, baseline de deuda y ADR (IDs `R-AR/R-NC/R-AF`) |
+| `microservice/` | ✅ **activa** (sin auditar) | [`microservice/README.md`](./microservice/README.md) | Estructura de crates Rust (capas `http/` y dominio, DI por `AppState`, DTOs, fail-fast, shutdown, división de módulos, README por paquete), **manifiesto `service.json`, perfiles, `/health` vs `/ready` y propiedad de datos** (IDs `R-MS/R-MI`) |
 | `gateway/` | ✅ **activa** (sin auditar) | [`gateway/README.md`](./gateway/README.md) | API Gateway: single entry point, edge offloading, JWT + scrub de headers, TTLs, errores normalizados (ADR-06), versionamiento (IDs `R-GW`) |
 | `data/` | ✅ **activa** (sin auditar) | [`data/README.md`](./data/README.md) | Integridad (centavos, stock atómico, estados, idempotencia, partida doble) y seguridad (secretos, PII, DTOs, rate limiting, `npm audit`) (IDs `R-DI/R-DS`) |
 | `db/` | ✅ **activa** (sin auditar) | [`db/README.md`](./db/README.md) | Postgres: schema-per-service, RLS, transacciones, índices, soft delete, migraciones; Supabase: paridad, Auth, secretos (IDs `R-DB/R-SB`) |
@@ -86,3 +86,9 @@ El área `test/` es el ejemplo canónico al que apuntan las demás.
   rollback) + `R-GE-*` en [`git/00-entornos.md`](./git/00-entornos.md); `R-CI-1`
   se enmendó para incluir `staging` en los gatillos (`ci.yml`). La decisión
   queda registrada en [`../decisiones.md`](../decisiones.md) como ADR-12.
+- **Contrato de servicio y fitness functions (2026-11-24):** se añadieron
+  `R-MS-9..16` ([`microservice/03-contrato-servicio.md`](./microservice/03-contrato-servicio.md))
+  y `R-AF-1..5` ([`architecture/03-conformidad.md`](./architecture/03-conformidad.md)).
+  El inventario de servicios, puertos y matriz de CI se deriva de
+  `packages/<servicio>/service.json`; la deuda arquitectónica se congela en
+  `scripts/config/architecture-baseline.json`. Decisión: [ADR-0050](../adr/0050-contrato-servicio-y-fitness-functions.md).

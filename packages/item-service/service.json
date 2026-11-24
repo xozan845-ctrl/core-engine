@@ -1,0 +1,60 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "item-service",
+    "boundedContext": "item",
+    "description": "Catálogo maestro: productos, servicios, variantes, series, componentes e importación.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "core",
+      "catalog"
+    ]
+  },
+  "spec": {
+    "profile": "core",
+    "runtime": "rust",
+    "port": 3015,
+    "schema": "item",
+    "outboxTable": "item.outbox",
+    "capabilities": [
+      "catalogo_items"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "inventory-service",
+        "pricing-service",
+        "storage-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/item-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 40,
+      "functions": 43
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "field-service",
+    "boundedContext": "field",
+    "description": "Operación de campo: personal, clientes, vehículos, rutas, visitas, tracking e incidencias.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "core",
+      "field"
+    ]
+  },
+  "spec": {
+    "profile": "core",
+    "runtime": "rust",
+    "port": 3008,
+    "schema": "field",
+    "outboxTable": "field.outbox",
+    "capabilities": [
+      "operacion_campo"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/field-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 77,
+      "functions": 71
+    }
+  }
+}

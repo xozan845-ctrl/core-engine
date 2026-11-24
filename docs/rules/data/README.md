@@ -30,7 +30,7 @@ rate limiting, dependencias).
 
 | ID | Exigencia |
 |---|---|
-| `R-DI-1` | Monedas → clase `Money` de `@core/shared` (ADR-01) |
+| `R-DI-1` | Monedas → enteros en centavos y helpers de serialización del crate (ADR-01) |
 | `R-DI-4` | Idempotencia ≠ caché: TTL mínimo 1h/24h, ver `R-AR-7` (`../architecture/01-arquitectura.md`) |
 | `R-DS-5` | Scrub de `x-internal-key` en el borde → `R-GW-3` (`../gateway/01-auth.md`) |
 | `R-DS-6` | Rate limiting vive solo en el gateway → `R-GW-2` (`../gateway/01-auth.md`) |

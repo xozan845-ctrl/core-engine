@@ -25,6 +25,10 @@ export const requiredSuites = [
     file: 'rules/microservices/tamano-modulos.test.mjs',
   },
   {
+    id: 'services-contract',
+    file: 'rules/microservices/service-contract.test.mjs',
+  },
+  {
     id: 'openapi-contract',
     file: 'rules/contract/openapi.test.mjs',
   },

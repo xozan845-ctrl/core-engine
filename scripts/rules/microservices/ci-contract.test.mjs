@@ -42,6 +42,10 @@ function rustMatrix() {
   return [...section.matchAll(/^\s+- service: ([a-z-]+)$/gm)].map((match) => match[1]);
 }
 
+function ciMatrixScript() {
+  return readText(join(repoRoot, 'scripts', 'tools', 'ci-matrix.mjs'));
+}
+
 export default defineSuite({
   id: 'microservices-ci-contract',
   area: 'test',
@@ -98,16 +102,33 @@ export default defineSuite({
       assert.deepEqual(problems, [], problems.join('\n'));
     });
 
-    test('R-CI-5: la matriz Rust de CI cubre exactamente los servicios', () => {
-      assert.deepEqual(sorted(rustMatrix()), sorted(SERVICES));
+    test('R-CI-5/R-AF-3: la matriz Rust de CI se deriva de los manifiestos', () => {
       const workflow = readText(ciWorkflowPath);
-      for (const service of SERVICES) {
-        assert.match(
-          workflow,
-          new RegExp(`dir: packages/${service}\\n`),
-          `falta el directorio de ${service} en la matriz Rust`,
-        );
-      }
+      assert.deepEqual(
+        rustMatrix(),
+        [],
+        'la matriz no debe volver a hardcodear servicios en ci.yml',
+      );
+      assert.match(
+        workflow,
+        /^ {2}matrix:$/m,
+        'falta el job matrix que emite la matriz',
+      );
+      assert.match(
+        workflow,
+        /include: \$\{\{ fromJSON\(needs\.matrix\.outputs\.include\) \}\}/,
+        'rust/docker-build deben consumir la matriz emitida',
+      );
+      assert.match(
+        workflow,
+        /node scripts\/tools\/ci-matrix\.mjs/,
+        'el job matrix debe ejecutar ci-matrix.mjs',
+      );
+      assert.match(
+        ciMatrixScript(),
+        /coverageMatrix\(\)/,
+        'ci-matrix.mjs debe usar coverageMatrix() de los manifiestos',
+      );
       assert.doesNotMatch(workflow, /^ {2}test:$/m, 'no debe quedar el job Node de tests');
       assert.doesNotMatch(workflow, /npm run build$/m, 'no debe quedar build Node');
       assert.doesNotMatch(workflow, /npm test$/m, 'no debe quedar npm test Node');
