@@ -8,10 +8,6 @@
       "lines": 1267,
       "publicFns": 15
     },
-    "packages/storage-service/src/storage/objetos.rs": {
-      "lines": 861,
-      "publicFns": 13
-    },
     "packages/stores-service/src/tiendas/mod.rs": {
       "lines": 942,
       "publicFns": 18
