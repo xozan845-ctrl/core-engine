@@ -40,8 +40,12 @@ scripts/
 │       ├── env.mjs           #   compose ↔ plantillas de entorno (R-CD-7)
 │       └── rules-docs.mjs    #   áreas, archivos NN-tema.md e IDs de docs/rules
 │
-├── config/                   # datos y helpers puros del proyecto
-│   ├── project.mjs           #   rama, servicios, scopes, rutas, tipos de commit
+├── config/                   # datos y helpers del proyecto
+│   ├── project.mjs           #   rama, scopes, rutas, tipos de commit
+│   ├── services.mjs          #   catálogo derivado de packages/*/service.json (R-MS-9/R-AF-3)
+│   ├── service-schema.json   #   JSON Schema del manifiesto de servicio
+│   ├── service-conformance.mjs #  contrato ejecutable: hallazgos, catálogo, eventos, deuda
+│   ├── architecture-baseline.json # deuda arquitectónica congelada (R-AF-2)
 │   ├── coverage.mjs          #   umbrales de cobertura por workspace (R-COV-1/4)
 │   ├── coverage-baseline.json #  cobertura real de referencia (R-COV-1)
 │   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
@@ -60,8 +64,9 @@ scripts/
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
 │   ├── microservices/
 │   │   ├── structure.test.mjs      # R-CD-3/4/14
-│   │   ├── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
-│   │   └── tamano-modulos.test.mjs # R-MS-7 (módulos >1.500 líneas)
+│   │   ├── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5, R-AF-3
+│   │   ├── tamano-modulos.test.mjs # R-MS-7 (módulos >1.500 líneas)
+│   │   └── service-contract.test.mjs # R-MS-9..16, R-AF-1..3, R-DB-1
 │   ├── contract/
 │   │   └── openapi.test.mjs        # R-DO-8, R-DS-5: superficies y contrato OpenAPI
 │   └── observability/
@@ -69,6 +74,9 @@ scripts/
 │       └── telemetry.test.mjs      # R-TM-1..7
 │
 └── tools/                    # operaciones (NO gobernanza)
+    ├── ci-matrix.mjs          # emite la matriz Rust desde los manifiestos (R-AF-3)
+    ├── architecture-report.mjs # genera catálogo, eventos y deuda (R-AF-4)
+    ├── architecture-baseline.mjs # mantiene la deuda congelada (R-AF-2)
     ├── release-check.mjs      # valida tag, monotonicidad y versiones (R-CD-1/2)
     ├── release-check.test.mjs # fixtures git: tag anotado, orden y versiones
     ├── version-bump.mjs       # alinea package.json + lockfile con un release
@@ -104,7 +112,7 @@ scripts/
 | Capa | Puede importar de | No puede importar de |
 |---|---|---|
 | `engine/` | Node built-ins | `config/`, `rules/`, `tools/` |
-| `config/` | — (sólo datos) | `engine/`, `rules/` |
+| `config/` | Node built-ins + datos del repo (`packages/*/service.json`) | `engine/`, `rules/`, `tools/` |
 | `rules/` | `engine/`, `config/` | `tools/` |
 | `tools/` | `engine/lib/`, `config/` | `rules/` |
 | `cli.mjs` | todo (es el composition root) | — |
@@ -183,7 +191,7 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 52/241 IDs de regla tienen check.
+Cobertura ejecutable: 67/254 IDs de regla tienen check.
 ```
 
 La suite `microservices-tamano-modulos` vigila **R-MS-7**: ningún archivo Rust
@@ -211,6 +219,9 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | npm script | Envuelve |
 |---|---|
 | `rules:check` | `node scripts/cli.mjs rules` |
+| `architecture:report` | `node scripts/tools/architecture-report.mjs` |
+| `architecture:check` | `node scripts/tools/architecture-report.mjs --check` |
+| `architecture:baseline` | `node scripts/tools/architecture-baseline.mjs` |
 | `release:check` | `node scripts/tools/release-check.mjs` |
 | `version:bump` | `node scripts/tools/version-bump.mjs` |
 | `coverage:compare` | `node scripts/tools/coverage-compare.mjs` |
@@ -221,8 +232,6 @@ Los `npm scripts` de la raíz son **envoltorios** (sin ruptura para CI ni local)
 | `env:check` | `node scripts/tools/env-check.mjs` |
 | `promotion:check` | `node scripts/tools/promotion-check.mjs` |
 | `security:secrets` | `node scripts/tools/secrets-check.mjs` |
-| `mutation:shared` | `npm run mutation -w @core/shared` |
-| `mutation:critical` | Stryker secuencial en identity/orders/commissions/finance |
 | `demo` | `node scripts/cli.mjs smoke` |
 | `smoke:remote` | `node scripts/tools/smoke-remote.mjs` |
 | `swagger:export` | `node scripts/cli.mjs swagger` |
@@ -240,6 +249,26 @@ tras el despliegue (R-CD-12) y exige `ADMIN_EMAIL`/`ADMIN_PASSWORD` del
 environment. `test:smoke` prueba ese contrato con un servidor HTTP efímero y
 no sustituye el workflow E2E de release/manual (G-6), que ejecuta `npm run demo`
 contra el stack dev limpio.
+
+## Contrato de servicio y arquitectura
+
+El inventario **no se hardcodea** en este motor: `config/services.mjs` lo deriva
+de `packages/<servicio>/service.json` (R-MS-9). De ahí salen `SERVICES`,
+`SERVICE_PORTS`, `SERVICE_PROFILES`, los umbrales de cobertura y la matriz de CI
+que emite `tools/ci-matrix.mjs` (R-AF-3).
+
+`config/service-conformance.mjs` es la fuente única de las comprobaciones del
+contrato: artefactos, identidad, compose, esquema, módulos por perfil, arranque,
+observabilidad, eventos, documentación y deuda. Lo consumen:
+
+- `rules/microservices/service-contract.test.mjs` (suite de PR);
+- `tools/architecture-report.mjs` (catálogo, matriz de eventos y deuda);
+- `tools/architecture-baseline.mjs` (mantenimiento del baseline).
+
+La deuda arquitectónica vive en `config/architecture-baseline.json` y **sólo
+puede reducirse**: `baseline:guard` rechaza entradas nuevas y la suite rechaza
+entradas obsoletas (R-AF-2). El detalle narrativo está en
+[`docs/architecture/`](../docs/architecture/README.md).
 
 ## Cómo añadir una regla ejecutable
 
