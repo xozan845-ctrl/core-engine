@@ -37,3 +37,7 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 - `01-estructura.md` se audita en cada revisión de `R-COV-3`; la suite
   `microservices-ci-contract` valida que cada servicio declare su crate, su
   Dockerfile y su README.
+- `R-MS-7` tiene check propio en la suite `microservices-tamano-modulos`: falla
+  si un archivo de `packages/*/src` supera los presupuestos de responsabilidad
+  (800 líneas de producción, 20 funciones públicas en dominio con SQL u 8 tablas
+  SQL) y `baseline:guard` impide añadir deuda nueva o relajar los presupuestos.

@@ -9,6 +9,12 @@ function documents(overrides = {}) {
     specs: ['packages/a/src/a.service.ts'],
     rls: ['catalog.outbox'],
     migrations: { '01_base.sql': 'hash-a' },
+    moduleSize: {
+      limits: { lines: 800, publicFns: 20, sqlTables: 8 },
+      debt: {
+        'packages/a/src/a.rs': { lines: 1600, publicFns: 10, sqlTables: 2 },
+      },
+    },
     ...overrides,
   };
 }
@@ -55,6 +61,49 @@ test('baseline-guard: rechaza editar o borrar migraciones existentes', () => {
     documents(),
   );
   assert.match(altered.join('\n'), /migrations: hash alterado/);
+});
+
+test('baseline-guard: rechaza crecer o añadir deuda de tamaño de módulos (R-MS-7)', () => {
+  const grown = compareBaselines(
+    documents({
+      moduleSize: {
+        limits: { lines: 800, publicFns: 20, sqlTables: 8 },
+        debt: {
+          'packages/a/src/a.rs': { lines: 1700, publicFns: 10, sqlTables: 2 },
+          'packages/b/src/b.rs': { lines: 1550, publicFns: 10, sqlTables: 2 },
+        },
+      },
+    }),
+    documents(),
+  );
+  assert.match(grown.join('\n'), /moduleSize: packages\/a\/src\/a\.rs\.lines creció/);
+  assert.match(grown.join('\n'), /moduleSize: nueva deuda\/excepción no permitida/);
+});
+
+test('baseline-guard: rechaza relajar los presupuestos de R-MS-7', () => {
+  const problems = compareBaselines(
+    documents({
+      moduleSize: {
+        limits: { lines: 1500, publicFns: 20, sqlTables: 8 },
+        debt: documents().moduleSize.debt,
+      },
+    }),
+    documents(),
+  );
+  assert.match(problems.join('\n'), /moduleSize\.limits\.lines: se relajó/);
+});
+
+test('baseline-guard: permite dividir un módulo y retirarlo del baseline', () => {
+  const problems = compareBaselines(
+    documents({
+      moduleSize: {
+        limits: documents().moduleSize.limits,
+        debt: {},
+      },
+    }),
+    documents(),
+  );
+  assert.deepEqual(problems, []);
 });
 
 test('baseline-guard: permite retirar un workspace migrado a Rust', () => {

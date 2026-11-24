@@ -8,6 +8,7 @@
 
 - **Última auditoría de testing:** 2026-11-11 — **17ª de Core Engine** (cierre del envelope `{data,meta}` y de los ADR de notificaciones).
 - **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR. G-1, G-3, G-4, G-5, G-6, G-7 y G-8 configurados y verdes; G-2 N/A. Deudas restantes: property/fuzz de fechas y fallos de broker, cobertura de `market-intelligence` y `commissions`, 45 warnings `no-explicit-any` y 12 moderates + 1 low de tooling.
+- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad y un baseline de 28 archivos. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
 
 ## Resumen por capa
 
@@ -25,7 +26,7 @@
 | Lint (G-7) | 🟢 | **0 errores, 45 warnings** `no-explicit-any` |
 | Build (G-7) | 🟢 | shared + gateway + 12 servicios: exit 0 |
 | Security gate (R-QA-6) | 🟡 | `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 (1 low, 12 moderate; tooling) |
-| Motor de gobernanza | 🟢 | `rules:check`: 90/90 tests, 22 suites, **52/238 IDs ejecutables**; `test:engine` 21; `test:smoke` 61; baselines sin retroceso |
+| Motor de gobernanza | 🟢 | `rules:check`: 86/86 tests, 23 suites, **52/241 IDs ejecutables**; `test:engine` 21; `test:smoke` 72; baselines sin retroceso (incluye tamaño de módulos R-MS-7) |
 
 ## Cobertura por workspace (ratchet R-COV-1, medición 2026-11-11)
 
@@ -78,8 +79,8 @@
 | Build | 0 errores TS | 0 errores (G-7) | ✅ |
 | Audit `high` | exit 0 | 0 (R-QA-6) | ✅ |
 | Audit `moderate` | **13 totales** (1 low, 12 moderate) | 0 (objetivo, no gate) | ⚠️ |
-| Motor de reglas | 90 tests / 22 suites; 52/238 IDs | R-CI-7 | ✅ |
-| Baselines | coverage/specs/rls/migrations sin retroceso | `baseline:guard` | ✅ |
+| Motor de reglas | 86 tests / 23 suites; 52/241 IDs | R-CI-7 | ✅ |
+| Baselines | coverage/specs/rls/migrations/tamaño sin retroceso | `baseline:guard` | ✅ |
 | Migraciones | 71 íntegras y registradas | R-DB-6 | ✅ |
 | RLS | 46 tablas; ninguna nueva sin RLS | R-SB-2 | ✅ |
 
@@ -138,6 +139,7 @@
 5. **13 vulnerabilidades de tooling** (1 low, 12 moderate): no hay fix seguro sin bajar ESLint 10→9; el gate solo exige `high`.
 6. **QA harness fuera de ESLint**: `qa-harness/` no está linteado.
 7. **Cobertura de capacidades**: se amplió a finance/commissions/envíos, pero no todas las rutas de todos los servicios declaran una capacidad de negocio.
+8. **Deuda R-MS-7**: 28 archivos superan los presupuestos de responsabilidad (800 líneas de producción, 20 funciones públicas o 8 tablas SQL). Están registrados en `scripts/config/module-size-baseline.json`; el baseline no puede crecer y cada división debe retirar su entrada. El mayor es `identity-service/src/dominio/empresas.rs` (2.300 líneas, 27 tablas).
 
 ## Evidencia de la auditoría (2026-11-11)
 
@@ -152,6 +154,9 @@
   tablas, ninguna nueva sin RLS.
 - `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 totales
   (1 low, 12 moderate).
+- **Actualización 2026-11-24:** `npm run rules:check` → 0 (86 tests, 23 suites,
+  52/241 IDs); `test:engine` → 0 (21); `test:smoke` → 0 (72);
+  `baseline:guard` → 0 incluyendo el baseline de tamaño de módulos.
 - **CI post-merge:** run `43088217913` sobre `develop` (`753a6ff`) en `success`
   en Rules, Security Gate, ESLint, Unit Tests + Coverage, API + BD contracts y
   Build all services.
