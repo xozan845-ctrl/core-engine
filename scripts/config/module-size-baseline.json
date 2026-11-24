@@ -8,10 +8,6 @@
       "lines": 1580,
       "publicFns": 20
     },
-    "packages/finance-service/src/finanzas/proyecciones.rs": {
-      "lines": 833,
-      "publicFns": 20
-    },
     "packages/finance-service/src/http/comercio.rs": {
       "lines": 873,
       "publicFns": 66
