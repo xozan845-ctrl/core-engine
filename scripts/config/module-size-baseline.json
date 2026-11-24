@@ -3,10 +3,5 @@
     "lines": 800,
     "publicFns": 20
   },
-  "debt": {
-    "packages/stores-service/src/tiendas/mod.rs": {
-      "lines": 942,
-      "publicFns": 18
-    }
-  }
+  "debt": {}
 }

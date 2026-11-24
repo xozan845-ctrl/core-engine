@@ -8,7 +8,7 @@
 
 - **Última auditoría de testing:** 2026-11-11 — **17ª de Core Engine** (cierre del envelope `{data,meta}` y de los ADR de notificaciones).
 - **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR. G-1, G-3, G-4, G-5, G-6, G-7 y G-8 configurados y verdes; G-2 N/A. Deudas restantes: property/fuzz de fechas y fallos de broker, cobertura de `market-intelligence` y `commissions`, 45 warnings `no-explicit-any` y 12 moderates + 1 low de tooling.
-- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad y un baseline de 1 archivo; identity ya dividió `empresas.rs`, `personal.rs`, `partes.rs` y `packs.rs`, y orders dividió toda su deuda: `pagos.rs`, `devoluciones.rs`, `clients.rs`, `fidelizacion.rs` y `checkout.rs`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
+- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad. Los 21 archivos de deuda de identity, orders, finance, inventory, item, logistics, storage, pricing y stores se dividieron por responsabilidad y el baseline quedó en `debt: {}`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
 
 ## Resumen por capa
 
@@ -139,7 +139,7 @@
 5. **13 vulnerabilidades de tooling** (1 low, 12 moderate): no hay fix seguro sin bajar ESLint 10→9; el gate solo exige `high`.
 6. **QA harness fuera de ESLint**: `qa-harness/` no está linteado.
 7. **Cobertura de capacidades**: se amplió a finance/commissions/envíos, pero no todas las rutas de todos los servicios declaran una capacidad de negocio.
-8. **Deuda R-MS-7**: 1 archivo superan los presupuestos de responsabilidad (800 líneas de producción o 20 funciones públicas). Están registrados en `scripts/config/module-size-baseline.json`; el baseline no puede crecer y cada división debe retirar su entrada. identity (`empresas`, `personal`, `partes`, `packs`) y identity y orders ya no tienen deuda; pricing dividió `precios/mod`; logistics y storage dividieron `envios/mod` y `storage/objetos`; inventory e item cerraron su deuda (`inventario`, `reservas`, `items`, `operaciones`); finance cerró su deuda (dividió `comercio/helpers` y `finanzas/proyecciones` y `http/comercio` y `http/finanzas` y `facturacion` y `tributacion`). el mayor pendiente es `finance-service/src/tributacion.rs` (1.591 líneas).
+8. **Deuda R-MS-7**: resuelta. Los 21 archivos iniciales se dividieron por responsabilidad y `scripts/config/module-size-baseline.json` quedó con `debt: {}`; el baseline solo conserva los presupuestos (800 líneas, 20 funciones públicas) para impedir que la deuda vuelva.
 
 ## Evidencia de la auditoría (2026-11-11)
 
@@ -154,7 +154,7 @@
   tablas, ninguna nueva sin RLS.
 - `npm audit --audit-level=high` → 0; `--audit-level=moderate` → 13 totales
   (1 low, 12 moderate).
-- **Actualización 2026-11-24:** `npm run rules:check` → 0 (86 tests, 23 suites,
+- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad. Los 21 archivos de deuda de identity, orders, finance, inventory, item, logistics, storage, pricing y stores se dividieron por responsabilidad y el baseline quedó en `debt: {}`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
   52/241 IDs); `test:engine` → 0 (21); `test:smoke` → 0 (72);
   `baseline:guard` → 0 incluyendo el baseline de tamaño de módulos.
 - **CI post-merge:** run `43088217913` sobre `develop` (`753a6ff`) en `success`
