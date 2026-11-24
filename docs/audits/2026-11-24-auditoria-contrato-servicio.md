@@ -62,7 +62,7 @@ operabilidad, no.
 | CI `staging` `b25e0781` | ✅ success |
 | Stage Images `b25e0781` | ✅ success (16 servicios) |
 | Deploy stage + smoke E2E `b25e0781` | ✅ success |
-| CI `main` `312415df` | ⏳ en cola al cierre del informe; PR #850 con 38 checks verdes |
+| CI `main` `312415df` | ✅ success (verificado tras el merge; PR #850 con 38 checks verdes) |
 
 ---
 
@@ -304,8 +304,9 @@ No hay un módulo compartido de runtime; la duplicación es deliberada (R-AR-5).
 
 ## 8. No verificado en esta auditoría
 
-- CI de `main` `312415df`: quedó en cola al cierre; el PR #850 tenía 38 checks
-  verdes y el árbol es idéntico a `staging`, cuyo CI y smoke E2E pasaron.
+- CI de `main` `312415df`: verificado en success después del merge; el PR #850
+  tenía 38 checks verdes y el árbol es idéntico a `staging`, cuyo CI y smoke E2E
+  pasaron.
 - Carga real, caos, latencia p95 y comportamiento multi-réplica.
 - RLS efectivo en un clúster productivo (el baseline de RLS es estático).
 - Pentest y revisión de seguridad de perímetro (fuera del alcance de estas
