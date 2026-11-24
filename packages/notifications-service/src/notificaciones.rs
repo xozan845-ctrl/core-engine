@@ -11,7 +11,7 @@ use crate::logs;
 use crate::mensajeria::{Sms, WhatsApp};
 use crate::plantillas::{construir_mensajes, render, variables};
 use crate::plantillas_db::Plantillas;
-use crate::tipos::{ContextoPedido, OrdenExterna};
+use crate::tipos::{ContextoPedido, Destinatario, OrdenExterna};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
@@ -106,25 +106,29 @@ impl NotificacionesPort for Notificaciones {
             return Ok(());
         };
 
-        let (comprador, vendedor) = tokio::join!(
-            self.clientes.obtener_usuario(&orden.comprador_id),
-            self.clientes.obtener_usuario(&orden.vendedor_id),
-        );
+        let vendedor_id = orden.vendedor_id.clone();
+        let (comprador, vendedor) =
+            tokio::join!(self.clientes.obtener_usuario(&orden.comprador_id), async {
+                match vendedor_id.as_deref() {
+                    Some(id) => self.clientes.obtener_usuario(id).await,
+                    None => Ok(None),
+                }
+            },);
         let contexto = ContextoPedido {
             orden,
             comprador: comprador?,
             vendedor: vendedor?,
         };
         let mensajes = construir_mensajes(evento, &contexto);
-        let empresa_id = evento
-            .get("data")
-            .and_then(|data| data.get("empresa_id"))
-            .and_then(Value::as_str);
         for mensaje in &mensajes {
+            let empresa_id = empresa_para_mensaje(evento, &contexto, &mensaje.destinatario);
             let vars = variables(evento, &contexto, mensaje.destinatario);
             let mut correo = mensaje.mensaje.clone();
             if let Some(plantillas) = self.plantillas.as_ref() {
-                if let Some(plantilla) = plantillas.obtener(empresa_id, tipo, "email").await? {
+                if let Some(plantilla) = plantillas
+                    .obtener(empresa_id.as_deref(), tipo, "email")
+                    .await?
+                {
                     if !plantilla.asunto.trim().is_empty() {
                         correo.subject = render(&plantilla.asunto, &vars);
                     }
@@ -148,7 +152,7 @@ impl NotificacionesPort for Notificaciones {
             if self.canales.iter().any(|canal| canal == "whatsapp") {
                 if let Some(whatsapp) = self.whatsapp.as_ref() {
                     let texto = self
-                        .texto_canal(tipo, empresa_id, "whatsapp", &vars, &correo.text)
+                        .texto_canal(tipo, empresa_id.as_deref(), "whatsapp", &vars, &correo.text)
                         .await?;
                     if let Err(error) = whatsapp.enviar(telefono, &texto).await {
                         logs::error(
@@ -161,7 +165,7 @@ impl NotificacionesPort for Notificaciones {
             if self.canales.iter().any(|canal| canal == "sms") {
                 if let Some(sms) = self.sms.as_ref() {
                     let texto = self
-                        .texto_canal(tipo, empresa_id, "sms", &vars, &correo.text)
+                        .texto_canal(tipo, empresa_id.as_deref(), "sms", &vars, &correo.text)
                         .await?;
                     if let Err(error) = sms.enviar(telefono, &texto).await {
                         logs::error(
@@ -196,12 +200,62 @@ pub async fn resolver_contexto(
     orden: OrdenExterna,
 ) -> Result<ContextoPedido, ErrorNotificacion> {
     let comprador = clientes.obtener_usuario(&orden.comprador_id).await?;
-    let vendedor = clientes.obtener_usuario(&orden.vendedor_id).await?;
+    let vendedor = match orden.vendedor_id.as_deref() {
+        Some(id) => clientes.obtener_usuario(id).await?,
+        None => None,
+    };
     Ok(ContextoPedido {
         orden,
         comprador,
         vendedor,
     })
+}
+
+/// Resuelve el tenant dueño de cada mensaje sin asociar una orden multi-tenant
+/// completa a una sola plantilla empresarial. El comprador usa plantilla de
+/// empresa solo cuando todas las líneas pertenecen al mismo tenant; el mensaje
+/// del vendedor usa la empresa de sus propias líneas.
+fn empresa_para_mensaje(
+    evento: &Value,
+    contexto: &ContextoPedido,
+    destinatario: &Destinatario,
+) -> Option<String> {
+    if let Some(empresa) = evento
+        .get("data")
+        .and_then(|data| data.get("empresa_id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+    {
+        return Some(empresa.to_string());
+    }
+    let empresas: Vec<String> = contexto
+        .orden
+        .items
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|item| item.empresa_id.clone())
+        .fold(Vec::new(), |mut salida, empresa| {
+            if !salida.contains(&empresa) {
+                salida.push(empresa);
+            }
+            salida
+        });
+    match destinatario {
+        Destinatario::Comprador if empresas.len() == 1 => empresas.into_iter().next(),
+        Destinatario::Comprador => None,
+        Destinatario::Vendedor => {
+            let vendedor = contexto.orden.vendedor_id.as_deref()?;
+            contexto
+                .orden
+                .items
+                .as_deref()?
+                .iter()
+                .find(|item| item.vendedor_id.as_deref() == Some(vendedor))
+                .and_then(|item| item.empresa_id.clone())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -220,7 +274,7 @@ mod tests {
         OrdenExterna {
             id: ORDEN_ID.to_string(),
             comprador_id: COMPRADOR_ID.to_string(),
-            vendedor_id: VENDEDOR_ID.to_string(),
+            vendedor_id: Some(VENDEDOR_ID.to_string()),
             estado: "pagada".to_string(),
             total_cents: 115000,
             moneda: "NIO".to_string(),
@@ -403,5 +457,27 @@ mod tests {
             .expect("contexto");
         assert_eq!(contexto.comprador.expect("comprador").nombre, "Ana");
         assert_eq!(contexto.vendedor.expect("vendedor").nombre, "Luis");
+    }
+
+    #[tokio::test]
+    async fn venta_directa_notifica_al_comprador_sin_exigir_vendedor() {
+        let mut orden_directa = orden();
+        orden_directa.vendedor_id = None;
+        let clientes = Arc::new(ClientesFalsos {
+            orden: Some(orden_directa),
+            usuarios: true,
+            orden_consultada: Mutex::new(Vec::new()),
+        });
+        let email = Arc::new(EmailFalso::default());
+        let notificaciones =
+            Notificaciones::nueva(clientes, Arc::clone(&email) as Arc<dyn EmailProvider>);
+        notificaciones
+            .procesar(&evento(
+                "payment.procesado",
+                json!({"order_id": ORDEN_ID, "monto_cents": 115000}),
+            ))
+            .await
+            .expect("notificar venta directa");
+        assert_eq!(email.enviados.lock().expect("enviados").len(), 1);
     }
 }

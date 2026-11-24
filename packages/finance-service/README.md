@@ -26,7 +26,7 @@
 | Esquema | `finance` (lee `identity.negocios`/`partes`) |
 | Outbox | `finance.outbox` |
 | Capacidades | `facturacion`, `ventas_credito` |
-| Consume | `order.created`, `payment.procesado`, `comision.acreditada`, `devolucion.solicitada` (cola `finance.pedidos`) |
+| Consume | `order.created`, `payment.procesado`, `comision.acreditada`, `venta.directa.acreditada`, `devolucion.solicitada`, `devolucion.recibida`, `devolucion.reembolsada` (cola `finance.pedidos`) |
 | Publica | `asiento.registrado`, `declaracion.generada`, `comprobante.emitido` |
 | Dependencias | `orders` (lectura de órdenes), `identity` (vendedores/capacidades) |
 | Worker | declaraciones del mes anterior el día 1 a las 00:10 |
@@ -118,7 +118,10 @@ contar en los libros. Cada asiento emite `asiento.registrado`.
 |---|---|
 | `payment.procesado` | Debe `1.1.1 Caja` / Haber `2.1.2 Fondos por liquidar`; suma GMV |
 | `comision.acreditada` | `2.1.2 Fondos por liquidar` → `4.1 Ingresos por comisiones`, `2.1.1 Comisiones por pagar`, `2.1.6` (parte empresa) |
-| `devolucion.solicitada` | Ajuste reverso de la comisión (RN-06) |
+| `venta.directa.acreditada` | `2.1.2 Fondos por liquidar` → `2.1.6 Acreedores empresarios` por el total de la línea; no reconoce ingreso de plataforma |
+| `devolucion.solicitada` | Ajuste reverso total pendiente en el subledger (RN-06) |
+| `devolucion.recibida` | Reverso proporcional por cantidades RMA; no mueve Caja |
+| `devolucion.reembolsada` | Debe `2.1.2 Fondos por liquidar` / Haber `1.1.1 Caja` por el monto confirmado por la pasarela |
 | `order.created` | Métrica de embudo (checkout completado), sin asiento |
 
 Todas las escrituras van en una transacción con outbox e idempotencia por
@@ -327,7 +330,10 @@ fecha esperada. Genera `TableroAlerta` con estado `ok`/`alerta`/`sin_dato`.
 | `order.created` | Métrica de embudo |
 | `payment.procesado` | Asiento Caja/Fondos + métrica GMV |
 | `comision.acreditada` | Asiento de realización de ingreso |
-| `devolucion.solicitada` | Asiento de ajuste/reverso |
+| `venta.directa.acreditada` | Asiento de acreedor del empresario, sin ingreso de plataforma |
+| `devolucion.solicitada` | Asiento de ajuste/reverso total |
+| `devolucion.recibida` | Reverso proporcional de la liquidación RMA |
+| `devolucion.reembolsada` | Salida de Caja por reembolso confirmado |
 
 Idempotencia por `event_id` en `finance.eventos_procesados`.
 

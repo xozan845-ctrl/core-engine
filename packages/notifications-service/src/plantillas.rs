@@ -335,7 +335,7 @@ mod tests {
         OrdenExterna {
             id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee".to_string(),
             comprador_id: "11111111-1111-1111-1111-111111111111".to_string(),
-            vendedor_id: "22222222-2222-2222-2222-222222222222".to_string(),
+            vendedor_id: Some("22222222-2222-2222-2222-222222222222".to_string()),
             estado: "pagada".to_string(),
             total_cents: 115000,
             moneda: "NIO".to_string(),

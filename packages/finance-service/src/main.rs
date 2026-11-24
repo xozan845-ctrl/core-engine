@@ -69,7 +69,10 @@ async fn main() {
                 "order.created".to_string(),
                 "payment.procesado".to_string(),
                 "comision.acreditada".to_string(),
+                "venta.directa.acreditada".to_string(),
                 "devolucion.solicitada".to_string(),
+                "devolucion.recibida".to_string(),
+                "devolucion.reembolsada".to_string(),
             ],
         }])
         .await

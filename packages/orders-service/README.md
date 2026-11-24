@@ -28,7 +28,7 @@ capacidad de **fidelización**.
 | Outbox | `orders.outbox` |
 | Capacidades | `cotizaciones`, `fulfillment_delivery`, `fulfillment_pickup`, `fulfillment_onsite`, `fulfillment_digital`, `contratos`, `suscripciones`, `mesas`, `fidelizacion`, `ventas_credito` (vía finance) |
 | Consume | `stock.reservado`, `stock.fallido`, `stock.reintegrado` (cola `orders.stock`) |
-| Publica | `order.created`, `order.status.updated`, `order.cancelled`, `payment.procesado`, `devolucion.solicitada` |
+| Publica | `order.created`, `order.status.updated`, `order.cancelled`, `payment.procesado`, `devolucion.solicitada`, `devolucion.recibida`, `devolucion.reembolsada` |
 | Dependencias | `stores`, `item`, `pricing`, `inventory`, `identity`, `scheduling`, `finance` |
 | Workers | expiración de órdenes impagas cada 60 s; suscripciones cada 1 h; expiración de puntos cada 6 h; outbox cada 1 s |
 | Expuesto al host | No |
@@ -459,6 +459,8 @@ Idempotencia por `event_id` en `orders.eventos_procesados`.
 | `order.cancelled` | Cancelación (manual, TTL o rechazo de pago); inventario libera stock |
 | `payment.procesado` | Pago confirmado (automático, manual o webhook) |
 | `devolucion.solicitada` | Devolución/cancelación de una orden ya pagada |
+| `devolucion.recibida` | RMA recibida con líneas y cantidades devueltas |
+| `devolucion.reembolsada` | La pasarela confirmó un reembolso total o parcial |
 
 ---
 
