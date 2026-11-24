@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/item-service/src/items/mod.rs": {
-      "lines": 1081,
-      "publicFns": 17
-    },
     "packages/item-service/src/operaciones/mod.rs": {
       "lines": 988,
       "publicFns": 8
