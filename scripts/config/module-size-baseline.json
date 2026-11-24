@@ -1,144 +1,96 @@
 {
   "limits": {
     "lines": 800,
-    "publicFns": 20,
-    "sqlTables": 8
+    "publicFns": 20
   },
   "debt": {
     "packages/finance-service/src/comercio/helpers.rs": {
       "lines": 324,
-      "publicFns": 21,
-      "sqlTables": 1
+      "publicFns": 21
     },
     "packages/finance-service/src/facturacion.rs": {
       "lines": 1580,
-      "publicFns": 20,
-      "sqlTables": 10
+      "publicFns": 20
     },
     "packages/finance-service/src/finanzas/proyecciones.rs": {
       "lines": 833,
-      "publicFns": 20,
-      "sqlTables": 2
+      "publicFns": 20
     },
     "packages/finance-service/src/http/comercio.rs": {
       "lines": 873,
-      "publicFns": 66,
-      "sqlTables": 0
+      "publicFns": 66
     },
     "packages/finance-service/src/http/finanzas.rs": {
       "lines": 1084,
-      "publicFns": 46,
-      "sqlTables": 0
+      "publicFns": 46
     },
     "packages/finance-service/src/tributacion.rs": {
       "lines": 1591,
-      "publicFns": 25,
-      "sqlTables": 10
-    },
-    "packages/identity-service/src/dominio/capacidades.rs": {
-      "lines": 725,
-      "publicFns": 8,
-      "sqlTables": 11
-    },
-    "packages/identity-service/src/dominio/empresas.rs": {
-      "lines": 2300,
-      "publicFns": 20,
-      "sqlTables": 27
-    },
-    "packages/identity-service/src/dominio/negocios.rs": {
-      "lines": 556,
-      "publicFns": 8,
-      "sqlTables": 10
+      "publicFns": 25
     },
     "packages/identity-service/src/dominio/packs.rs": {
       "lines": 881,
-      "publicFns": 10,
-      "sqlTables": 10
+      "publicFns": 10
     },
     "packages/identity-service/src/dominio/partes.rs": {
       "lines": 1156,
-      "publicFns": 18,
-      "sqlTables": 5
+      "publicFns": 18
     },
     "packages/identity-service/src/dominio/personal.rs": {
       "lines": 1611,
-      "publicFns": 14,
-      "sqlTables": 7
+      "publicFns": 14
     },
     "packages/inventory-service/src/inventario/mod.rs": {
       "lines": 861,
-      "publicFns": 11,
-      "sqlTables": 8
+      "publicFns": 11
     },
     "packages/inventory-service/src/reservas.rs": {
       "lines": 863,
-      "publicFns": 9,
-      "sqlTables": 11
+      "publicFns": 9
     },
     "packages/item-service/src/items/mod.rs": {
       "lines": 1081,
-      "publicFns": 17,
-      "sqlTables": 5
+      "publicFns": 17
     },
     "packages/item-service/src/operaciones/mod.rs": {
       "lines": 988,
-      "publicFns": 8,
-      "sqlTables": 2
+      "publicFns": 8
     },
     "packages/logistics-service/src/envios/mod.rs": {
       "lines": 975,
-      "publicFns": 18,
-      "sqlTables": 2
-    },
-    "packages/market-intelligence-service/src/inteligencia/mod.rs": {
-      "lines": 732,
-      "publicFns": 15,
-      "sqlTables": 10
+      "publicFns": 18
     },
     "packages/orders-service/src/checkout.rs": {
       "lines": 1662,
-      "publicFns": 5,
-      "sqlTables": 3
+      "publicFns": 5
     },
     "packages/orders-service/src/clients.rs": {
       "lines": 1125,
-      "publicFns": 20,
-      "sqlTables": 0
+      "publicFns": 20
     },
     "packages/orders-service/src/devoluciones.rs": {
       "lines": 804,
-      "publicFns": 9,
-      "sqlTables": 2
+      "publicFns": 9
     },
     "packages/orders-service/src/fidelizacion.rs": {
       "lines": 1183,
-      "publicFns": 18,
-      "sqlTables": 7
-    },
-    "packages/orders-service/src/http/interno.rs": {
-      "lines": 344,
-      "publicFns": 1,
-      "sqlTables": 9
+      "publicFns": 18
     },
     "packages/orders-service/src/pagos.rs": {
       "lines": 1719,
-      "publicFns": 25,
-      "sqlTables": 5
+      "publicFns": 25
     },
     "packages/pricing-service/src/precios/mod.rs": {
       "lines": 1267,
-      "publicFns": 15,
-      "sqlTables": 5
+      "publicFns": 15
     },
     "packages/storage-service/src/storage/objetos.rs": {
       "lines": 861,
-      "publicFns": 13,
-      "sqlTables": 2
+      "publicFns": 13
     },
     "packages/stores-service/src/tiendas/mod.rs": {
       "lines": 942,
-      "publicFns": 18,
-      "sqlTables": 4
+      "publicFns": 18
     }
   }
 }
