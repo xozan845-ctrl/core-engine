@@ -1037,6 +1037,150 @@ async fn no_debe_expirar_una_orden_con_pago_confirmado() {
 }
 
 #[tokio::test]
+async fn una_expiracion_con_candidato_obsoleto_no_cancela_orden_pagada() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden pendiente");
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    // Congela la vista del poller: la fila sí era candidata antes del pago.
+    let candidato: Option<Uuid> = sqlx::query_scalar(
+        "SELECT v.id FROM orders.orden_vista v
+          WHERE v.id = $1::uuid AND v.estado = 'creada'
+            AND v.creado_en < NOW() - INTERVAL '30 minutes'
+            AND NOT EXISTS (
+                  SELECT 1 FROM orders.pagos p WHERE p.order_id = v.id
+                    AND p.estado IN ('confirmado', 'reembolsado_parcial', 'reembolsado')
+            )",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_optional(db.pool())
+    .await
+    .expect("candidato");
+    assert!(candidato.is_some());
+
+    checkout
+        .transicionar(
+            &orden.id,
+            "pagada",
+            Some("pago_confirmado"),
+            Some("sistema"),
+            Some((
+                orders_service::checkout::PAYMENT_PROCESADO,
+                json!({"order_id": orden.id, "monto_cents": orden.total_cents}),
+            )),
+        )
+        .await
+        .expect("el pago gana la carrera");
+
+    // Simula que el poller conserva el ID ya seleccionado. La transición vuelve
+    // a leer bajo el lock y no ejecuta la cancelación obsoleta.
+    let error = checkout
+        .transicionar(
+            &orden.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect_err("la expiración obsoleta debe rechazarse");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("orden");
+    assert_eq!(vista.estado, "pagada");
+}
+
+#[tokio::test]
+async fn una_expiracion_que_selecciono_antes_no_cancela_si_el_pago_gana_la_carrera() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden pendiente");
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    // Simula el candidato que el poller leyó antes de que terminara el pago.
+    let candidato: Option<Uuid> = sqlx::query_scalar(
+        "SELECT v.id FROM orders.orden_vista v
+          WHERE v.id = $1::uuid AND v.estado = 'creada'
+            AND v.creado_en < NOW() - INTERVAL '30 minutes'
+            AND NOT EXISTS (
+                  SELECT 1 FROM orders.pagos p WHERE p.order_id = v.id
+                    AND p.estado IN ('confirmado', 'reembolsado_parcial', 'reembolsado')
+            )",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_optional(db.pool())
+    .await
+    .expect("seleccionar candidato");
+    assert!(candidato.is_some(), "la orden era candidata antes del pago");
+
+    checkout
+        .transicionar(
+            &orden.id,
+            "pagada",
+            Some("pago_confirmado"),
+            Some("sistema"),
+            Some((
+                orders_service::checkout::PAYMENT_PROCESADO,
+                json!({"order_id": orden.id, "monto_cents": orden.total_cents}),
+            )),
+        )
+        .await
+        .expect("el pago gana la carrera");
+
+    // El poller conserva un ID leído antes del pago; el cambio de estado vuelve
+    // a validar la historia bajo el lock y rechaza la expiración obsoleta.
+    let error = checkout
+        .transicionar(
+            &orden.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect_err("no cancelar orden ya pagada");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "pagada");
+    let expiracion = ExpiracionOrdenes::nueva(Arc::clone(&db), Arc::clone(&checkout), 30);
+    assert_eq!(expiracion.expirar().await.expect("siguiente barrido"), 0);
+}
+
+#[tokio::test]
 async fn debe_emitir_devolucion_al_cancelar_una_orden_pagada() {
     let _guard = DB_LOCK.lock().await;
     let Some(db) = con_bd().await else { return };
@@ -1883,6 +2027,15 @@ async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
             .await
             .expect("eventos");
     assert_eq!(eventos, 1);
+    let reembolsos: (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint,
+                COALESCE(MAX((payload->'data'->>'monto_cents')::int), 0)::bigint
+           FROM orders.outbox WHERE tipo = 'devolucion.reembolsada'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("eventos reembolso");
+    assert_eq!(reembolsos, (1, 10_000));
 
     // Reintentos idempotentes: cubren las rutas administrativas de recuperación.
     let reembolso_retry = devoluciones

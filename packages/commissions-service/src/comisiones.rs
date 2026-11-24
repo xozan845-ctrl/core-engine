@@ -127,6 +127,16 @@ pub fn calcular_con_tasa(
     })
 }
 
+/// Redondeo proporcional entero (medio hacia arriba), acotado a `total_parte`.
+fn proporcional(total: i64, parte: i64, total_parte: i64) -> i64 {
+    if total <= 0 || parte <= 0 || total_parte <= 0 {
+        return 0;
+    }
+    let parte = parte.min(total_parte);
+    ((i128::from(total) * i128::from(parte) + i128::from(total_parte) / 2)
+        / i128::from(total_parte)) as i64
+}
+
 #[async_trait]
 pub trait ComisionesPort: Send + Sync {
     fn calcular(&self, venta_cents: i64, participacion: i64) -> Result<Calculo, ApiError>;
@@ -207,7 +217,9 @@ impl Comisiones {
         Comision::desde_fila(&fila).map(Some).map_err(error_db)
     }
 
-    /// RN-06 parcial: compensa una cantidad devuelta de una línea.
+    /// RN-06 parcial: compensa una cantidad devuelta de una línea. La
+    /// compensación es acumulativa: varias devoluciones de la misma línea nunca
+    /// superan la cantidad y los montos originalmente acreditados.
     pub async fn compensar_linea(
         &self,
         tx: &mut Transaction<'_, Postgres>,
@@ -236,18 +248,44 @@ impl Comisiones {
         if comision.estado == "compensada" {
             return Ok(());
         }
-        let cantidad_original: i32 = fila.try_get("cantidad").unwrap_or(1);
-        let factor = (cantidad as f64 / f64::from(cantidad_original.max(1))).min(1.0);
-        let monto_vendedor = -((comision.monto_vendedor_cents as f64 * factor).round() as i64);
-        let monto_empresario =
-            -((comision.monto_empresario_cents.unwrap_or(0) as f64 * factor).round() as i64);
+        let cantidad_original = i64::from(fila.try_get::<i32, _>("cantidad").unwrap_or(1).max(1));
+        let fila_comision = parsear_uuid(&comision.id)?;
+
+        let previa: (i64, i64, i64, i64) = sqlx::query_as(
+            "SELECT COALESCE(SUM(cantidad), 0)::bigint,
+                    COALESCE(-SUM(monto_cents), 0)::bigint,
+                    COALESCE(-SUM(monto_empresario_cents), 0)::bigint,
+                    COALESCE(-SUM(monto_comision_cents), 0)::bigint
+               FROM commissions.compensaciones_devoluciones
+              WHERE comision_id = $1",
+        )
+        .bind(fila_comision)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(error_db)?;
+        let nueva = (previa.0 + cantidad).min(cantidad_original);
+        if nueva <= previa.0 {
+            return Ok(());
+        }
+        let delta_vendedor =
+            proporcional(comision.monto_vendedor_cents, nueva, cantidad_original) - previa.1;
+        let delta_empresario = proporcional(
+            comision.monto_empresario_cents.unwrap_or(0),
+            nueva,
+            cantidad_original,
+        ) - previa.2;
+        let delta_comision =
+            proporcional(comision.comision_cents, nueva, cantidad_original) - previa.3;
+        if delta_vendedor <= 0 && delta_empresario <= 0 && delta_comision <= 0 {
+            return Ok(());
+        }
         sqlx::query(
             "INSERT INTO commissions.compensaciones_devoluciones
                 (id, comision_id, order_id, vendedor_id, empresa_id, negocio_id, monto_cents,
-                 monto_empresario_cents, motivo, creado_en)
-             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,NOW())",
+                 monto_empresario_cents, monto_comision_cents, cantidad, motivo, creado_en)
+             VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())",
         )
-        .bind(parsear_uuid(&comision.id)?)
+        .bind(fila_comision)
         .bind(order_uuid)
         .bind(parsear_uuid(&comision.vendedor_id)?)
         .bind(
@@ -264,15 +302,17 @@ impl Comisiones {
                 .map(parsear_uuid)
                 .transpose()?,
         )
-        .bind(centavos_i32(monto_vendedor)?)
-        .bind(centavos_i32(monto_empresario)?)
+        .bind(centavos_i32(-delta_vendedor)?)
+        .bind(centavos_i32(-delta_empresario)?)
+        .bind(centavos_i32(-delta_comision)?)
+        .bind((nueva - previa.0) as i32)
         .bind(motivo)
         .execute(&mut **tx)
         .await
         .map_err(error_db)?;
-        if cantidad >= i64::from(cantidad_original) {
+        if nueva >= cantidad_original {
             sqlx::query("UPDATE commissions.comisiones SET estado = 'compensada' WHERE id = $1")
-                .bind(parsear_uuid(&comision.id)?)
+                .bind(fila_comision)
                 .execute(&mut **tx)
                 .await
                 .map_err(error_db)?;
@@ -280,7 +320,8 @@ impl Comisiones {
         Ok(())
     }
 
-    /// RN-06: la devolución compensa la comisión en la siguiente liquidación.
+    /// RN-06: la devolución total compensa lo que aún quede pendiente en cada
+    /// línea. Las devoluciones parciales previas ya descontaron su parte.
     pub async fn compensar(
         &self,
         tx: &mut Transaction<'_, Postgres>,
@@ -288,51 +329,24 @@ impl Comisiones {
         motivo: &str,
     ) -> Result<(), ApiError> {
         let order_uuid = parsear_uuid(order_id)?;
-        let filas = sqlx::query("SELECT * FROM commissions.comisiones WHERE order_id = $1")
-            .bind(order_uuid)
-            .fetch_all(&mut **tx)
-            .await
-            .map_err(error_db)?;
+        let filas = sqlx::query(
+            "SELECT linea_clave, cantidad FROM commissions.comisiones WHERE order_id = $1",
+        )
+        .bind(order_uuid)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(error_db)?;
         for fila in filas {
-            let comision = Comision::desde_fila(&fila).map_err(error_db)?;
-            if comision.estado == "compensada" {
+            let Some(linea_clave) = fila
+                .try_get::<Option<String>, _>("linea_clave")
+                .ok()
+                .flatten()
+            else {
                 continue;
-            }
-            let monto_empresario = comision.monto_empresario_cents.unwrap_or(0);
-            sqlx::query(
-                "INSERT INTO commissions.compensaciones_devoluciones
-                    (id, comision_id, order_id, vendedor_id, empresa_id, negocio_id, monto_cents,
-                     monto_empresario_cents, motivo, creado_en)
-                 VALUES (gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,NOW())",
-            )
-            .bind(parsear_uuid(&comision.id)?)
-            .bind(order_uuid)
-            .bind(parsear_uuid(&comision.vendedor_id)?)
-            .bind(
-                comision
-                    .empresa_id
-                    .as_deref()
-                    .map(parsear_uuid)
-                    .transpose()?,
-            )
-            .bind(
-                comision
-                    .negocio_id
-                    .as_deref()
-                    .map(parsear_uuid)
-                    .transpose()?,
-            )
-            .bind(centavos_i32(-comision.monto_vendedor_cents)?)
-            .bind(centavos_i32(-monto_empresario)?)
-            .bind(motivo)
-            .execute(&mut **tx)
-            .await
-            .map_err(error_db)?;
-            sqlx::query("UPDATE commissions.comisiones SET estado = 'compensada' WHERE id = $1")
-                .bind(parsear_uuid(&comision.id)?)
-                .execute(&mut **tx)
-                .await
-                .map_err(error_db)?;
+            };
+            let cantidad = i64::from(fila.try_get::<i32, _>("cantidad").unwrap_or(1).max(1));
+            self.compensar_linea(tx, order_id, &linea_clave, cantidad, motivo)
+                .await?;
         }
         Ok(())
     }

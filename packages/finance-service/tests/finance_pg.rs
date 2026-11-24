@@ -440,6 +440,35 @@ async fn provisionar(url: &str) {
           tipo text NOT NULL,
           procesado_en timestamptz NOT NULL DEFAULT NOW()
         );
+        CREATE TABLE finance.ventas_lineas (
+          order_id uuid NOT NULL,
+          linea_clave text NOT NULL,
+          empresa_id uuid NOT NULL,
+          negocio_id uuid,
+          directa boolean NOT NULL DEFAULT false,
+          base_cents integer NOT NULL,
+          impuesto_cents integer NOT NULL DEFAULT 0,
+          comision_cents integer NOT NULL DEFAULT 0,
+          vendedor_cents integer NOT NULL DEFAULT 0,
+          empresario_cents integer NOT NULL DEFAULT 0,
+          cantidad integer NOT NULL DEFAULT 1,
+          revertido_cantidad integer NOT NULL DEFAULT 0,
+          revertido_base_cents integer NOT NULL DEFAULT 0,
+          revertido_impuesto_cents integer NOT NULL DEFAULT 0,
+          revertido_comision_cents integer NOT NULL DEFAULT 0,
+          revertido_vendedor_cents integer NOT NULL DEFAULT 0,
+          revertido_empresario_cents integer NOT NULL DEFAULT 0,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW(),
+          PRIMARY KEY (order_id, linea_clave)
+        );
+        CREATE TABLE finance.devoluciones_reembolsadas (
+          devolucion_id uuid PRIMARY KEY,
+          order_id uuid NOT NULL,
+          empresa_id uuid,
+          reembolsado_cents integer NOT NULL DEFAULT 0,
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
         CREATE TABLE finance.outbox (
           event_id uuid PRIMARY KEY,
           tipo text NOT NULL,
@@ -1315,6 +1344,175 @@ async fn debe_procesar_eventos_financieros_una_sola_vez() {
         .await
         .expect("vendedor");
     assert_eq!(ventas, 1);
+}
+
+#[tokio::test]
+async fn debe_contabilizar_venta_directa_y_reembolso_rma_sin_ingreso_de_plataforma() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let consumidor = Consumidor::nuevo(
+        Arc::clone(&db),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        0.12,
+    );
+    let order_id = "22222222-2222-4222-8222-222222222222";
+    let empresa_id = "44444444-4444-4444-8444-444444444444";
+    let vendedor_id = "11111111-1111-4111-8111-111111111111";
+
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000001",
+            "tipo": "payment.procesado",
+            "data": { "order_id": order_id, "monto_cents": 172_500 }
+        }))
+        .await
+        .expect("pago");
+
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000002",
+            "tipo": "comision.acreditada",
+            "data": {
+                "order_id": order_id,
+                "linea_clave": "linea-comision",
+                "empresa_id": empresa_id,
+                "vendedor_id": vendedor_id,
+                "base_cents": 100_000,
+                "impuesto_cents": 15_000,
+                "cantidad": 2,
+                "monto_cents": 12_000,
+                "monto_vendedor_cents": 50_000,
+                "monto_empresario_cents": 38_000,
+            }
+        }))
+        .await
+        .expect("comision");
+
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000003",
+            "tipo": "venta.directa.acreditada",
+            "data": {
+                "order_id": order_id,
+                "linea_clave": "linea-directa",
+                "empresa_id": empresa_id,
+                "base_cents": 50_000,
+                "impuesto_cents": 7_500,
+                "cantidad": 1,
+            }
+        }))
+        .await
+        .expect("venta directa");
+
+    // La venta directa no debe crear ingreso de comisiones.
+    let ingresos: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(debe_cents - haber_cents), 0)::bigint
+           FROM finance.asiento_detalles WHERE cuenta_codigo = '4.1'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("ingresos");
+    assert_eq!(ingresos, -12_000);
+
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000004",
+            "tipo": "devolucion.recibida",
+            "data": {
+                "order_id": order_id,
+                "devolucion_id": "55555555-5555-4555-8555-555555555555",
+                "empresa_id": empresa_id,
+                "items": [{
+                    "linea_clave": "linea-comision",
+                    "cantidad": 1,
+                    "base_cents": 50_000,
+                    "impuesto_cents": 7_500,
+                    "monto_cents": 57_500
+                }]
+            }
+        }))
+        .await
+        .expect("rma");
+
+    // El RMA revierte la mitad de la comisión, vendedor y empresario; no toca Caja.
+    let caja: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(debe_cents - haber_cents), 0)::bigint
+           FROM finance.asiento_detalles WHERE cuenta_codigo = '1.1.1'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("caja");
+    assert_eq!(caja, 172_500);
+    let comision_revertida: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(debe_cents - haber_cents), 0)::bigint
+           FROM finance.asiento_detalles WHERE cuenta_codigo = '4.1'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("comision reverso");
+    assert_eq!(comision_revertida, -6_000);
+    let revertido: i64 = sqlx::query_scalar(
+        "SELECT revertido_cantidad::bigint FROM finance.ventas_lineas
+          WHERE order_id = $1::uuid AND linea_clave = 'linea-comision'",
+    )
+    .bind(order_id)
+    .fetch_one(db.pool())
+    .await
+    .expect("subledger");
+    assert_eq!(revertido, 1);
+
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000005",
+            "tipo": "devolucion.reembolsada",
+            "data": {
+                "order_id": order_id,
+                "devolucion_id": "55555555-5555-4555-8555-555555555555",
+                "monto_cents": 57_500,
+                "reembolsado_cents": 57_500,
+            }
+        }))
+        .await
+        .expect("reembolso");
+    // Reentrega con otro event_id y el mismo acumulado: no debe sacar caja otra vez.
+    consumidor
+        .manejar(&json!({
+            "event_id": "80000000-0000-4000-8000-000000000006",
+            "tipo": "devolucion.reembolsada",
+            "data": {
+                "order_id": order_id,
+                "devolucion_id": "55555555-5555-4555-8555-555555555555",
+                "monto_cents": 57_500,
+                "reembolsado_cents": 57_500,
+            }
+        }))
+        .await
+        .expect("reembolso idempotente");
+
+    let caja: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(SUM(debe_cents - haber_cents), 0)::bigint
+           FROM finance.asiento_detalles WHERE cuenta_codigo = '1.1.1'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("caja final");
+    assert_eq!(caja, 115_000);
+    let asientos: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM finance.asientos WHERE referencia_id = $1",
+    )
+    .bind(order_id)
+    .fetch_one(db.pool())
+    .await
+    .expect("asientos");
+    // pago + comisión + venta directa + reverso RMA + reembolso
+    assert_eq!(asientos, 5);
 }
 
 #[tokio::test]

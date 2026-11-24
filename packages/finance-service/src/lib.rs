@@ -22,6 +22,7 @@ pub mod outbox;
 pub mod pdf;
 pub mod pdf_almacen;
 pub mod rabbit;
+mod reversos;
 pub mod rutas;
 pub mod state;
 pub mod tributacion;

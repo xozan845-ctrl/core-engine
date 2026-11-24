@@ -749,12 +749,30 @@ impl Checkout {
         actor: Option<&str>,
         evento_adicional: Option<(&str, Value)>,
     ) -> Result<OrderView, ApiError> {
+        // Serializa todos los cambios de estado de esta orden. Sin el lock, el
+        // barrido de expiración y la confirmación de pago podrían reconstruir
+        // ambos `creada`, y el segundo evento podría cancelar una orden ya pagada.
+        let mut tx = self.db.transaccion().await.map_err(error_db)?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(order_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(error_db)?;
+
+        // Leer la historia solo después de tomar el lock; así se valida contra
+        // el estado que dejó la transición ganadora.
         let historia = OrderEventStore.historia_de(&self.db, order_id).await?;
         if historia.is_empty() {
             return Err(ApiError::no_encontrado("Orden", order_id));
         }
         let estado = reconstruir_desde_eventos(&historia)
             .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))?;
+        if motivo == Some("expirada_por_ttl") && estado_pagado(&estado.estado) {
+            return Err(ApiError::dominio(
+                "TRANSICION_INVALIDA",
+                "La orden recibió el pago antes de vencer; el barrido no puede cancelarla.",
+            ));
+        }
         self.tipos
             .validar(&estado.tipo_orden, &estado.estado, estado_nuevo)
             .await?;
@@ -763,8 +781,6 @@ impl Checkout {
         let liberar_stock = estado_nuevo == "cancelada";
         let estaba_pagada = estado_pagado(&estado.estado);
         let motivo_cancelacion = motivo.unwrap_or("cancelacion");
-
-        let mut tx = self.db.transaccion().await.map_err(error_db)?;
         OrderEventStore
             .append_en_transaccion(
                 &mut tx,
@@ -790,6 +806,7 @@ impl Checkout {
                 "previo_estado": estado.estado,
                 "motivo": motivo,
                 "actor": actor_final,
+                "empresa_ids": empresas_de_items(&estado.items),
             },
         });
         self.insertar_outbox(&mut tx, &evento).await?;
@@ -1613,6 +1630,16 @@ fn empresa_unica(items: &[ItemOrden]) -> Option<String> {
     } else {
         None
     }
+}
+
+fn empresas_de_items(items: &[ItemOrden]) -> Vec<String> {
+    let mut empresas = Vec::new();
+    for item in items {
+        if !empresas.contains(&item.empresa_id) {
+            empresas.push(item.empresa_id.clone());
+        }
+    }
+    empresas
 }
 
 /// `true` si el fulfillment está permitido por el pack; lista vacía = sin

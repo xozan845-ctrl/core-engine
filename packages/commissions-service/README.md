@@ -26,8 +26,8 @@ stage antes de habilitarlo
 | Esquema | `commissions` (lee `identity.negocios`) |
 | Outbox | `commissions.outbox` |
 | Capacidad | `liquidaciones` |
-| Consume | `order.completado`, `payment.procesado`, `devolucion.solicitada`, `comision.acreditada` |
-| Publica | `comision.acreditada` |
+| Consume | `order.completado`, `payment.procesado`, `devolucion.solicitada`, `devolucion.recibida`, `comision.acreditada` |
+| Publica | `comision.acreditada`, `venta.directa.acreditada` |
 | Dependencias | `orders` (detalle de orden), `inventory` (KPIs), `identity` (vendedores/capacidades) |
 | Workers | corte quincenal cada 30 s (dispara a las 00:05 de los días 1 y 15); outbox 1 s |
 | Entornos | dev, **stage** (no producción) |
@@ -113,9 +113,11 @@ varias comisiones.
 
 ### Devoluciones
 
-`devolucion.solicitada` registra una **compensación** por la comisión y los
-montos de vendedor/empresario. La comisión pasa a `compensada` y el negativo se
-aplica en la **siguiente liquidación** (RN-06), nunca se edita el histórico.
+`devolucion.solicitada` registra una **compensación** total por la comisión y
+los montos de vendedor/empresario. `devolucion.recibida` compensa solo las
+cantidades devueltas por una RMA. La compensación es acumulativa y nunca supera
+la cantidad ni los montos originales; el negativo se aplica en la **siguiente
+liquidación** (RN-06), nunca se edita el histórico.
 
 ---
 
@@ -179,8 +181,9 @@ pendientes y liquidaciones. Los montos salen como strings `"1150.00"`.
 | Evento | Cola | Efecto |
 |---|---|---|
 | `payment.procesado` | `commissions.pedidos` | Registra pago simulado |
-| `order.completado` | `commissions.pedidos` | Acredita comisión por línea y emite `comision.acreditada` |
-| `devolucion.solicitada` | `commissions.pedidos` | Compensa comisión (RN-06) |
+| `order.completado` | `commissions.pedidos` | Acredita comisión o emite `venta.directa.acreditada` por línea |
+| `devolucion.solicitada` | `commissions.pedidos` | Compensa lo pendiente por devolución total (RN-06) |
+| `devolucion.recibida` | `commissions.pedidos` | Compensa proporcionalmente las cantidades RMA |
 | `comision.acreditada` | `commissions.liquidacion` | Consolida para el corte |
 
 Idempotencia por `event_id` en `commissions.eventos_procesados` y por
