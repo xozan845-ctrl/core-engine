@@ -6,7 +6,6 @@
   "finance.asientos",
   "finance.asientos_vista",
   "finance.comprobantes",
-  "finance.declaraciones",
   "finance.eventos_procesados",
   "finance.jurisdicciones",
   "finance.libro_mayor_mv",

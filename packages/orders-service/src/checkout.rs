@@ -42,6 +42,10 @@ pub struct LineaEntrada {
     pub fulfillment_config: Option<Value>,
     #[serde(default)]
     pub ubicacion_id: Option<String>,
+    /// Código de tasa regional; si falta, se usa `atributos.impuesto_codigo`
+    /// del ítem o la tasa predeterminada de la región.
+    #[serde(default)]
+    pub impuesto_codigo: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -73,6 +77,7 @@ struct LineaAgrupada {
     fulfillment: Option<String>,
     fulfillment_config: Option<Value>,
     ubicacion_id: Option<String>,
+    impuesto_codigo: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -254,6 +259,14 @@ impl Checkout {
                 descuento_de_promocion(promocion, precio_unitario, linea.cantidad)?
             };
             total += bruto.saturating_sub(descuento);
+            let impuesto_codigo = linea.impuesto_codigo.clone().or_else(|| {
+                oferta
+                    .atributos
+                    .as_ref()
+                    .and_then(|atributos| atributos.get("impuesto_codigo"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            });
             items.push(ItemOrden {
                 oferta_id: oferta.id.clone(),
                 sku: oferta.sku.clone(),
@@ -263,6 +276,7 @@ impl Checkout {
                 descuento_cents: descuento,
                 impuesto_cents: 0,
                 tasa_impuesto_bps: 0,
+                impuesto_codigo,
                 total_linea_cents: 0,
                 promocion_id: promocion.map(|promo| promo.id.clone()),
                 vendedor_id: oferta.vendedor_id.clone(),
@@ -1162,10 +1176,25 @@ impl Checkout {
             let config = configs
                 .get(&(item.empresa_id.clone(), item.negocio_id.clone()))
                 .and_then(|config| config.as_ref());
+            let (tasa, exenta) = match config {
+                Some(config) if config.impuesto_activo => config
+                    .tasa(item.impuesto_codigo.as_deref())
+                    .ok_or_else(|| {
+                        ApiError::dominio(
+                            "IMPUESTO_NO_DISPONIBLE",
+                            format!(
+                                "La región no tiene configurada la tasa {}.",
+                                item.impuesto_codigo
+                                    .as_deref()
+                                    .unwrap_or(config.tasa_default_codigo.as_str())
+                            ),
+                        )
+                    })?,
+                Some(_) | None => (0.0, false),
+            };
             let activo = config
-                .map(|config| config.impuesto_activo && config.tasa_iva > 0.0)
+                .map(|config| config.impuesto_activo && !exenta && tasa > 0.0)
                 .unwrap_or(false);
-            let tasa = config.map(|config| config.tasa_iva).unwrap_or(0.0);
             let tasa_bps = (tasa * 10_000.0).round().max(0.0) as i64;
             let (impuesto, total_linea) = if activo {
                 if config
@@ -1286,6 +1315,7 @@ fn lineas_de_carrito(items: &[ItemCarrito]) -> Vec<LineaEntrada> {
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
             ubicacion_id: None,
+            impuesto_codigo: None,
         })
         .collect()
 }
@@ -1346,6 +1376,17 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
                         "Una misma oferta no puede despacharse desde dos ubicaciones en una orden.",
                     ));
                 }
+                let impuesto = linea
+                    .impuesto_codigo
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|valor| !valor.is_empty());
+                if impuesto.is_some() && actual.impuesto_codigo.as_deref() != impuesto {
+                    return Err(ApiError::dominio(
+                        "IMPUESTO_CONFLICTO",
+                        "Una misma oferta no puede usar dos códigos de impuesto en una orden.",
+                    ));
+                }
                 actual.cantidad += linea.cantidad;
                 if linea.fulfillment_config.is_some() {
                     actual.fulfillment_config = linea.fulfillment_config.clone();
@@ -1361,6 +1402,12 @@ fn agrupar(lineas: &[LineaEntrada]) -> Result<Vec<LineaAgrupada>, ApiError> {
                         fulfillment: linea.fulfillment.clone(),
                         fulfillment_config: linea.fulfillment_config.clone(),
                         ubicacion_id: ubicacion,
+                        impuesto_codigo: linea
+                            .impuesto_codigo
+                            .as_deref()
+                            .map(str::trim)
+                            .filter(|valor| !valor.is_empty())
+                            .map(str::to_string),
                     },
                 );
             }
@@ -1640,6 +1687,7 @@ mod tests {
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
                 ubicacion_id: None,
+                impuesto_codigo: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
@@ -1647,6 +1695,7 @@ mod tests {
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
                 ubicacion_id: None,
+                impuesto_codigo: None,
             },
         ];
         let agrupadas = agrupar(&lineas).expect("agrupar");
@@ -1663,6 +1712,7 @@ mod tests {
                 fulfillment: Some("none".into()),
                 fulfillment_config: None,
                 ubicacion_id: None,
+                impuesto_codigo: None,
             },
             LineaEntrada {
                 oferta_id: "o-1".into(),
@@ -1670,6 +1720,7 @@ mod tests {
                 fulfillment: Some("digital".into()),
                 fulfillment_config: None,
                 ubicacion_id: None,
+                impuesto_codigo: None,
             },
         ];
         assert_eq!(
@@ -1785,6 +1836,7 @@ mod tests {
             descuento_cents: 0,
             impuesto_cents: 0,
             tasa_impuesto_bps: 0,
+            impuesto_codigo: None,
             total_linea_cents: 0,
             promocion_id: None,
             vendedor_id: None,

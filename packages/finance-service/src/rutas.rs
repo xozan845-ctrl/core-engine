@@ -226,8 +226,24 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
             get(finanzas::jurisdicciones_listar).post(finanzas::jurisdicciones_crear),
         )
         .route(
+            "/api/v2/finanzas/jurisdicciones/{codigo}",
+            patch(finanzas::jurisdicciones_actualizar),
+        )
+        .route(
+            "/api/v2/finanzas/jurisdicciones/{codigo}/tasas",
+            get(finanzas::tasas_listar).put(finanzas::tasas_guardar),
+        )
+        .route(
             "/api/v2/finanzas/configuracion-fiscal",
             get(finanzas::configuracion_fiscal_obtener).put(finanzas::configuracion_fiscal_guardar),
+        )
+        .route(
+            "/api/v2/finanzas/series",
+            get(finanzas::series_listar).post(finanzas::series_crear),
+        )
+        .route(
+            "/api/v2/finanzas/series/{serie}",
+            patch(finanzas::series_actualizar),
         )
         .route(
             "/api/v2/finanzas/regimenes",

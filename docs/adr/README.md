@@ -57,6 +57,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0046](./0046-suscripcion-plataforma-expansion.md) | Aceptado (implementado con cobro manual) | Plan USD 35/mes para operar más de un negocio |
 | [0047](./0047-onboarding-idempotente.md) | Aceptado (implementado) | Onboarding autenticado, idempotente y con token/estado consolidado |
 | [0048](./0048-pasarelas-tilopay-pagadito.md) | Aceptado (implementado; verificación sandbox pendiente) | Adaptadores Tilopay y Pagadito, webhooks como señal, conciliación programada y pago tardío |
+| [0049](./0049-regiones-tributarias.md) | Aceptado (implementado; piloto Nicaragua) | Región tributaria seleccionable por pack y tenant, manifiesto fiscal y resolución fail-closed |
 
 ## Convención
 

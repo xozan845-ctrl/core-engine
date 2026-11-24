@@ -177,10 +177,15 @@ Validaciones en orden:
    orden trae `cupon_codigo`, pricing valida y canjea el cupón sobre el total
    (ADR-0028). El modelo `venta_directa` del pack desactiva la comisión por
    línea y permite `vendedor_id` nulo (ADR-0023). En cotización la comisión es
-   0 hasta aceptar. Si la configuración fiscal del tenant tiene
-   `impuesto_activo=true`, cada línea guarda `impuesto_cents`,
-   `tasa_impuesto_bps` y `total_linea_cents`; el cupón se reparte antes del
-   cálculo y el comprobante reutiliza el snapshot (ADR-0038).
+   0 hasta aceptar. La configuración fiscal la resuelve finance con el orden
+   negocio → empresa → región tributaria del tenant (ADR-0026, ADR-0049). Si
+   tiene `impuesto_activo=true`, cada línea resuelve su `impuesto_codigo`
+   (override de la línea o `atributos.impuesto_codigo` del ítem) contra el
+   catálogo de tasas de la región y guarda `impuesto_cents`,
+   `tasa_impuesto_bps`, `impuesto_codigo` y `total_linea_cents`. Un código
+   desconocido falla con `IMPUESTO_NO_DISPONIBLE`; una tasa `EXENTA` no suma
+   IVA. El cupón se reparte antes del cálculo y el comprobante reutiliza el
+   snapshot (ADR-0038).
 7. Crédito: registra la venta en finance antes de confirmar; si falla, se
    anula el crédito y no se crea la orden.
 8. Todo se persiste en una transacción: evento + outbox + proyección.

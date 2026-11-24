@@ -107,6 +107,7 @@ src/
     ├── partes.rs               personas/organizaciones y relaciones
     ├── password_reset.rs       token de un uso, 30 min, hash SHA-256
     ├── personal.rs             roles, puestos, asignaciones, invitaciones
+    ├── regiones.rs             regiones tributarias por pack y tenant
     ├── registros.rs            historia clínica, recetas, expedientes
     ├── sesiones.rs             refresh persistido y revocable
     ├── slug.rs                 normalización, reservados, UUID
@@ -207,8 +208,17 @@ internos son objetos concretos (`Storage`, `Stores`).
 ### Empresa
 
 - `POST /api/v2/empresas` crea la empresa y el negocio **`principal`** en la
-  misma operación, con `vertical_id` y `pack_codigo`/`pack_version`.
+  misma operación, con `vertical_id`, `pack_codigo`/`pack_version` y
+  `region_tributaria` (si se omite, la predeterminada del pack).
 - Acepta `capacidades_extra` para add-ons (p. ej. `fidelizacion`).
+- `GET /regiones-tributarias?pack_codigo=&pack_version=` lista las regiones que
+  el pack admite (selector del onboarding).
+- `GET/PUT /empresas/{id}/region-tributaria` consulta o cambia la región con
+  validación contra el pack, historial y auditoría. El manifiesto de features
+  expone `region_tributaria` y sus features `fiscal.*`.
+- `GET/PUT /packs/{codigo}/{version}/regiones` lista y reemplaza las regiones
+  declaradas por un pack; el PUT es solo `super_admin`/`admin` y exige una
+  predeterminada.
 - `GET /empresas/{id}` resuelve por UUID **o slug**; solo miembros o admins.
 - `PATCH /empresas/{id}/perfil` actualiza datos comerciales/fiscales y logo.
 - `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en
@@ -503,7 +513,8 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
   PostgreSQL real (`TEST_DATABASE_URL`).
 - Cobertura de referencia del gate Rust: 79/75 (medida 81,65/76,98).
 - Casos cubiertos: seed idempotente, slugs con historial, capacidades por
-  negocio, invitaciones, extensiones, registros y API keys.
+  negocio, invitaciones, extensiones, registros, API keys y selección/cambio de
+  región tributaria con historial (ADR-0049).
 
 ---
 
@@ -511,6 +522,7 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 
 - [ADR-0017 · identity-service en Rust](../../docs/adr/0017-identity-service-en-rust.md)
 - [ADR-0021 · negocios por empresa](../../docs/adr/0021-negocios-por-empresa.md)
+- [ADR-0049 · regiones tributarias](../../docs/adr/0049-regiones-tributarias.md)
 - [ADR-0005 · autenticación de gateway sin gate de borde](../../docs/adr/0005-autenticacion-gateway-sin-gate-de-borde.md)
 - [Runbook multi-vertical](../../docs/runbook-multi-vertical.md)
 - [Runbook de autenticación del gateway](../../docs/runbook-gateway-auth.md)

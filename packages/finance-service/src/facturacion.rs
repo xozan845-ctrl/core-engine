@@ -28,6 +28,8 @@ pub struct Comprobante {
     pub base_gravada_cents: i64,
     pub iva_cents: i64,
     pub exento_cents: i64,
+    pub retencion_cents: i64,
+    pub retencion_tasa_bps: i64,
     pub total_cents: i64,
     pub moneda: String,
     pub estado: String,
@@ -42,6 +44,7 @@ pub struct Comprobante {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SerieComprobante {
     pub serie: String,
+    pub empresa_id: Option<String>,
     pub negocio_id: Option<String>,
     pub tipo: String,
     pub prefijo: String,
@@ -69,6 +72,10 @@ pub struct OrdenItemFiscal {
     pub descuento_cents: i64,
     #[serde(default)]
     pub impuesto_cents: i64,
+    #[serde(default)]
+    pub tasa_impuesto_bps: i64,
+    #[serde(default)]
+    pub impuesto_codigo: Option<String>,
     #[serde(default)]
     pub total_linea_cents: i64,
 }
@@ -236,6 +243,144 @@ impl ProveedorFacturacionElectronica for FacturacionHttp {
     }
 }
 
+/// Adaptador de referencia para un proveedor electrónico nacional (DGI y
+/// similares). Genera el XML fiscal y lo publica en un gateway de certificación
+/// configurado por entorno; la firma/certificado y el endpoint los provee el
+/// país. No contiene claves ni lógica específica hardcodeada.
+pub struct FacturacionDgi {
+    url: String,
+    clave: String,
+    timeout: Duration,
+}
+
+impl FacturacionDgi {
+    pub fn nueva(url: String, clave: Option<String>, timeout_ms: u64) -> Self {
+        Self {
+            url: url.trim_end_matches('/').to_string(),
+            clave: clave.unwrap_or_default(),
+            timeout: Duration::from_millis(timeout_ms.max(1)),
+        }
+    }
+
+    fn xml(comprobante: &Comprobante, ambiente: &str) -> String {
+        let datos = comprobante.datos_cliente.as_ref();
+        let cliente_ruc = datos
+            .and_then(|valor| valor.get("ruc"))
+            .and_then(Value::as_str)
+            .unwrap_or("-");
+        let cliente_nombre = datos
+            .and_then(|valor| valor.get("razon_social"))
+            .and_then(Value::as_str)
+            .unwrap_or("-");
+        let emisor_ruc = datos
+            .and_then(|valor| valor.get("emisor_ruc"))
+            .and_then(Value::as_str)
+            .unwrap_or("-");
+        let items = datos
+            .and_then(|valor| valor.get("items"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|item| {
+                format!(
+                    "<Item><SKU>{}</SKU><Cantidad>{}</Cantidad><Base>{}</Base><IVA>{}</IVA><Total>{}</Total></Item>",
+                    xml_escape(item.get("sku").and_then(Value::as_str).unwrap_or("-")),
+                    item.get("cantidad").and_then(Value::as_i64).unwrap_or(0),
+                    item.get("base_cents").and_then(Value::as_i64).unwrap_or(0),
+                    item.get("iva_cents").and_then(Value::as_i64).unwrap_or(0),
+                    item.get("total_cents").and_then(Value::as_i64).unwrap_or(0),
+                )
+            })
+            .collect::<String>();
+        format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+             <ComprobanteElectronico>\
+             <Ambiente>{}</Ambiente>\
+             <Emisor><RUC>{}</RUC></Emisor>\
+             <Receptor><RUC>{}</RUC><RazonSocial>{}</RazonSocial></Receptor>\
+             <Serie>{}</Serie><Numero>{}</Numero><Tipo>{}</Tipo>\
+             <FechaEmision>{}</FechaEmision><Moneda>{}</Moneda>\
+             <Totales><BaseGravada>{}</BaseGravada><IVA>{}</IVA><Exento>{}</Exento>\
+             <Retencion>{}</Retencion><Total>{}</Total></Totales>\
+             <Items>{}</Items>\
+             </ComprobanteElectronico>",
+            xml_escape(ambiente),
+            xml_escape(emisor_ruc),
+            xml_escape(cliente_ruc),
+            xml_escape(cliente_nombre),
+            xml_escape(&comprobante.serie),
+            xml_escape(&comprobante.numero),
+            xml_escape(&comprobante.tipo),
+            xml_escape(comprobante.emitido_en.as_deref().unwrap_or("-")),
+            xml_escape(&comprobante.moneda),
+            comprobante.base_gravada_cents,
+            comprobante.iva_cents,
+            comprobante.exento_cents,
+            comprobante.retencion_cents,
+            comprobante.total_cents,
+            items,
+        )
+    }
+}
+
+fn xml_escape(valor: &str) -> String {
+    valor
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+#[async_trait]
+impl ProveedorFacturacionElectronica for FacturacionDgi {
+    async fn emitir(
+        &self,
+        comprobante: &Comprobante,
+        ambiente: &str,
+    ) -> Result<ReferenciaElectronica, ApiError> {
+        if self.url.is_empty() {
+            return Err(ApiError::dominio(
+                "PROVEEDOR_NO_CONFIGURADO",
+                "No hay gateway DGI configurado (FACTURACION_PROVEEDOR_URL).",
+            ));
+        }
+        let cliente = reqwest::Client::builder()
+            .timeout(self.timeout)
+            .build()
+            .map_err(|_| ApiError::interno())?;
+        let respuesta = cliente
+            .post(format!("{}/comprobantes", self.url))
+            .bearer_auth(&self.clave)
+            .header("content-type", "application/xml")
+            .body(Self::xml(comprobante, ambiente))
+            .send()
+            .await
+            .map_err(|_| ApiError::servicio_no_disponible("facturacion-electronica"))?;
+        if !respuesta.status().is_success() {
+            return Err(ApiError::nueva(
+                "FACTURACION_RECHAZADA",
+                "El gateway DGI rechazo el comprobante.",
+                axum::http::StatusCode::BAD_GATEWAY,
+            ));
+        }
+        let valor: Value = respuesta.json().await.map_err(|_| ApiError::interno())?;
+        Ok(ReferenciaElectronica {
+            referencia: valor
+                .get("referencia")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            estado: valor
+                .get("estado")
+                .and_then(Value::as_str)
+                .unwrap_or("aceptada")
+                .to_string(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct EmitirComprobante {
     pub tipo: String,
@@ -273,6 +418,7 @@ pub struct Facturacion {
     ordenes: Arc<dyn Ordenes>,
     emitir: bool,
     http: Option<Arc<FacturacionHttp>>,
+    dgi: Option<Arc<FacturacionDgi>>,
     pdf_almacen: Option<Arc<crate::pdf_almacen::PdfAlmacen>>,
 }
 
@@ -291,6 +437,7 @@ impl Facturacion {
             ordenes,
             emitir,
             http: None,
+            dgi: None,
             pdf_almacen: None,
         }
     }
@@ -310,6 +457,16 @@ impl Facturacion {
         self
     }
 
+    pub fn con_proveedor_dgi(
+        mut self,
+        url: String,
+        clave: Option<String>,
+        timeout_ms: u64,
+    ) -> Self {
+        self.dgi = Some(Arc::new(FacturacionDgi::nueva(url, clave, timeout_ms)));
+        self
+    }
+
     pub async fn listar(
         &self,
         desde: Option<DateTime<Utc>>,
@@ -319,8 +476,8 @@ impl Facturacion {
     ) -> Result<Vec<Comprobante>, ApiError> {
         let filas = sqlx::query(
             "SELECT id, serie, numero, tipo, orden_id, empresa_id, negocio_id, parte_id, base_gravada_cents,
-                    iva_cents, exento_cents, total_cents, moneda, estado,
-                    datos_cliente, emitido_en, creado_en,
+                    iva_cents, exento_cents, retencion_cents, retencion_tasa_bps, total_cents,
+                    moneda, estado, datos_cliente, emitido_en, creado_en,
                     electronica_estado, electronica_referencia, electronica_enviada_en
              FROM finance.comprobantes
              WHERE ($1::timestamptz IS NULL OR creado_en >= $1)
@@ -341,25 +498,152 @@ impl Facturacion {
     }
 
     pub async fn series(&self) -> Result<Vec<SerieComprobante>, ApiError> {
-        self.series_de(None).await
+        self.series_de(None, None).await
     }
 
     pub async fn series_de(
         &self,
         negocio_id: Option<&str>,
+        empresa_id: Option<&str>,
     ) -> Result<Vec<SerieComprobante>, ApiError> {
         let filas = sqlx::query(
-            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+            "SELECT serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
                     jurisdiccion, activa
              FROM finance.series_comprobantes
               WHERE ($1::uuid IS NULL OR negocio_id IS NULL OR negocio_id = $1::uuid)
+                AND ($2::uuid IS NULL OR empresa_id IS NULL OR empresa_id = $2::uuid)
               ORDER BY serie",
         )
         .bind(negocio_id)
+        .bind(empresa_id)
         .fetch_all(self.db.pool())
         .await
         .map_err(error_db)?;
         Ok(filas.iter().map(serie_de_fila).collect())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn crear_serie(
+        &self,
+        serie: &str,
+        tipo: &str,
+        prefijo: &str,
+        ruc_emisor: &str,
+        jurisdiccion: &str,
+        empresa_id: Option<&str>,
+        negocio_id: Option<&str>,
+        activa: bool,
+    ) -> Result<SerieComprobante, ApiError> {
+        for (campo, valor) in [("empresa_id", empresa_id), ("negocio_id", negocio_id)] {
+            if let Some(valor) = valor {
+                uuid::Uuid::parse_str(valor).map_err(|_| {
+                    ApiError::validacion(json!([
+                        {"campo": campo, "restricciones": ["isUuid"]}
+                    ]))
+                })?;
+            }
+        }
+        let serie = serie.trim();
+        let tipo = tipo.trim().to_uppercase();
+        let prefijo = prefijo.trim();
+        let jurisdiccion = jurisdiccion.trim().to_uppercase();
+        if !(1..=40).contains(&serie.chars().count())
+            || !serie
+                .chars()
+                .all(|caracter| caracter.is_ascii_alphanumeric() || caracter == '-')
+        {
+            return Err(ApiError::validacion(json!([
+                {"campo": "serie", "restricciones": ["matches:^[A-Za-z0-9-]{1,40}$"]}
+            ])));
+        }
+        if !["FACTURA", "NOTA_CREDITO"].contains(&tipo.as_str()) {
+            return Err(ApiError::validacion(json!([
+                {"campo": "tipo", "restricciones": ["isIn:FACTURA,NOTA_CREDITO"]}
+            ])));
+        }
+        if prefijo.is_empty() || prefijo.chars().count() > 20 {
+            return Err(ApiError::validacion(json!([
+                {"campo": "prefijo", "restricciones": ["isLength:1,20"]}
+            ])));
+        }
+        if ruc_emisor.trim().is_empty() {
+            return Err(ApiError::validacion(json!([
+                {"campo": "ruc_emisor", "restricciones": ["isString"]}
+            ])));
+        }
+        let region =
+            sqlx::query("SELECT 1 FROM finance.jurisdicciones WHERE codigo_pais = $1 AND activa")
+                .bind(&jurisdiccion)
+                .fetch_optional(self.db.pool())
+                .await
+                .map_err(error_db)?;
+        if region.is_none() {
+            return Err(ApiError::no_encontrado("Jurisdiccion", &jurisdiccion));
+        }
+        let fila = sqlx::query(
+            "INSERT INTO finance.series_comprobantes
+               (serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual,
+                ruc_emisor, jurisdiccion, activa)
+             VALUES ($1, $2::uuid, $3::uuid, $4, $5, 0, $6, $7, $8)
+             RETURNING serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual,
+                       ruc_emisor, jurisdiccion, activa",
+        )
+        .bind(serie)
+        .bind(empresa_id)
+        .bind(negocio_id)
+        .bind(&tipo)
+        .bind(prefijo)
+        .bind(ruc_emisor.trim())
+        .bind(&jurisdiccion)
+        .bind(activa)
+        .fetch_one(self.db.pool())
+        .await
+        .map_err(|error| {
+            if crate::errors::es_violacion_unicidad(&error) {
+                ApiError::conflicto("La serie ya existe.")
+            } else {
+                error_db(error)
+            }
+        })?;
+        Ok(serie_de_fila(&fila))
+    }
+
+    pub async fn empresa_de_serie(&self, serie: &str) -> Result<Option<String>, ApiError> {
+        let fila = sqlx::query(
+            "SELECT empresa_id::text AS empresa_id
+               FROM finance.series_comprobantes WHERE serie = $1",
+        )
+        .bind(serie)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        Ok(fila
+            .and_then(|fila| fila.try_get("empresa_id").ok())
+            .flatten())
+    }
+
+    pub async fn actualizar_serie(
+        &self,
+        serie: &str,
+        activa: Option<bool>,
+        prefijo: Option<&str>,
+    ) -> Result<SerieComprobante, ApiError> {
+        let fila = sqlx::query(
+            "UPDATE finance.series_comprobantes
+                SET activa = COALESCE($2, activa),
+                    prefijo = COALESCE($3, prefijo)
+              WHERE serie = $1
+              RETURNING serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual,
+                        ruc_emisor, jurisdiccion, activa",
+        )
+        .bind(serie)
+        .bind(activa)
+        .bind(prefijo)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .ok_or_else(|| ApiError::no_encontrado("Serie", serie))?;
+        Ok(serie_de_fila(&fila))
     }
 
     /// Emite (o reserva como BORRADOR) un comprobante de la venta.
@@ -380,44 +664,89 @@ impl Facturacion {
             .map(uuid::Uuid::parse_str)
             .transpose()
             .map_err(|_| ApiError::interno())?;
+        let empresa_uuid = orden
+            .empresa_id
+            .as_deref()
+            .map(uuid::Uuid::parse_str)
+            .transpose()
+            .map_err(|_| ApiError::interno())?;
+        let region = match orden.empresa_id.as_deref() {
+            Some(empresa_id) => sqlx::query_scalar::<_, Option<String>>(
+                "SELECT region_tributaria FROM identity.empresas WHERE id = $1::uuid",
+            )
+            .bind(empresa_id)
+            .fetch_optional(self.db.pool())
+            .await
+            .map_err(error_db)?
+            .flatten(),
+            None => None,
+        };
 
         let serie = sqlx::query(
-            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+            "SELECT serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
                     jurisdiccion, activa
              FROM finance.series_comprobantes
               WHERE tipo = $1 AND activa
-                AND (negocio_id = $2::uuid OR negocio_id IS NULL)
-              ORDER BY (negocio_id IS NOT NULL) DESC, serie
+                AND ($2::uuid IS NULL OR empresa_id = $2::uuid OR empresa_id IS NULL)
+                AND ($3::uuid IS NULL OR negocio_id = $3::uuid OR negocio_id IS NULL)
+                AND ($4::text IS NULL OR jurisdiccion = $4)
+              ORDER BY (empresa_id IS NOT NULL) DESC,
+                       (negocio_id IS NOT NULL) DESC,
+                       serie
               LIMIT 1",
         )
         .bind(&dto.tipo)
+        .bind(empresa_uuid)
         .bind(negocio_uuid)
+        .bind(region.as_deref())
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?
         .ok_or_else(|| {
             ApiError::dominio(
                 "SERIE_NO_DISPONIBLE",
-                format!("No hay serie activa para {}.", dto.tipo),
+                format!(
+                    "No hay serie activa para {} en la región {}.",
+                    dto.tipo,
+                    region.as_deref().unwrap_or("sin región")
+                ),
             )
         })?;
         let serie = serie_de_fila(&serie);
 
         let fila_jurisdiccion = sqlx::query(
-            "SELECT tasa_iva, moneda FROM finance.jurisdicciones WHERE codigo_pais = $1",
+            "SELECT tasa_iva, moneda, retencion_activa, tasa_retencion, retencion_codigo
+               FROM finance.jurisdicciones WHERE codigo_pais = $1",
         )
         .bind(&serie.jurisdiccion)
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?;
-        let (tasa_iva, moneda) = match fila_jurisdiccion {
-            Some(fila) => (
-                fila.try_get::<f64, _>("tasa_iva").unwrap_or(0.15),
-                fila.try_get::<String, _>("moneda")
-                    .unwrap_or_else(|_| "NIO".to_string()),
-            ),
-            None => (0.15, "NIO".to_string()),
+        // La tasa y la moneda salen de la región de la serie. Sin región no se
+        // inventa un IVA: fallar cerrado es parte del contrato fiscal.
+        let Some(fila_jurisdiccion) = fila_jurisdiccion else {
+            return Err(ApiError::dominio(
+                "SIN_JURISDICCION",
+                format!(
+                    "La serie {} apunta a la región {} que no existe.",
+                    serie.serie, serie.jurisdiccion
+                ),
+            ));
         };
+        let tasa_iva = fila_jurisdiccion
+            .try_get::<f64, _>("tasa_iva")
+            .map_err(error_db)?;
+        let moneda = fila_jurisdiccion
+            .try_get::<String, _>("moneda")
+            .map_err(error_db)?;
+        let retencion_activa: bool = fila_jurisdiccion
+            .try_get("retencion_activa")
+            .unwrap_or(false);
+        let tasa_retencion: f64 = fila_jurisdiccion.try_get("tasa_retencion").unwrap_or(0.0);
+        let retencion_codigo: String = fila_jurisdiccion
+            .try_get("retencion_codigo")
+            .unwrap_or_else(|_| "IR".to_string());
+        let mut exento: i64 = 0;
         let (base, iva) = if orden.items.is_empty() {
             let base = money::desde_centavos(orden.total_cents)?;
             let iva = money::multiplicar_por(base, tasa_iva)?;
@@ -442,6 +771,9 @@ impl Facturacion {
                         .total_linea_cents
                         .saturating_sub(item.impuesto_cents)
                         .max(0);
+                    if item.impuesto_codigo.as_deref() == Some("EXENTA") {
+                        exento = exento.saturating_add(base_linea);
+                    }
                     base = money::sumar(base, money::desde_centavos(base_linea)?)?;
                     iva = money::sumar(iva, money::desde_centavos(item.impuesto_cents)?)?;
                 } else {
@@ -458,6 +790,17 @@ impl Facturacion {
             (base, iva)
         };
         let total = money::sumar(base, iva)?;
+        let base_gravada = base.saturating_sub(exento);
+        let retencion = if retencion_activa && tasa_retencion > 0.0 {
+            money::multiplicar_por(base_gravada, tasa_retencion)?
+        } else {
+            0
+        };
+        let retencion_bps = if retencion_activa {
+            (tasa_retencion * 10_000.0).round() as i64
+        } else {
+            0
+        };
         let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
         let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
         let parte_id = dto.parte_id.clone();
@@ -481,12 +824,16 @@ impl Facturacion {
                         let iva = (base as f64 * tasa_iva).round() as i64;
                         (base, iva, base + iva)
                     };
+                let exento_linea = item.impuesto_codigo.as_deref() == Some("EXENTA");
                 json!({
                     "sku": item.sku,
                     "cantidad": item.cantidad,
                     "base_cents": base_linea,
                     "iva_cents": iva_linea,
                     "total_cents": total_linea,
+                    "tasa_impuesto_bps": item.tasa_impuesto_bps,
+                    "impuesto_codigo": item.impuesto_codigo.clone(),
+                    "exento": exento_linea,
                 })
             })
             .collect();
@@ -497,18 +844,26 @@ impl Facturacion {
             "emisor_ruc": serie.ruc_emisor,
             "orden_id": dto.orden_id,
             "items": items_fiscales,
+            "retencion": {
+                "activa": retencion_activa,
+                "codigo": retencion_codigo,
+                "tasa_bps": retencion_bps,
+                "monto_cents": retencion,
+            },
         });
 
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
         let fila = sqlx::query(
             "INSERT INTO finance.comprobantes
                (id, serie, numero, tipo, orden_id, empresa_id, negocio_id, parte_id, base_gravada_cents,
-                iva_cents, exento_cents, total_cents, moneda, estado, datos_cliente,
-                emitido_en)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, $11, $12, $13,
-                     CASE WHEN $12 = 'EMITIDO' THEN NOW() ELSE NULL END)
+                iva_cents, exento_cents, retencion_cents, retencion_tasa_bps, total_cents,
+                moneda, estado, datos_cliente, emitido_en)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                     $11, $12, $13, $14, $15, $16,
+                     CASE WHEN $15 = 'EMITIDO' THEN NOW() ELSE NULL END)
              RETURNING id, serie, numero, tipo, orden_id, empresa_id, negocio_id, parte_id, base_gravada_cents,
-                       iva_cents, exento_cents, total_cents, moneda, estado,
+                       iva_cents, exento_cents, retencion_cents, retencion_tasa_bps,
+                       total_cents, moneda, estado,
                        datos_cliente, emitido_en, creado_en,
                        electronica_estado, electronica_referencia, electronica_enviada_en",
         )
@@ -540,8 +895,11 @@ impl Facturacion {
                     ]))
                 })?,
         )
-        .bind(base as i32)
+        .bind(base_gravada as i32)
         .bind(iva as i32)
+        .bind(exento as i32)
+        .bind(retencion as i32)
+        .bind(retencion_bps as i32)
         .bind(total as i32)
         .bind(&moneda)
         .bind(estado)
@@ -607,10 +965,13 @@ impl Facturacion {
                         "tipo": dto.tipo,
                         "orden_id": dto.orden_id,
                         "parte_id": comprobante.parte_id,
-                        "base_gravada_cents": base,
+                        "empresa_id": comprobante.empresa_id,
+                        "base_gravada_cents": base_gravada,
                         "iva_cents": iva,
+                        "exento_cents": exento,
+                        "retencion_cents": retencion,
                         "total_cents": total,
-                        "moneda": "C$",
+                        "moneda": moneda,
                     }),
                 )
                 .await?;
@@ -648,16 +1009,22 @@ impl Facturacion {
                     let ambiente = fila
                         .try_get::<String, _>("ambiente_electronico")
                         .unwrap_or_else(|_| "pruebas".to_string());
-                    let resultado = if proveedor == "http" {
-                        match self.http.as_ref() {
+                    let resultado = match proveedor.as_str() {
+                        "http" => match self.http.as_ref() {
                             Some(http) => http.emitir(&comprobante, &ambiente).await,
                             None => Err(ApiError::dominio(
                                 "PROVEEDOR_NO_CONFIGURADO",
                                 "No hay URL de facturación electrónica configurada.",
                             )),
-                        }
-                    } else {
-                        FacturacionSimulada.emitir(&comprobante, &ambiente).await
+                        },
+                        "dgi" => match self.dgi.as_ref() {
+                            Some(dgi) => dgi.emitir(&comprobante, &ambiente).await,
+                            None => Err(ApiError::dominio(
+                                "PROVEEDOR_NO_CONFIGURADO",
+                                "No hay gateway DGI configurado.",
+                            )),
+                        },
+                        _ => FacturacionSimulada.emitir(&comprobante, &ambiente).await,
                     };
                     let (estado, referencia) = match resultado {
                         Ok(referencia) => (referencia.estado, referencia.referencia),
@@ -703,23 +1070,40 @@ impl Facturacion {
             .map(uuid::Uuid::parse_str)
             .transpose()
             .map_err(|_| ApiError::interno())?;
+        let empresa_uuid = uuid::Uuid::parse_str(&dto.empresa_id).map_err(|_| {
+            ApiError::validacion(json!([
+                {"campo": "empresa_id", "restricciones": ["isUuid"]}
+            ]))
+        })?;
+        let region = sqlx::query_scalar::<_, Option<String>>(
+            "SELECT region_tributaria FROM identity.empresas WHERE id = $1::uuid",
+        )
+        .bind(&dto.empresa_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?
+        .flatten();
         let serie = sqlx::query(
-            "SELECT serie, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
+            "SELECT serie, empresa_id, negocio_id, tipo, prefijo, secuencial_actual, ruc_emisor,
                     jurisdiccion, activa
                FROM finance.series_comprobantes
               WHERE tipo = 'NOTA_CREDITO' AND activa
-                AND (negocio_id = $1::uuid OR negocio_id IS NULL)
-              ORDER BY (negocio_id IS NOT NULL) DESC, serie
+                AND (empresa_id = $1::uuid OR empresa_id IS NULL)
+                AND (negocio_id = $2::uuid OR negocio_id IS NULL)
+                AND ($3::text IS NULL OR jurisdiccion = $3)
+              ORDER BY (empresa_id IS NOT NULL) DESC, (negocio_id IS NOT NULL) DESC, serie
               LIMIT 1",
         )
+        .bind(empresa_uuid)
         .bind(negocio_uuid)
+        .bind(region.as_deref())
         .fetch_optional(self.db.pool())
         .await
         .map_err(error_db)?
         .ok_or_else(|| {
             ApiError::dominio(
                 "SERIE_NO_DISPONIBLE",
-                "No hay serie activa para NOTA_CREDITO.",
+                "No hay serie activa para NOTA_CREDITO en la región del tenant.",
             )
         })?;
         let serie = serie_de_fila(&serie);
@@ -731,7 +1115,15 @@ impl Facturacion {
         .await
         .map_err(error_db)?
         .or(dto.moneda.clone())
-        .unwrap_or_else(|| "NIO".to_string());
+        .ok_or_else(|| {
+            ApiError::dominio(
+                "SIN_JURISDICCION",
+                format!(
+                    "La serie {} apunta a la región {} que no existe.",
+                    serie.serie, serie.jurisdiccion
+                ),
+            )
+        })?;
         let numero = format!("{}{:08}", serie.prefijo, serie.secuencial_actual + 1);
         let estado = if self.emitir { "EMITIDO" } else { "BORRADOR" };
         let datos_cliente = json!({
@@ -1150,6 +1542,8 @@ fn comprobante_de_fila(fila: &sqlx::postgres::PgRow) -> Comprobante {
         base_gravada_cents: fila.try_get::<i32, _>("base_gravada_cents").unwrap_or(0) as i64,
         iva_cents: fila.try_get::<i32, _>("iva_cents").unwrap_or(0) as i64,
         exento_cents: fila.try_get::<i32, _>("exento_cents").unwrap_or(0) as i64,
+        retencion_cents: fila.try_get::<i32, _>("retencion_cents").unwrap_or(0) as i64,
+        retencion_tasa_bps: fila.try_get::<i32, _>("retencion_tasa_bps").unwrap_or(0) as i64,
         total_cents: fila.try_get::<i32, _>("total_cents").unwrap_or(0) as i64,
         moneda: fila.try_get("moneda").unwrap_or_default(),
         estado: fila.try_get("estado").unwrap_or_default(),
@@ -1173,6 +1567,7 @@ fn comprobante_de_fila(fila: &sqlx::postgres::PgRow) -> Comprobante {
 fn serie_de_fila(fila: &sqlx::postgres::PgRow) -> SerieComprobante {
     SerieComprobante {
         serie: fila.try_get("serie").unwrap_or_default(),
+        empresa_id: uuid_texto(fila, "empresa_id").ok(),
         negocio_id: uuid_texto(fila, "negocio_id").ok(),
         tipo: fila.try_get("tipo").unwrap_or_default(),
         prefijo: fila.try_get("prefijo").unwrap_or_default(),
@@ -1222,5 +1617,45 @@ mod tests {
         assert_eq!(iva, 15_000);
         assert_eq!(money::sumar(base, iva).expect("total"), 115_000);
         assert_eq!(money::string(115_000), "1150.00");
+    }
+
+    #[test]
+    fn debe_generar_el_xml_del_adaptador_dgi() {
+        let comprobante = Comprobante {
+            id: "c-1".into(),
+            serie: "F001".into(),
+            numero: "F001-00000001".into(),
+            tipo: "FACTURA".into(),
+            orden_id: Some("o-1".into()),
+            empresa_id: None,
+            parte_id: None,
+            negocio_id: None,
+            base_gravada_cents: 100_000,
+            iva_cents: 15_000,
+            exento_cents: 5_000,
+            retencion_cents: 2_000,
+            retencion_tasa_bps: 200,
+            total_cents: 120_000,
+            moneda: "C$".into(),
+            estado: "EMITIDO".into(),
+            datos_cliente: Some(json!({
+                "ruc": "RUC-CLIENTE",
+                "razon_social": "Cliente & Cia",
+                "emisor_ruc": "RUC-EMISOR",
+                "items": [{"sku": "SKU<1>", "cantidad": 1, "base_cents": 100_000,
+                           "iva_cents": 15_000, "total_cents": 120_000}]
+            })),
+            emitido_en: Some("2026-01-01T00:00:00.000Z".into()),
+            creado_en: "2026-01-01T00:00:00.000Z".into(),
+            electronica_estado: None,
+            electronica_referencia: None,
+            electronica_enviada_en: None,
+        };
+        let xml = FacturacionDgi::xml(&comprobante, "pruebas");
+        assert!(xml.contains("<ComprobanteElectronico>"));
+        assert!(xml.contains("<RUC>RUC-EMISOR</RUC>"));
+        assert!(xml.contains("Cliente &amp; Cia"));
+        assert!(xml.contains("SKU&lt;1&gt;"));
+        assert!(xml.contains("<Retencion>2000</Retencion>"));
     }
 }

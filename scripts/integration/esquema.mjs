@@ -15,6 +15,10 @@ const MIGRACIONES = [
   '01f_slugs.sql',
   '01h_catalogo_por_empresa.sql',
   '01i_variantes_imagenes.sql',
+  '24_multi_vertical.sql',
+  '29_vertical_packs.sql',
+  '30_pack_backfill.sql',
+  '32_pack_builder.sql',
   '11_catalogo_productos_servicios.sql',
   '12_catalogo_operaciones_avanzadas.sql',
   '25_catalog_items.sql',
@@ -36,6 +40,9 @@ const MIGRACIONES = [
   '84_inventory_stock_owner.sql',
   '85_retiro_catalog.sql',
   '95_precio_stock_columnas.sql',
+  '97_fiscal_tenant.sql',
+  '99_regiones_tributarias.sql',
+  '99z_regiones_fiscal_completo.sql',
 ];
 
 const PRELUDIO = `

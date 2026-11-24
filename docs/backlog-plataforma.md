@@ -13,6 +13,8 @@ para que las decisiones no se diluyan (R-DO-7).
 | Webhooks salientes | Suscripciones por tenant, HMAC, reintentos, API admin | [ADR-0045](./adr/0045-webhooks-salientes.md) |
 | Cobro de plataforma | Plan `empresario_plus` USD 35/mes para >1 negocio, cobro manual | [ADR-0046](./adr/0046-suscripcion-plataforma-expansion.md) |
 | Onboarding | Alta autenticada e idempotente con estado y token fresco | [ADR-0047](./adr/0047-onboarding-idempotente.md) |
+| Regiones tributarias | Selección por pack/tenant, manifiesto fiscal y resolución fail-closed | [ADR-0049](./adr/0049-regiones-tributarias.md), [runbook](./runbook-regiones-tributarias.md) |
+| Cierre fiscal multirregión | Series por empresa/región, catálogo de tasas, exenciones, retenciones, declaraciones por tenant, formato de moneda y adaptador DGI de referencia | [ADR-0049](./adr/0049-regiones-tributarias.md) |
 
 ## Backlog priorizado
 

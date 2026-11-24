@@ -30,9 +30,14 @@ Redesplegar. El arranque de `db-migrate` asegura `LOGIN` y la membership
 -- Como core_engine_app, con claims del tenant A:
 SELECT set_config('request.jwt.claims',
   '{"rol":"empresario","tenant_id":"<A>"}', false);
-SELECT count(*) FROM analytics.hechos_venta;      -- solo A
-SELECT count(*) FROM finance.configuracion_fiscal; -- solo A
+SELECT count(*) FROM analytics.hechos_venta;        -- solo A
+SELECT count(*) FROM finance.configuracion_fiscal;   -- solo A
+SELECT count(*) FROM identity.empresa_region_historial; -- solo A
 ```
+
+`identity.pack_regiones` y `finance.jurisdicciones` son catálogos de
+plataforma: se leen con cualquier claim de tenant, pero solo los administran
+`super_admin`/`admin`.
 
 - `GET /api/v2/orders/empresa/resumen` con token de A no debe ver B.
 - Un job de outbox debe seguir publicando (claim de servicio).
