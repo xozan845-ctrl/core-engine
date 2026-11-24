@@ -16,8 +16,9 @@ const pretty = process.argv.includes('--pretty');
 const matrix = coverageMatrix();
 
 if (pretty) {
-  console.log(JSON.stringify({ include: matrix }, null, 2));
+  console.log(JSON.stringify(matrix, null, 2));
 } else {
   // stdout debe ser una sola línea: GitHub Actions lo escribe en $GITHUB_OUTPUT.
-  console.log(JSON.stringify({ include: matrix }));
+  // Se emite el array (no { include }) porque `matrix.include` espera una lista.
+  console.log(JSON.stringify(matrix));
 }
