@@ -56,10 +56,6 @@
       "lines": 1125,
       "publicFns": 20
     },
-    "packages/orders-service/src/devoluciones.rs": {
-      "lines": 804,
-      "publicFns": 9
-    },
     "packages/orders-service/src/fidelizacion.rs": {
       "lines": 1183,
       "publicFns": 18
