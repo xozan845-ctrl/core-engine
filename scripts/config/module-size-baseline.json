@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/pricing-service/src/precios/mod.rs": {
-      "lines": 1267,
-      "publicFns": 15
-    },
     "packages/stores-service/src/tiendas/mod.rs": {
       "lines": 942,
       "publicFns": 18
