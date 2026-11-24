@@ -62,7 +62,7 @@ impl PedidosConsumer {
         }
         let order_id = order_id_de(evento)?;
         let actual = sqlx::query(
-            "SELECT estado, total_cents, metodo_pago FROM orders.orden_vista WHERE id = $1",
+            "SELECT estado, total_cents, metodo_pago, items_json FROM orders.orden_vista WHERE id = $1",
         )
         .bind(parsear_uuid(&order_id).map_err(|e| e.mensaje)?)
         .fetch_optional(self.db.pool())
@@ -90,11 +90,13 @@ impl PedidosConsumer {
                     return Ok(());
                 }
                 let es_credito = metodo == "credito";
+                let items: Value = actual.try_get("items_json").map_err(|e| e.to_string())?;
                 let pago = serde_json::json!({
                     "order_id": order_id,
                     "monto_cents": total,
                     "estado": "procesado",
                     "metodo": if es_credito { "credito" } else { "simulado" },
+                    "items": items,
                 });
                 self.checkout
                     .transicionar(

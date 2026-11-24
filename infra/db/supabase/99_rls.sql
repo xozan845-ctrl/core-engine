@@ -1855,3 +1855,30 @@ CREATE POLICY series_comprobantes_empresa_restrictiva ON finance.series_comproba
     OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
     OR auth.rol() IN ('super_admin', 'admin')
   );
+
+-- ── finance.ventas_lineas y devoluciones_reembolsadas (ADR-0050) ──────────
+ALTER TABLE finance.ventas_lineas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ventas_lineas_tenant ON finance.ventas_lineas;
+CREATE POLICY ventas_lineas_tenant ON finance.ventas_lineas
+  FOR ALL TO authenticated
+  USING (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  )
+  WITH CHECK (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  );
+
+ALTER TABLE finance.devoluciones_reembolsadas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_reembolsadas_tenant ON finance.devoluciones_reembolsadas;
+CREATE POLICY devoluciones_reembolsadas_tenant ON finance.devoluciones_reembolsadas
+  FOR ALL TO authenticated
+  USING (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  )
+  WITH CHECK (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  );

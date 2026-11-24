@@ -450,6 +450,73 @@ async fn debe_entregar_y_firmar_un_webhook_sin_duplicar() {
 }
 
 #[tokio::test]
+async fn enruta_evento_de_pedido_real_y_aísla_lineas_por_tenant() {
+    let Some(url) = url() else { return };
+    let (db, pool) = preparar(&url).await;
+    let servidor = servidor_webhook(vec![StatusCode::OK, StatusCode::OK]).await;
+    let webhooks = Webhooks::nueva_para_tests(Arc::clone(&db), 2000, false);
+    let empresa_a = Uuid::new_v4().to_string();
+    let empresa_b = Uuid::new_v4().to_string();
+    for (empresa, nombre) in [(&empresa_a, "ERP A"), (&empresa_b, "ERP B")] {
+        webhooks
+            .crear(
+                empresa,
+                &servidor.url,
+                nombre,
+                vec!["order.created".into()],
+                &Uuid::new_v4().to_string(),
+            )
+            .await
+            .expect("crear webhook tenant");
+    }
+    let event_id = Uuid::new_v4();
+    let evento = json!({
+        "event_id": event_id,
+        "tipo": "order.created",
+        "data": {
+            "order_id": Uuid::new_v4(),
+            "total_cents": 300,
+            "items": [
+                {"empresa_id": empresa_a, "sku": "A", "cantidad": 1, "total_linea_cents": 100},
+                {"empresa_id": empresa_b, "sku": "B", "cantidad": 2, "total_linea_cents": 200}
+            ]
+        }
+    });
+
+    webhooks
+        .despachar(&evento)
+        .await
+        .expect("despachar evento real");
+    let payloads: Vec<Value> = {
+        let registros = servidor.recibidos.lock().expect("recibidos");
+        assert_eq!(registros.len(), 2);
+        registros
+            .iter()
+            .map(|registro| serde_json::from_slice(&registro.cuerpo).expect("payload json"))
+            .collect()
+    };
+    for (empresa, sku, total) in [(&empresa_a, "A", 100), (&empresa_b, "B", 200)] {
+        let payload = payloads
+            .iter()
+            .find(|payload| payload["data"]["empresa_id"] == *empresa)
+            .expect("payload del tenant");
+        assert_eq!(payload["data"]["total_cents"], total);
+        let items = payload["data"]["items"].as_array().expect("items");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["sku"], sku);
+    }
+    let entregas: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notifications.webhook_entregas WHERE event_id = $1",
+    )
+    .bind(event_id)
+    .fetch_one(&pool)
+    .await
+    .expect("entregas");
+    assert_eq!(entregas, 2);
+    db.cerrar().await;
+}
+
+#[tokio::test]
 async fn debe_reintentar_una_entrega_fallida() {
     let Some(url) = url() else { return };
     let (db, pool) = preparar(&url).await;
