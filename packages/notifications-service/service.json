@@ -1,0 +1,64 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "notifications-service",
+    "boundedContext": "notifications",
+    "description": "Consumidor de eventos del ciclo del pedido y notificaciones multicanal.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "consumer",
+      "messaging"
+    ]
+  },
+  "spec": {
+    "profile": "consumer",
+    "runtime": "rust",
+    "port": 3012,
+    "schema": "notifications",
+    "outboxTable": null,
+    "capabilities": [],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "orders-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": [
+        "order.created",
+        "order.status.updated",
+        "payment.procesado",
+        "order.completado",
+        "shipment.started",
+        "devolucion.solicitada",
+        "stock.fallido"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/notifications-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 74,
+      "functions": 74
+    }
+  }
+}

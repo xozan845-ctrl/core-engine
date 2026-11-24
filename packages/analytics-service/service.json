@@ -1,0 +1,63 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "analytics-service",
+    "boundedContext": "analytics",
+    "description": "Hechos de venta, cohortes, reportes programados y analítica de negocio, empresa y plataforma.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "olap",
+      "analytics"
+    ]
+  },
+  "spec": {
+    "profile": "olap",
+    "runtime": "rust",
+    "port": 3016,
+    "schema": "analytics",
+    "outboxTable": null,
+    "capabilities": [
+      "analitica_negocios"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "orders-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": [
+        "order.completado",
+        "devolucion.recibida",
+        "devolucion.solicitada",
+        "comision.acreditada"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/analytics-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 50,
+      "functions": 45
+    }
+  }
+}

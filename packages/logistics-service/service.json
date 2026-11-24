@@ -1,0 +1,65 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "logistics-service",
+    "boundedContext": "logistics",
+    "description": "Envíos, guías, flotas, rutas, asignación híbrida y transiciones logísticas.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "logistics"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3005,
+    "schema": "logistics",
+    "outboxTable": "logistics.outbox",
+    "capabilities": [
+      "logistica_rutas",
+      "logistica_pod"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "orders-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "shipment.started",
+        "order.completado"
+      ],
+      "consumes": [
+        "payment.procesado",
+        "order.status.updated"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/logistics-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 63,
+      "functions": 62
+    }
+  }
+}

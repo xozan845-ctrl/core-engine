@@ -1,0 +1,83 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "orders-service",
+    "boundedContext": "orders",
+    "description": "CQRS + Event Sourcing: carrito, checkout, pagos, contratos, suscripciones y salón.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "cqrs",
+      "event-sourcing"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3004,
+    "schema": "orders",
+    "outboxTable": "orders.outbox",
+    "capabilities": [
+      "orders",
+      "fidelizacion",
+      "mesas",
+      "sala",
+      "suscripciones",
+      "contratos",
+      "cotizaciones",
+      "pagos"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "finance-service",
+        "identity-service",
+        "inventory-service",
+        "item-service",
+        "pricing-service",
+        "scheduling-service",
+        "stores-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "order.created",
+        "payment.procesado",
+        "order.status.updated",
+        "order.cancelled",
+        "devolucion.solicitada",
+        "devolucion.recibida",
+        "devolucion.reembolsada"
+      ],
+      "consumes": [
+        "stock.reservado",
+        "stock.fallido",
+        "stock.reintegrado"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/orders-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 62,
+      "functions": 63
+    }
+  }
+}

@@ -138,3 +138,17 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-GE-7** — Si el PR de promoción reporta **conflicto por historial duplicado**: se cierra con la razón y se recrea desde la rama destino con el delta (cherry-pick), verificando **árbol idéntico** (`git diff --quiet <origen>` = vacío).
 
 > Estado actual de los gates: ver [`AUDIT.md`](./AUDIT.md) (snapshot).
+
+## 12. Contrato de servicio (R-MS-9..16 · R-AF-1..5)
+
+- [ ] **R-MS-9** — El PR actualiza `packages/<servicio>/service.json` si cambia puerto, esquema, perfil, capacidades, eventos, dependencias, SLO u owner.
+- [ ] **R-MS-10** — El servicio cumple los módulos mínimos de su perfil (`edge/core/transactional/consumer/olap`).
+- [ ] **R-MS-11** — `/health` (liveness) y `/ready` (readiness, 503 si falta BD/Rabbit) existen y tienen semántica correcta.
+- [ ] **R-MS-12** — `PORT`, `EXPOSE` y `spec.port` coinciden; escucha en `0.0.0.0`; sin estado local.
+- [ ] **R-MS-13** — `owner`, `lifecycle` y `slo` son reales y están alineados con `docs/slo.md`.
+- [ ] **R-MS-14** — Eventos declarados, con un solo dueño, presentes en `src/`, consumidores idempotentes y outbox si publica.
+- [ ] **R-MS-15** — `/metrics` con RED, logs JSON y `x-request-id` en HTTP y eventos.
+- [ ] **R-MS-16** — Cero SQL contra esquemas ajenos; si hay deuda, está en el baseline y no crece.
+- [ ] **R-AF-2** — `npm run baseline:guard` verde; ninguna entrada nueva de deuda.
+- [ ] **R-AF-3** — No se editaron listas de servicios/CI a mano; la matriz se deriva del manifiesto.
+- [ ] **R-AF-4** — `npm run architecture:check` verde; catálogo/matriz/deuda regenerados.

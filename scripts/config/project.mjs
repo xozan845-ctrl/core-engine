@@ -6,11 +6,29 @@
  * Al portar el motor a otro repositorio del stack se edita este archivo (y
  * `manifest.mjs`); `scripts/engine/` no se toca.
  *
- * Core Engine es un **monorepo npm workspaces**: varios servicios NestJS en
- * Todos los servicios son crates Rust independientes. La configuración sigue
- * siendo multi-paquete (lista de servicios) y no un único `APP_DIR`.
+ * Core Engine es un **monorepo de crates Rust independientes**. El inventario
+ * de servicios ya **no se hardcodea aquí**: se deriva de
+ * `packages/<servicio>/service.json` (R-MS-9) a través de `services.mjs`.
+ * `SERVICES` y `RUST_SERVICES` se reexportan para conservar la API del motor.
  * ──────────────────────────────────────────────────────────────────────────────
  */
+import {
+  PACKAGES_DIR,
+  RUST_SERVICES,
+  SERVICES,
+  SERVICE_MANIFESTS,
+  SERVICE_PORTS,
+  SERVICE_PROFILES,
+} from './services.mjs';
+
+export {
+  PACKAGES_DIR,
+  RUST_SERVICES,
+  SERVICES,
+  SERVICE_MANIFESTS,
+  SERVICE_PORTS,
+  SERVICE_PROFILES,
+};
 
 /** Rama principal del repositorio. */
 export const MAIN_BRANCH = 'main';
@@ -27,9 +45,6 @@ export const GHCR_OWNER = 'xozan845-ctrl';
  */
 export const INTEGRATION_BRANCH = 'develop';
 
-/** Directorio de los paquetes del workspace. */
-export const PACKAGES_DIR = 'packages';
-
 /** Árbol normativo de reglas (lo lee el motor para el reporte de cobertura). */
 export const RULES_DIR = 'docs/rules';
 
@@ -37,59 +52,12 @@ export const RULES_DIR = 'docs/rules';
 export const WORKFLOWS_DIR = '.github/workflows';
 
 /**
- * Servicios desplegables del monorepo (uno por carpeta `packages/<servicio>`
- * con `Dockerfile` propio).
- */
-export const SERVICES = [
-  'api-gateway',
-  'identity-service',
-  'item-service',
-  'inventory-service',
-  'pricing-service',
-  'stores-service',
-  'orders-service',
-  'logistics-service',
-  'scheduling-service',
-  'commissions-service',
-  'finance-service',
-  'field-service',
-  'market-intelligence-service',
-  'storage-service',
-  'notifications-service',
-  'analytics-service',
-];
-
-/**
  * Excepciones temporales de R-QA-1. Deben estar justificadas en la regla y la
  * suite `microservices-ci-contract` impide que oculten una suite ya existente.
  */
 export const SERVICE_TEST_EXCEPTIONS = [];
 
-/**
- * Servicios con implementación Rust (crate + cargo). Quedan fuera del runner
- * Vitest y del contrato de scripts npm; su gate vive en el job `rust` de CI
- * (ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0014 y docs/rules/test/06-estandares-cobertura.md).
- */
-export const RUST_SERVICES = [
-  'api-gateway',
-  'scheduling-service',
-  'notifications-service',
-  'commissions-service',
-  'field-service',
-  'logistics-service',
-  'market-intelligence-service',
-  'storage-service',
-  'stores-service',
-  'finance-service',
-  'orders-service',
-  'item-service',
-  'inventory-service',
-  'pricing-service',
-  'identity-service',
-  'analytics-service',
-];
-
-/** Servicios Node/NestJS con suite Vitest (todos menos los migrados a Rust). */
+/** Servicios Node/NestJS con suite Vitest (hoy vacío: todos migraron a Rust). */
 export const SERVICES_NODE = SERVICES.filter(
   (service) => !RUST_SERVICES.includes(service),
 );
