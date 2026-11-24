@@ -1,0 +1,70 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "api-gateway",
+    "boundedContext": "gateway",
+    "description": "Único punto de entrada: JWT, políticas por ruta, proxy, rate limit y readiness.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "edge",
+      "jwt"
+    ]
+  },
+  "spec": {
+    "profile": "edge",
+    "runtime": "rust",
+    "port": 8080,
+    "schema": null,
+    "outboxTable": null,
+    "composeName": "gateway",
+    "capabilities": [],
+    "publicApi": true,
+    "internalApi": false,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "item-service",
+        "inventory-service",
+        "pricing-service",
+        "stores-service",
+        "orders-service",
+        "logistics-service",
+        "scheduling-service",
+        "commissions-service",
+        "finance-service",
+        "field-service",
+        "market-intelligence-service",
+        "storage-service",
+        "notifications-service",
+        "analytics-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/api/core-engine.openapi.json"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 78,
+      "functions": 73
+    }
+  }
+}

@@ -398,6 +398,13 @@ plataforma priorizada: [`docs/backlog-plataforma.md`](docs/backlog-plataforma.md
 
 ## Arquitectura
 
+La declaración completa (principios, C4, contrato de servicio, fitness
+functions y guía para añadir un servicio) vive en
+[`docs/architecture/`](./docs/architecture/README.md). Cada servicio publica su
+contrato en `packages/<servicio>/service.json`; el catálogo, la matriz de
+eventos y la deuda arquitectónica se generan desde ahí con
+`npm run architecture:report`.
+
 ```text
                     ┌─────────────┐   TLS/CORS/Throttling en el borde
   Cliente ─────────▶│ API Gateway │  JWT HS256 (access 15 min + refresh 7 d)
@@ -694,13 +701,15 @@ RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
    hashes (R-DB-6); no edite una migración ya aplicada.
 3. Ejecute `99_rls.sql` (activa RLS por rol).
 4. Iguale el secreto JWT HS256 y las URL de los servicios al proyecto. La
-   diferencia de implementacion queda aislada en `jwt.utils.ts`.
+   diferencia de implementacion queda aislada en `packages/api-gateway/src/auth.rs`.
 
 ## Contribuir
 
-El proyecto se gobierna por reglas ejecutables en `docs/rules/` y por PR
-obligatorio (`R-PR-1..9`, `R-IA-5`): rama semántica desde `develop`, commits
-Conventional Commits en español con el ID de regla, y checks verdes en la cabeza
-del PR antes de mergear con `--rebase`. Punto de entrada:
+El proyecto se gobierna por reglas ejecutables en `docs/rules/`, un contrato de
+servicio declarativo en `packages/<servicio>/service.json` y por PR obligatorio
+(`R-PR-1..9`, `R-IA-5`): rama semántica desde `develop`, commits Conventional
+Commits en español con el ID de regla, y checks verdes en la cabeza del PR antes
+de mergear con `--rebase`. Puntos de entrada:
+[`docs/architecture/README.md`](docs/architecture/README.md),
 [`docs/rules/README.md`](docs/rules/README.md) y
 [`docs/rules/_meta/CHECKLIST.md`](docs/rules/_meta/CHECKLIST.md).

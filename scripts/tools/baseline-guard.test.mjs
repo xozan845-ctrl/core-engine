@@ -15,6 +15,7 @@ function documents(overrides = {}) {
         'packages/a/src/a.rs': { lines: 1600, publicFns: 10 },
       },
     },
+    architecture: { debt: ['readiness:orders-service:ready'] },
     ...overrides,
   };
 }
@@ -47,6 +48,26 @@ test('baseline-guard: rechaza aumentar deuda de specs o RLS', () => {
   );
   assert.match(problems.join('\n'), /specs: nueva deuda/);
   assert.match(problems.join('\n'), /rls: nueva deuda/);
+});
+
+test('baseline-guard: rechaza aumentar deuda de arquitectura', () => {
+  const problems = compareBaselines(
+    documents({
+      architecture: {
+        debt: ['readiness:orders-service:ready', 'cross-schema:orders-service:identity'],
+      },
+    }),
+    documents(),
+  );
+  assert.match(problems.join('\n'), /architecture: nueva deuda/);
+});
+
+test('baseline-guard: permite reducir deuda de arquitectura', () => {
+  const problems = compareBaselines(
+    documents({ architecture: { debt: [] } }),
+    documents(),
+  );
+  assert.deepEqual(problems, []);
 });
 
 test('baseline-guard: rechaza editar o borrar migraciones existentes', () => {
