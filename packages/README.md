@@ -20,6 +20,12 @@ son transversales a los rubros; no hay `farmacia-service` ni `dental-service`.
 
 ## 1. Mapa de paquetes
 
+> **Fuente de verdad:** el catálogo se genera desde
+> `packages/<servicio>/service.json` en
+> [`docs/architecture/catalogo-servicios.md`](../docs/architecture/catalogo-servicios.md)
+> (R-MS-9/R-AF-4). Esta tabla es la vista curada para humanos; si difiere del
+> manifiesto, manda el manifiesto y `npm run architecture:check` falla.
+
 | Paquete | Puerto | Esquema(s) | Entornos | Rol |
 |---|---:|---|---|---|
 | [`api-gateway`](./api-gateway/README.md) | **8080** | — | dev/stage/prod | Único punto de entrada, JWT, políticas, proxy, rate limit, readiness |
@@ -547,13 +553,20 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 
 ### Añadir un microservicio
 
+La guía completa es [`docs/architecture/04-guia-nuevo-servicio.md`](../docs/architecture/04-guia-nuevo-servicio.md).
+Resumen:
+
 1. ADR que justifique el nuevo *bounded context*.
-2. Crate en `packages/<nombre>-service` con la estructura R-MS-1.
-3. Esquema propio, migraciones, RLS y `eventos_procesados`/`outbox` si aplica.
-4. Entrada en `docker-compose.dev.yml`/`.stage.yml`/`.yml`.
-5. Destino y política en `api-gateway` (incluida `readiness.rs`).
-6. Ruta interna en `identity` si necesita capacidades/tenants.
-7. Documentación: README del paquete, catálogo, OpenAPI y reglas.
+2. `packages/<nombre>-service/service.json` con perfil, puerto, esquema,
+   capacidades, eventos y SLO (R-MS-9).
+3. Crate en `packages/<nombre>-service` con la estructura R-MS-1/R-MS-10.
+4. Esquema propio, migraciones, RLS y `eventos_procesados`/`outbox` si aplica.
+5. Entrada en `docker-compose.dev.yml`/`.stage.yml`/`.yml`.
+6. Destino y política en `api-gateway` (incluida `readiness.rs`).
+7. Ruta interna en `identity` si necesita capacidades/tenants.
+8. Documentación: README del paquete, catálogo, OpenAPI y reglas.
+9. `npm run architecture:report` y `npm run rules:check` en verde. La matriz de
+   CI y el catálogo se derivan del manifiesto; no se editan listas a mano.
 
 ### Checklists rápidas
 
@@ -563,8 +576,10 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 - [ ] `empresa_id`/`negocio_id` en toda escritura.
 - [ ] Eventos por outbox, nunca publicación directa en transacción.
 - [ ] Consumidor idempotente por `event_id`.
+- [ ] `/health`, `/ready`, `/metrics`, logs JSON y `x-request-id`.
 - [ ] Errores con código estable y sin stacktrace.
 - [ ] OpenAPI regenerado y README actualizado en el mismo PR.
+- [ ] `service.json` y catálogo generado sin drift.
 
 ---
 
@@ -573,8 +588,9 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 | Documento | Contenido |
 |---|---|
 | [`../README.md`](../README.md) | Visión de producto, multi-vertical y arranque |
+| [`../docs/architecture/`](../docs/architecture/) | Declaración arquitectónica: principios, contrato de servicio, fitness functions, catálogo y guía de servicio nuevo |
 | [`../docs/rules/`](../docs/rules/) | Reglas ejecutables de arquitectura, CI, datos, docs, git, gateway, microservicios, observabilidad y tests |
-| [`../docs/adr/`](../docs/adr/) | 22 decisiones de arquitectura |
+| [`../docs/adr/`](../docs/adr/) | Decisiones de arquitectura (ADR-0001..0050) |
 | [`../docs/api/core-engine.openapi.json`](../docs/api/core-engine.openapi.json) | Contrato público agregado |
 | [`../docs/api/core-engine.internal.openapi.json`](../docs/api/core-engine.internal.openapi.json) | Contrato interno agregado |
 | [`../docs/openapi/<servicio>/`](../docs/openapi/) | Contratos por servicio (público + interno) |
