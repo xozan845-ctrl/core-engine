@@ -52,10 +52,6 @@
       "lines": 1662,
       "publicFns": 5
     },
-    "packages/orders-service/src/clients.rs": {
-      "lines": 1125,
-      "publicFns": 20
-    },
     "packages/orders-service/src/fidelizacion.rs": {
       "lines": 1183,
       "publicFns": 18
