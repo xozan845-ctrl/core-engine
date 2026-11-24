@@ -48,10 +48,6 @@
       "lines": 975,
       "publicFns": 18
     },
-    "packages/orders-service/src/checkout.rs": {
-      "lines": 1662,
-      "publicFns": 5
-    },
     "packages/pricing-service/src/precios/mod.rs": {
       "lines": 1267,
       "publicFns": 15
