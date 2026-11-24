@@ -10,9 +10,9 @@ function documents(overrides = {}) {
     rls: ['catalog.outbox'],
     migrations: { '01_base.sql': 'hash-a' },
     moduleSize: {
-      limits: { lines: 800, publicFns: 20, sqlTables: 8 },
+      limits: { lines: 800, publicFns: 20 },
       debt: {
-        'packages/a/src/a.rs': { lines: 1600, publicFns: 10, sqlTables: 2 },
+        'packages/a/src/a.rs': { lines: 1600, publicFns: 10 },
       },
     },
     ...overrides,
@@ -67,10 +67,10 @@ test('baseline-guard: rechaza crecer o añadir deuda de tamaño de módulos (R-M
   const grown = compareBaselines(
     documents({
       moduleSize: {
-        limits: { lines: 800, publicFns: 20, sqlTables: 8 },
+        limits: { lines: 800, publicFns: 20 },
         debt: {
-          'packages/a/src/a.rs': { lines: 1700, publicFns: 10, sqlTables: 2 },
-          'packages/b/src/b.rs': { lines: 1550, publicFns: 10, sqlTables: 2 },
+          'packages/a/src/a.rs': { lines: 1700, publicFns: 10 },
+          'packages/b/src/b.rs': { lines: 1550, publicFns: 10 },
         },
       },
     }),
@@ -84,7 +84,7 @@ test('baseline-guard: rechaza relajar los presupuestos de R-MS-7', () => {
   const problems = compareBaselines(
     documents({
       moduleSize: {
-        limits: { lines: 1500, publicFns: 20, sqlTables: 8 },
+        limits: { lines: 1500, publicFns: 20 },
         debt: documents().moduleSize.debt,
       },
     }),

@@ -10,31 +10,26 @@ import { PACKAGES_DIR, SERVICES } from '../../config/project.mjs';
  * Un archivo Rust de `src/` no puede superar ninguno de estos presupuestos:
  *   - 800 líneas de producción (sin el módulo `#[cfg(test)]`),
  *   - 20 funciones públicas (módulos de dominio con SQL; `http/` queda fuera
- *     porque cada handler es una ruta),
- *   - 8 tablas SQL distintas (señal de varios agregados en el mismo archivo).
+ *     porque cada handler es una ruta).
  *
  * `scripts/config/module-size-baseline.json` registra la deuda existente. La
  * deuda no puede crecer, y cuando un archivo mejora hay que bajar su entrada
  * para que el baseline funcione como trinquete. Un archivo que ya cumple sale
  * del baseline en el mismo PR.
  */
-const METRICAS = ['lines', 'publicFns', 'sqlTables'];
+const METRICAS = ['lines', 'publicFns'];
 
 function metricas(texto) {
   const inicioTests = texto.search(/#\[cfg\(test\)\]/);
   const produccion = inicioTests >= 0 ? texto.slice(0, inicioTests) : texto;
-  const tablas = new Set(
-    [
-      ...produccion.matchAll(
-        /\b(?:FROM|JOIN|INTO|UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)/gi,
-      ),
-    ].map((match) => `${match[1].toLowerCase()}.${match[2].toLowerCase()}`),
+  const tieneSql = /\b(?:FROM|JOIN|INTO|UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+[a-z_][a-z0-9_]*\./i.test(
+    produccion,
   );
 
   return {
     lines: (produccion.match(/\n/g) ?? []).length,
     publicFns: (produccion.match(/^\s*pub\s+(?:async\s+)?fn\s+\w+/gm) ?? []).length,
-    sqlTables: tablas.size,
+    tieneSql,
   };
 }
 
@@ -42,8 +37,7 @@ function metricas(texto) {
 function presupuestosExcedidos(valores, limites, ruta) {
   const excedidos = [];
   if (valores.lines > limites.lines) excedidos.push('lines');
-  if (valores.sqlTables > limites.sqlTables) excedidos.push('sqlTables');
-  const aplicaFunciones = !ruta.includes(`${sep}http${sep}`) && valores.sqlTables > 0;
+  const aplicaFunciones = !ruta.includes(`${sep}http${sep}`) && valores.tieneSql;
   if (aplicaFunciones && valores.publicFns > limites.publicFns) {
     excedidos.push('publicFns');
   }

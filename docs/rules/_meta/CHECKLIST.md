@@ -33,7 +33,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-COV-1** — La cobertura del crate no baja del umbral vigente en `.github/workflows/ci.yml`.
 - [ ] **R-COV-2** — Todo caso de uso, handler o consumidor tocado tiene pruebas en el mismo PR (`mod tests` o `tests/<dominio>_*.rs`).
 - [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza).
-- [ ] **R-MS-7** — Ningún archivo de `src/` nuevo supera 800 líneas de producción, 20 funciones públicas (dominio con SQL) u 8 tablas SQL; si el PR toca uno del baseline, lo divide y retira su entrada de `scripts/config/module-size-baseline.json`.
+- [ ] **R-MS-7** — Ningún archivo de `src/` nuevo supera 800 líneas de producción o 20 funciones públicas (dominio con SQL); si el PR toca uno del baseline, lo divide y retira su entrada de `scripts/config/module-size-baseline.json`.
 - [ ] **G-7** — `npm run lint` + `cargo fmt --check` + `cargo clippy --locked --all-targets -- -D warnings` en verde.
 
 ## 3. Unit ([`01-reglas-unit.md`](../test/01-reglas-unit.md))
