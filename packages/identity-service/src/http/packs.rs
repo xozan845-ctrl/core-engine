@@ -4,7 +4,8 @@ use super::validacion::{campo, validar, Regla, ReglaCampo};
 use super::Cuerpo;
 use crate::auth::UsuarioContexto;
 use crate::dominio::packs::{
-    CrearPack, ModeloOperacion, Pack, PackCapacidadInput, PackModeloInput, VerticalOperacion,
+    CrearPack, ModeloOperacion, Pack, PackCapacidadInput, PackModeloInput, PackRegionInput,
+    VerticalOperacion,
 };
 use crate::errors::ApiError;
 use crate::state::AppState;
@@ -53,6 +54,7 @@ const PACK: &[ReglaCampo] = &[
         &[Regla::Texto, Regla::MaxLongitud(500)],
     ),
     campo("config", false, &[Regla::Objeto]),
+    campo("regiones", false, &[Regla::Arreglo]),
 ];
 
 const VERTICAL_QUERY: &[ReglaCampo] = &[campo(
@@ -178,6 +180,7 @@ pub async fn crear(
     actor(&headers)?.exigir_roles(&["super_admin", "admin"], &[])?;
     let modelos = items(&dto, "modelos")?;
     let capacidades = items(&dto, "capacidades")?;
+    let regiones = regiones_input(&dto)?;
     let pack = state
         .servicios()?
         .packs
@@ -219,9 +222,42 @@ pub async fn crear(
                     activo: item.activo,
                 })
                 .collect(),
+            regiones,
         })
         .await?;
     created(valores(pack)?)
+}
+
+/// GET /api/v2/packs/:codigo/:version/regiones
+pub async fn regiones_listar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((codigo, version)): Path<(String, i32)>,
+) -> Result<Response, ApiError> {
+    actor(&headers)?.exigir_roles(&["super_admin", "admin", "empresario"], &[])?;
+    let regiones = state
+        .servicios()?
+        .packs
+        .regiones(&codigo.trim().to_lowercase(), version)
+        .await?;
+    ok(valores(regiones)?)
+}
+
+/// PUT /api/v2/packs/:codigo/:version/regiones
+pub async fn regiones_guardar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((codigo, version)): Path<(String, i32)>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    actor(&headers)?.exigir_roles(&["super_admin", "admin"], &[])?;
+    let regiones = regiones_input(&dto)?;
+    let pack = state
+        .servicios()?
+        .packs
+        .reemplazar_regiones(&codigo.trim().to_lowercase(), version, regiones)
+        .await?;
+    ok(valores(pack)?)
 }
 
 /// GET /api/v2/packs/:codigo/:version
@@ -302,6 +338,76 @@ fn items(dto: &Value, clave: &str) -> Result<Vec<Item>, ApiError> {
             Ok(Item {
                 codigo: codigo.to_string(),
                 config,
+                activo,
+            })
+        })
+        .collect()
+}
+
+/// Las regiones usan códigos ISO en mayúsculas (`NI`, `US-CA`), así que se
+/// validan aparte de los `Item` (que exigen segmentos en minúsculas).
+fn regiones_input(dto: &Value) -> Result<Vec<PackRegionInput>, ApiError> {
+    let Some(valor) = dto.get("regiones") else {
+        return Ok(Vec::new());
+    };
+    if valor.is_null() {
+        return Ok(Vec::new());
+    }
+    let Some(lista) = valor.as_array() else {
+        return Err(ApiError::validacion(json!([
+            {"campo": "regiones", "restricciones": ["isArray"]}
+        ])));
+    };
+    lista
+        .iter()
+        .enumerate()
+        .map(|(indice, item)| {
+            let Some(objeto) = item.as_object() else {
+                return Err(ApiError::validacion(json!([
+                    {"campo": "regiones", "restricciones": ["isObject"]}
+                ])));
+            };
+            let codigo = objeto
+                .get("codigo")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|valor| !valor.is_empty())
+                .ok_or_else(|| {
+                    ApiError::validacion(json!([
+                        {"campo": format!("regiones[{indice}].codigo"), "restricciones": ["isString"]}
+                    ]))
+                })?
+                .to_uppercase();
+            if codigo.len() > 16
+                || !codigo.chars().all(|caracter| {
+                    caracter.is_ascii_uppercase() || caracter.is_ascii_digit() || caracter == '-'
+                })
+            {
+                return Err(ApiError::validacion(json!([
+                    {"campo": format!("regiones[{indice}].codigo"), "restricciones": ["matches"]}
+                ])));
+            }
+            let predeterminada = match objeto.get("predeterminada") {
+                None | Some(Value::Null) => None,
+                Some(Value::Bool(valor)) => Some(*valor),
+                Some(_) => {
+                    return Err(ApiError::validacion(json!([
+                        {"campo": format!("regiones[{indice}].predeterminada"), "restricciones": ["isBoolean"]}
+                    ])))
+                }
+            };
+            let activo = match objeto.get("activo") {
+                None | Some(Value::Null) => None,
+                Some(Value::Bool(valor)) => Some(*valor),
+                Some(_) => {
+                    return Err(ApiError::validacion(json!([
+                        {"campo": format!("regiones[{indice}].activo"), "restricciones": ["isBoolean"]}
+                    ])))
+                }
+            };
+            Ok(PackRegionInput {
+                codigo,
+                predeterminada,
                 activo,
             })
         })

@@ -19,6 +19,7 @@ pub mod packs;
 pub mod partes;
 pub mod personal;
 pub mod plataforma;
+pub mod regiones;
 pub mod registros;
 pub mod usuarios;
 pub mod validacion;
@@ -320,6 +321,11 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/incorporaciones/{token}/aceptar",
             post(personal::aceptar_invitacion),
         )
+        .route("/api/v2/regiones-tributarias", get(regiones::listar))
+        .route(
+            "/api/v2/empresas/{empresa_id}/region-tributaria",
+            get(regiones::obtener).put(regiones::actualizar),
+        )
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades",
             get(capacidades::listar),
@@ -375,6 +381,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/packs/verticales",
             get(packs::listar_verticales).post(packs::crear_vertical),
+        )
+        .route(
+            "/api/v2/packs/{codigo}/{version}/regiones",
+            get(packs::regiones_listar).put(packs::regiones_guardar),
         )
         .route("/api/v2/packs/{codigo}/{version}", get(packs::obtener))
         .fallback(no_encontrado)

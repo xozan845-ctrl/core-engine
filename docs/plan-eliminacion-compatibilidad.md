@@ -425,7 +425,9 @@ autenticado, nunca como referencia de parte.
 
 **Riesgo:** medio-alto. Afecta alta de empresas, catálogo y logística.
 
-- [ ] Migrar `identity.empresas.tipo_empresa` → `vertical_id` + `pack_codigo`.
+- [ ] Migrar `identity.empresas.tipo_empresa` → `vertical_id` + `pack_codigo`
+  + `region_tributaria` (ADR-0049); el backfill de región lo hace
+  `99_regiones_tributarias.sql`.
 - [ ] Migrar `identity.empresas.modalidad_logistica` → capacidades
   `fulfillment_*` + `fulfillment_config`.
 - [ ] Migrar `logistics.envios.modalidad_logistica` → configuración por capacidades.
@@ -435,7 +437,8 @@ autenticado, nunca como referencia de parte.
 - [ ] Quitar endpoints:
   - `PATCH /api/v1/empresas/:id/logistica`
   - `PATCH /api/v1/empresas/:id/tipo`
-- [ ] Hacer obligatorios `vertical_id`/`pack_codigo` en el alta.
+- [ ] Hacer obligatorios `vertical_id`/`pack_codigo`/`region_tributaria` en el
+  alta (la región ya falla cerrada si el pack no declara ninguna).
 - [ ] Quitar el fallback:
   - `vertical = verticalId ?? (tipo === 'logistica' ? 'flota' : 'retail')`
   - `pack = { codigo: 'pack_${vertical}', version: 1 }`

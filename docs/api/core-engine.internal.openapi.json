@@ -502,6 +502,56 @@
                     },
                     "precios_con_impuesto": {
                       "type": "boolean"
+                    },
+                    "moneda_iso": {
+                      "type": "string",
+                      "example": "NIO"
+                    },
+                    "tasas": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "codigo": {
+                            "type": "string"
+                          },
+                          "nombre": {
+                            "type": "string"
+                          },
+                          "tasa": {
+                            "type": "number"
+                          },
+                          "exenta": {
+                            "type": "boolean"
+                          },
+                          "activa": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "codigo",
+                          "nombre",
+                          "tasa",
+                          "exenta",
+                          "activa"
+                        ]
+                      }
+                    },
+                    "tasa_default_codigo": {
+                      "type": "string",
+                      "example": "GENERAL"
+                    },
+                    "retencion_activa": {
+                      "type": "boolean"
+                    },
+                    "tasa_retencion": {
+                      "type": "number",
+                      "nullable": true,
+                      "example": 0.02
+                    },
+                    "retencion_codigo": {
+                      "type": "string",
+                      "example": "IR"
                     }
                   }
                 }

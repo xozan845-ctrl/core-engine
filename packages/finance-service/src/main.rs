@@ -112,11 +112,17 @@ async fn main() {
         config.emitir_comprobantes_fiscales,
     );
     if let Some(url) = config.facturacion_proveedor_url.clone() {
-        facturacion = facturacion.con_proveedor_http(
-            url,
-            config.facturacion_proveedor_key.clone(),
-            config.internal_request_timeout_ms,
-        );
+        facturacion = facturacion
+            .con_proveedor_http(
+                url.clone(),
+                config.facturacion_proveedor_key.clone(),
+                config.internal_request_timeout_ms,
+            )
+            .con_proveedor_dgi(
+                url,
+                config.facturacion_proveedor_key.clone(),
+                config.internal_request_timeout_ms,
+            );
     }
     if config.pdf_almacenamiento.eq_ignore_ascii_case("storage") {
         if let Some(url) = config.storage_service_url.clone() {

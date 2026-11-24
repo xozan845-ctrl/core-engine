@@ -14,9 +14,31 @@ const EVENTO_ORDER_COMPLETADO: &str = "order.completado";
 const EVENTO_DEVOLUCION_SOLICITADA: &str = "devolucion.solicitada";
 const EVENTO_STOCK_FALLIDO: &str = "stock.fallido";
 
+/// Símbolo de presentación por moneda. Acepta ISO 4217 o un símbolo ya
+/// resuelto por la región; si no lo conoce, deja el código visible en vez de
+/// asumir un país.
+fn simbolo_moneda(moneda: &str) -> &str {
+    match moneda.trim() {
+        "USD" | "US$" => "US$",
+        "NIO" | "C$" => "C$",
+        "CRC" | "₡" => "₡",
+        "GTQ" | "Q" => "Q",
+        "HNL" | "L" => "L",
+        "PAB" | "B/." => "B/.",
+        "MXN" => "MX$",
+        "COP" => "COL$",
+        "PEN" => "S/",
+        "DOP" => "RD$",
+        "BRL" => "R$",
+        "ARS" => "AR$",
+        "CLP" => "CLP$",
+        "EUR" | "€" => "€",
+        otro => otro,
+    }
+}
+
 fn dinero(cents: i64, moneda: &str) -> String {
-    let simbolo = if moneda == "USD" { "US$" } else { "C$" };
-    format!("{simbolo} {:.2}", cents as f64 / 100.0)
+    format!("{} {:.2}", simbolo_moneda(moneda), cents as f64 / 100.0)
 }
 
 fn escapar_html(valor: &str) -> String {
@@ -516,6 +538,15 @@ mod tests {
             &contexto,
         );
         assert!(mensajes[0].mensaje.text.contains("US$ 1150.00"));
+    }
+
+    #[test]
+    fn usa_el_simbolo_de_la_region_o_deja_el_codigo_visible() {
+        assert_eq!(simbolo_moneda("NIO"), "C$");
+        assert_eq!(simbolo_moneda("CRC"), "₡");
+        assert_eq!(simbolo_moneda("GTQ"), "Q");
+        assert_eq!(simbolo_moneda("JPY"), "JPY");
+        assert_eq!(dinero(115_000, "GTQ"), "Q 1150.00");
     }
 }
 

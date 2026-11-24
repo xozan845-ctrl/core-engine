@@ -63,6 +63,10 @@ pub async fn crear(
         .get("pack_version")
         .and_then(Value::as_i64)
         .and_then(|valor| i32::try_from(valor).ok());
+    let region_tributaria = empresa_dto
+        .get("region_tributaria")
+        .and_then(Value::as_str)
+        .map(str::to_string);
     let slug = slug_del_onboarding(&empresa_dto, &dto, &nombre, &clave)?;
     let hash = hash_canonico(&dto)?;
 
@@ -96,6 +100,7 @@ pub async fn crear(
             vertical_id: Some(vertical),
             pack_codigo: Some(pack),
             pack_version,
+            region_tributaria,
             capacidades_extra: capacidades,
         })
         .await
@@ -225,6 +230,12 @@ fn normalizar_empresa(dto: &Value) -> Result<Value, ApiError> {
     objeto.insert("pack_codigo".into(), Value::String(pack));
     if let Some(version) = dto.get("pack_version") {
         objeto.insert("pack_version".into(), version.clone());
+    }
+    if let Some(region) = dto
+        .get("region_tributaria")
+        .or_else(|| objeto.get("region_tributaria"))
+    {
+        objeto.insert("region_tributaria".into(), region.clone());
     }
     let mut capacidades = capacidades_extra(&Value::Object(objeto.clone()))?;
     for capacidad in capacidades_extra(dto)? {

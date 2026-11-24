@@ -168,11 +168,47 @@ struct StockV2 {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TasaImpuestoExterna {
+    pub codigo: String,
+    pub nombre: String,
+    pub tasa: f64,
+    pub exenta: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConfiguracionFiscal {
     pub tasa_iva: f64,
     pub impuesto_activo: bool,
     pub precios_con_impuesto: bool,
     pub moneda: String,
+    pub moneda_iso: String,
+    pub tasas: Vec<TasaImpuestoExterna>,
+    pub tasa_default_codigo: String,
+    pub retencion_activa: bool,
+    pub tasa_retencion: f64,
+    pub retencion_codigo: String,
+}
+
+impl ConfiguracionFiscal {
+    /// Resuelve la tasa de una línea. `None` significa que el código no existe
+    /// en la región y la operación debe fallar cerrada.
+    pub fn tasa(&self, codigo: Option<&str>) -> Option<(f64, bool)> {
+        let codigo = codigo
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .unwrap_or(self.tasa_default_codigo.as_str());
+        if let Some(tasa) = self.tasas.iter().find(|tasa| tasa.codigo == codigo) {
+            return Some((tasa.tasa, tasa.exenta));
+        }
+        if self.tasas.is_empty() {
+            return match codigo {
+                "GENERAL" => Some((self.tasa_iva, self.tasa_iva == 0.0)),
+                "EXENTA" => Some((0.0, true)),
+                _ => None,
+            };
+        }
+        None
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -410,6 +446,27 @@ impl Clientes {
             return None;
         }
         let cuerpo: Value = respuesta.json().await.ok()?;
+        let tasas = cuerpo
+            .get("tasas")
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| {
+                        Some(TasaImpuestoExterna {
+                            codigo: item.get("codigo")?.as_str()?.to_string(),
+                            nombre: item
+                                .get("nombre")
+                                .and_then(Value::as_str)
+                                .unwrap_or("")
+                                .to_string(),
+                            tasa: item.get("tasa")?.as_f64()?,
+                            exenta: item.get("exenta").and_then(Value::as_bool).unwrap_or(false),
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
         Some(ConfiguracionFiscal {
             tasa_iva: cuerpo.get("tasa_iva").and_then(Value::as_f64)?,
             impuesto_activo: cuerpo
@@ -424,6 +481,30 @@ impl Clientes {
                 .get("moneda")
                 .and_then(Value::as_str)
                 .unwrap_or("NIO")
+                .to_string(),
+            moneda_iso: cuerpo
+                .get("moneda_iso")
+                .and_then(Value::as_str)
+                .unwrap_or("NIO")
+                .to_string(),
+            tasas,
+            tasa_default_codigo: cuerpo
+                .get("tasa_default_codigo")
+                .and_then(Value::as_str)
+                .unwrap_or("GENERAL")
+                .to_string(),
+            retencion_activa: cuerpo
+                .get("retencion_activa")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            tasa_retencion: cuerpo
+                .get("tasa_retencion")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0),
+            retencion_codigo: cuerpo
+                .get("retencion_codigo")
+                .and_then(Value::as_str)
+                .unwrap_or("IR")
                 .to_string(),
         })
     }
@@ -1095,5 +1176,44 @@ mod tests {
         let config = ConfiguracionOperativa::default();
         assert!(config.requiere_vendedor);
         assert!(config.comision);
+    }
+
+    #[test]
+    fn debe_resolver_tasas_por_codigo_y_fallar_cerrado() {
+        let config = ConfiguracionFiscal {
+            tasa_iva: 0.15,
+            impuesto_activo: true,
+            precios_con_impuesto: true,
+            moneda: "C$".into(),
+            moneda_iso: "NIO".into(),
+            tasas: vec![
+                TasaImpuestoExterna {
+                    codigo: "GENERAL".into(),
+                    nombre: "General".into(),
+                    tasa: 0.15,
+                    exenta: false,
+                },
+                TasaImpuestoExterna {
+                    codigo: "EXENTA".into(),
+                    nombre: "Exento".into(),
+                    tasa: 0.0,
+                    exenta: true,
+                },
+            ],
+            tasa_default_codigo: "GENERAL".into(),
+            retencion_activa: true,
+            tasa_retencion: 0.02,
+            retencion_codigo: "IR".into(),
+        };
+        assert_eq!(config.tasa(None), Some((0.15, false)));
+        assert_eq!(config.tasa(Some("EXENTA")), Some((0.0, true)));
+        assert_eq!(config.tasa(Some("NO_EXISTE")), None);
+
+        let legacy = ConfiguracionFiscal {
+            tasas: Vec::new(),
+            ..config
+        };
+        assert_eq!(legacy.tasa(Some("GENERAL")), Some((0.15, false)));
+        assert_eq!(legacy.tasa(Some("EXENTA")), Some((0.0, true)));
     }
 }

@@ -17,6 +17,7 @@ use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
+use identity_service::dominio::regiones::Regiones;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
@@ -99,11 +100,13 @@ async fn main() {
         config.servicios_purga.clone(),
         config.internal_api_key.clone(),
     ));
+    let regiones = Arc::new(Regiones::nueva(Arc::clone(&db)));
     let empresas = Arc::new(Empresas::nueva(
         Arc::clone(&db),
         Arc::clone(&usuarios),
         Arc::clone(&storage),
         Arc::clone(&purga),
+        Arc::clone(&regiones),
         config
             .export_signing_key
             .clone()
@@ -188,6 +191,7 @@ async fn main() {
             onboarding,
             personal,
             partes,
+            regiones,
             registros,
             suscripciones,
             packs,

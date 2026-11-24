@@ -141,6 +141,7 @@
   "99_onboarding_jobs.sql": "44063bd9e9a0b7b691ed5dcccef498105671974821d253168a993cc06e487526",
   "99_orders_impuestos.sql": "7aea50e7ace675db4e97ce1dce331b364e519c0fbe13e88f105dc4bda3fc1da3",
   "99_pagos_configurables.sql": "8f5d75a6112af0a37676da0e0076775b5f154389c8c32d85478cb9999775868a",
+  "99_regiones_tributarias.sql": "9bcaae3493efd50e9c5a4620a60737d2001eae51e04d65c6a77c56c402ebe2d0",
   "99_resenas_wishlist.sql": "bd304020779542ef5fdec98cf6bcafe81e1806e8e9a8c9cfda0696b33343da81",
   "99_rma.sql": "53f86262f1e5e429ce1c748e3bcb5a49d1e3687f27633f7a02241cf10b047b65",
   "99_rma_reembolsos.sql": "616e46b03e87c898a3d35b7937ddd361739454d0b9a3a9f0b3252bcd4af1f5a6",
@@ -151,6 +152,7 @@
   "99y_pasarelas_tipos.sql": "1aa4dd08c58c429bab59a6d9ae8a836499ec279579a88495a53133f8fe61c6c9",
   "99z_append_only.sql": "548c3b383409e222b2edcdd4fe317ae8e8387fe36c3801898b575c1f70f76ae1",
   "99z_pasarelas.sql": "06c3e5545b40691e45a5f6858e527fed4a56be76e1c8e73631333e453c5f3248",
+  "99z_regiones_fiscal_completo.sql": "01bab94cb14684ed68a229d00db85832fe1f8d0fc543a229d2181b226199a4e3",
   "99z_reservas_onsite.sql": "6524ca2a675a1391234d4dad8222f7360c1f6b7cc2fb8452727887a3b9a280b0",
   "99z_rls_tenant.sql": "05c29a68848afce3c6250b88d13c5acbb02fc74184a9d1052a157e4caeef1272",
   "99z_scheduling_outbox_rls.sql": "b7e3cbf4962cff7243affda7011a88880ce7d5b6ebd33b99f4f5edd493847f38"

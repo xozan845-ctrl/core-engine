@@ -8,7 +8,7 @@ use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
     Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionFiscal, ConfiguracionOperativa,
     Cotizacion, CreditoEstado, CuponExterno, CuponValidado, ItemStock, OfertaExterna, PrecioLinea,
-    PreciosExternos, PromocionLinea, StockUbicacion,
+    PreciosExternos, PromocionLinea, StockUbicacion, TasaImpuestoExterna,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -660,6 +660,7 @@ fn compra(cantidad: i64) -> ComandoCrear {
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
             ubicacion_id: None,
+            impuesto_codigo: None,
         }]),
         ..Default::default()
     }
@@ -808,6 +809,12 @@ async fn debe_calcular_iva_por_linea_con_precios_incluidos() {
             impuesto_activo: true,
             precios_con_impuesto: true,
             moneda: "NIO".into(),
+            moneda_iso: "NIO".into(),
+            tasas: Vec::new(),
+            tasa_default_codigo: "GENERAL".into(),
+            retencion_activa: false,
+            tasa_retencion: 0.0,
+            retencion_codigo: "IR".into(),
         },
     );
     let orden = checkout
@@ -841,6 +848,12 @@ async fn debe_calcular_iva_por_linea_con_precios_sin_impuesto() {
             impuesto_activo: true,
             precios_con_impuesto: false,
             moneda: "NIO".into(),
+            moneda_iso: "NIO".into(),
+            tasas: Vec::new(),
+            tasa_default_codigo: "GENERAL".into(),
+            retencion_activa: false,
+            tasa_retencion: 0.0,
+            retencion_codigo: "IR".into(),
         },
     );
     let orden = checkout
@@ -851,6 +864,78 @@ async fn debe_calcular_iva_por_linea_con_precios_sin_impuesto() {
     assert_eq!(orden.impuesto_cents, 3_000);
     assert_eq!(orden.items[0].impuesto_cents, 3_000);
     assert_eq!(orden.items[0].total_linea_cents, 23_000);
+}
+
+#[tokio::test]
+async fn debe_aplicar_exencion_y_fallar_con_tasa_desconocida_por_linea() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let fiscal = ConfiguracionFiscal {
+        tasa_iva: 0.15,
+        impuesto_activo: true,
+        precios_con_impuesto: false,
+        moneda: "NIO".into(),
+        moneda_iso: "NIO".into(),
+        tasas: vec![
+            TasaImpuestoExterna {
+                codigo: "GENERAL".into(),
+                nombre: "General".into(),
+                tasa: 0.15,
+                exenta: false,
+            },
+            TasaImpuestoExterna {
+                codigo: "EXENTA".into(),
+                nombre: "Exento".into(),
+                tasa: 0.0,
+                exenta: true,
+            },
+        ],
+        tasa_default_codigo: "GENERAL".into(),
+        retencion_activa: false,
+        tasa_retencion: 0.0,
+        retencion_codigo: "IR".into(),
+    };
+    let (checkout, _, _) = infra_fiscal(Arc::clone(&db), 10, fiscal);
+    let exenta = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 2,
+                    fulfillment: Some("none".to_string()),
+                    fulfillment_config: None,
+                    ubicacion_id: None,
+                    impuesto_codigo: Some("EXENTA".into()),
+                }]),
+                ..compra(2)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden exenta");
+    assert_eq!(exenta.impuesto_cents, 0);
+    assert_eq!(exenta.items[0].tasa_impuesto_bps, 0);
+    assert_eq!(exenta.items[0].impuesto_codigo.as_deref(), Some("EXENTA"));
+    assert_eq!(exenta.items[0].total_linea_cents, 20_000);
+
+    let error = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("none".to_string()),
+                    fulfillment_config: None,
+                    ubicacion_id: None,
+                    impuesto_codigo: Some("NO_EXISTE".into()),
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect_err("tasa desconocida");
+    assert_eq!(error.codigo, "IMPUESTO_NO_DISPONIBLE");
 }
 
 #[tokio::test]
@@ -3287,6 +3372,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     fulfillment: Some("retiro_tienda".to_string()),
                     fulfillment_config: None,
                     ubicacion_id: None,
+                    impuesto_codigo: None,
                 }]),
                 ..compra(1)
             },
@@ -3305,6 +3391,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     fulfillment: Some("no_existe".to_string()),
                     fulfillment_config: None,
                     ubicacion_id: None,
+                    impuesto_codigo: None,
                 }]),
                 ..compra(1)
             },

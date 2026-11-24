@@ -15,8 +15,8 @@ use crate::finanzas::proyecciones::{
 use crate::http::{contexto, fecha_query, query_f64, query_i64, Cuerpo};
 use crate::state::AppState;
 use crate::tributacion::{
-    CrearJurisdiccion, CrearRegimen, FiltrosDeclaracion, Jurisdiccion, PeriodoMensual,
-    RegimenFiscal, RegistrarSujeto, SujetoTributario,
+    ActualizarJurisdiccion, CrearJurisdiccion, CrearRegimen, CrearTasaImpuesto, FiltrosDeclaracion,
+    Jurisdiccion, PeriodoMensual, RegimenFiscal, RegistrarSujeto, SujetoTributario, TasaImpuesto,
 };
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -278,6 +278,157 @@ pub async fn jurisdicciones_crear(
     Ok(Json(state.tributacion.crear_jurisdiccion(dto).await?))
 }
 
+pub async fn jurisdicciones_actualizar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(codigo): Path<String>,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<Jurisdiccion>, ApiError> {
+    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let dto: ActualizarJurisdiccion = serde_json::from_value(cuerpo).map_err(validacion_body)?;
+    Ok(Json(
+        state
+            .tributacion
+            .actualizar_jurisdiccion(&codigo, dto)
+            .await?,
+    ))
+}
+
+pub async fn tasas_listar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(jurisdiccion): Path<String>,
+) -> Result<Json<Vec<TasaImpuesto>>, ApiError> {
+    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let codigo = jurisdiccion.trim().to_uppercase();
+    Ok(Json(state.tributacion.tasas_de(Some(&codigo)).await?))
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct GuardarTasasRequest {
+    #[serde(default)]
+    pub tasas: Vec<CrearTasaImpuesto>,
+}
+
+pub async fn tasas_guardar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(jurisdiccion): Path<String>,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<Vec<TasaImpuesto>>, ApiError> {
+    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let dto: GuardarTasasRequest = serde_json::from_value(cuerpo).map_err(validacion_body)?;
+    Ok(Json(
+        state
+            .tributacion
+            .guardar_tasas(jurisdiccion.trim(), dto.tasas)
+            .await?,
+    ))
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct CrearSerieRequest {
+    pub serie: String,
+    pub tipo: String,
+    pub prefijo: String,
+    pub ruc_emisor: String,
+    pub jurisdiccion: String,
+    #[serde(default)]
+    pub empresa_id: Option<String>,
+    #[serde(default)]
+    pub negocio_id: Option<String>,
+    #[serde(default)]
+    pub activa: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ActualizarSerieRequest {
+    #[serde(default)]
+    pub activa: Option<bool>,
+    #[serde(default)]
+    pub prefijo: Option<String>,
+}
+
+pub async fn series_listar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Json<Vec<crate::facturacion::SerieComprobante>>, ApiError> {
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let empresa_id = if usuario.es_admin_global() {
+        query
+            .get("empresa_id")
+            .map(String::as_str)
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+    } else {
+        Some(usuario.tenant()?.to_string())
+    };
+    Ok(Json(
+        state
+            .facturacion
+            .series_de(
+                query.get("negocio_id").map(String::as_str),
+                empresa_id.as_deref(),
+            )
+            .await?,
+    ))
+}
+
+pub async fn series_crear(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<crate::facturacion::SerieComprobante>, ApiError> {
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let dto: CrearSerieRequest = serde_json::from_value(cuerpo).map_err(validacion_body)?;
+    let empresa_id = if usuario.es_admin_global() {
+        dto.empresa_id
+    } else {
+        Some(usuario.tenant()?.to_string())
+    };
+    Ok(Json(
+        state
+            .facturacion
+            .crear_serie(
+                &dto.serie,
+                &dto.tipo,
+                &dto.prefijo,
+                &dto.ruc_emisor,
+                &dto.jurisdiccion,
+                empresa_id.as_deref(),
+                dto.negocio_id.as_deref(),
+                dto.activa.unwrap_or(true),
+            )
+            .await?,
+    ))
+}
+
+pub async fn series_actualizar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(serie): Path<String>,
+    Cuerpo(cuerpo): Cuerpo,
+) -> Result<Json<crate::facturacion::SerieComprobante>, ApiError> {
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let dto: ActualizarSerieRequest = serde_json::from_value(cuerpo).map_err(validacion_body)?;
+    if !usuario.es_admin_global() {
+        let propietario = state.facturacion.empresa_de_serie(&serie).await?;
+        if propietario.as_deref() != Some(usuario.tenant()?) {
+            return Err(ApiError::acceso_denegado(
+                "Solo puedes administrar las series de tu empresa.",
+            ));
+        }
+    }
+    Ok(Json(
+        state
+            .facturacion
+            .actualizar_serie(&serie, dto.activa, dto.prefijo.as_deref())
+            .await?,
+    ))
+}
+
 pub async fn regimenes_listar(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -351,11 +502,22 @@ pub async fn declaraciones_listar(
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<crate::tributacion::Declaracion>>, ApiError> {
-    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let empresa_id = if usuario.es_admin_global() {
+        query
+            .get("empresa_id")
+            .map(String::as_str)
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+    } else {
+        Some(usuario.tenant()?.to_string())
+    };
     Ok(Json(
         state
             .tributacion
             .declaraciones(FiltrosDeclaracion {
+                empresa_id,
                 tipo: query.get("tipo").cloned(),
                 periodo_inicio: query.get("periodo_inicio").cloned(),
                 estado: query.get("estado").cloned(),
@@ -366,6 +528,8 @@ pub async fn declaraciones_listar(
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct GenerarDeclaracionesRequest {
+    #[serde(default)]
+    pub empresa_id: Option<String>,
     #[serde(default)]
     pub tipo: Option<String>,
     #[serde(default)]
@@ -379,15 +543,34 @@ pub async fn declaraciones_generar(
     headers: HeaderMap,
     Cuerpo(cuerpo): Cuerpo,
 ) -> Result<Json<Vec<crate::tributacion::Declaracion>>, ApiError> {
-    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
     let dto: GenerarDeclaracionesRequest = serde_json::from_value(cuerpo).unwrap_or_default();
     let periodo = match (dto.inicio, dto.fin) {
         (Some(inicio), Some(fin)) => Some(PeriodoMensual { inicio, fin }),
         _ => None,
     };
-    Ok(Json(
-        state.tributacion.generar_declaraciones(periodo).await?,
-    ))
+    let empresa_id = if usuario.es_admin_global() {
+        dto.empresa_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+    } else {
+        Some(usuario.tenant()?.to_string())
+    };
+    let mut generadas = state
+        .tributacion
+        .generar_declaraciones(periodo.clone(), empresa_id.as_deref())
+        .await?;
+    if empresa_id.is_none() {
+        generadas.extend(
+            state
+                .tributacion
+                .generar_declaraciones_tenants(periodo)
+                .await?,
+        );
+    }
+    Ok(Json(generadas))
 }
 
 pub async fn declaracion_presentar(
@@ -446,11 +629,24 @@ pub async fn comprobantes_series(
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<SerieComprobante>>, ApiError> {
-    contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let usuario = contexto(&state, &headers, &ROLES_FINANZAS, &[], &[CAP_FACTURACION]).await?;
+    let empresa_id = if usuario.es_admin_global() {
+        query
+            .get("empresa_id")
+            .map(String::as_str)
+            .map(str::trim)
+            .filter(|valor| !valor.is_empty())
+            .map(str::to_string)
+    } else {
+        Some(usuario.tenant()?.to_string())
+    };
     Ok(Json(
         state
             .facturacion
-            .series_de(query.get("negocioId").map(String::as_str))
+            .series_de(
+                query.get("negocioId").map(String::as_str),
+                empresa_id.as_deref(),
+            )
             .await?,
     ))
 }
@@ -598,6 +794,14 @@ pub async fn configuracion_fiscal_obtener(
         "ambiente_electronico": config.ambiente_electronico,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
+        "moneda_iso": config.jurisdiccion.moneda_iso,
+        "locale": config.jurisdiccion.locale,
+        "zona_horaria": config.jurisdiccion.zona_horaria,
+        "tasas": config.tasas,
+        "tasa_default_codigo": config.jurisdiccion.tasa_default_codigo,
+        "retencion_activa": config.retencion_activa,
+        "tasa_retencion": config.tasa_retencion,
+        "retencion_codigo": config.retencion_codigo,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,
     })))
@@ -653,6 +857,14 @@ pub async fn configuracion_fiscal_guardar(
         "ambiente_electronico": config.ambiente_electronico,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
+        "moneda_iso": config.jurisdiccion.moneda_iso,
+        "locale": config.jurisdiccion.locale,
+        "zona_horaria": config.jurisdiccion.zona_horaria,
+        "tasas": config.tasas,
+        "tasa_default_codigo": config.jurisdiccion.tasa_default_codigo,
+        "retencion_activa": config.retencion_activa,
+        "tasa_retencion": config.tasa_retencion,
+        "retencion_codigo": config.retencion_codigo,
         "impuesto_activo": config.impuesto_activo,
         "precios_con_impuesto": config.precios_con_impuesto,
     })))

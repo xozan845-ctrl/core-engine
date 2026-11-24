@@ -3,12 +3,13 @@
 //! Solo corren con `TEST_DATABASE_URL`; provisionan el esquema `identity`
 //! aplicando las migraciones reales de `infra/db/init` (sin dumps paralelos).
 
-use identity_service::auth::{verificar_token, Sesion};
+use identity_service::auth::{verificar_token, Sesion, UsuarioContexto};
 use identity_service::config::Config;
 use identity_service::crypto::CifradoSecreto;
 use identity_service::db::Db;
 use identity_service::dominio::auth::Auth;
 use identity_service::dominio::password_reset::PasswordReset;
+use identity_service::dominio::regiones::Regiones;
 use identity_service::dominio::sesiones::Sesiones;
 use identity_service::dominio::usuarios::{CrearUsuario, FiltroUsuarios, Usuarios};
 use identity_service::email::{Email, EmailMessage};
@@ -462,4 +463,128 @@ async fn debe_guardar_y_validar_el_telefono_del_usuario() {
         .await
         .expect_err("invalido");
     assert_eq!(error.codigo, "TELEFONO_INVALIDO");
+}
+
+#[tokio::test]
+async fn debe_seleccionar_y_cambiar_la_region_tributaria_del_tenant() {
+    let Some(ctx) = preparar().await else { return };
+    let regiones = Regiones::nueva(Arc::clone(&ctx.db));
+
+    let disponibles = regiones
+        .listar(Some("pack_retail"), Some(1))
+        .await
+        .expect("regiones del pack");
+    let nicaragua = disponibles
+        .iter()
+        .find(|region| region.codigo == "NI")
+        .expect("Nicaragua disponible");
+    assert!(nicaragua.predeterminada);
+    assert_eq!(nicaragua.moneda_iso, "NIO");
+    assert_eq!(nicaragua.zona_horaria, "America/Managua");
+
+    let actor_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO identity.usuarios (id, nombre, correo, contrasena_hash, rol)
+         VALUES ($1, 'Tester fiscal', $2, 'no-usada', 'super_admin')",
+    )
+    .bind(actor_id)
+    .bind(format!("{actor_id}@regiones.test"))
+    .execute(ctx.db.pool())
+    .await
+    .expect("usuario actor");
+
+    let empresa_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO identity.empresas
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por,
+            region_tributaria, pais, moneda, zona_horaria)
+         VALUES ($1, 'Empresa fiscal', $3, 'retail', 'pack_retail', 1, $2, 'NI',
+                 'Nicaragua', 'NIO', 'America/Managua')",
+    )
+    .bind(empresa_id)
+    .bind(actor_id)
+    .bind(format!(
+        "empresa-fiscal-{}",
+        &empresa_id.simple().to_string()[..8]
+    ))
+    .execute(ctx.db.pool())
+    .await
+    .expect("empresa");
+
+    let actual = regiones
+        .de_empresa(&empresa_id.to_string())
+        .await
+        .expect("region")
+        .expect("asignada");
+    assert_eq!(actual.region.codigo, "NI");
+
+    let actor = UsuarioContexto {
+        user_id: actor_id.to_string(),
+        email: format!("{actor_id}@regiones.test"),
+        rol: "super_admin".to_string(),
+        nombre: None,
+        tenant_id: None,
+        personal_id: None,
+        participacion_porcentaje: None,
+        rol_empresa_id: None,
+        negocio_id: None,
+        permisos: Vec::new(),
+    };
+
+    // Una región existente pero no declarada por el pack se rechaza.
+    sqlx::query(
+        "INSERT INTO finance.jurisdicciones
+           (codigo_pais, nombre, pais_iso, moneda, moneda_iso, simbolo_moneda,
+            tasa_iva, tasa_ir, locale, zona_horaria, activa)
+         VALUES ('US', 'Estados Unidos', 'US', 'US$', 'USD', 'US$',
+                 0.0, 0.0, 'en-US', 'America/New_York', true)",
+    )
+    .execute(ctx.db.pool())
+    .await
+    .expect("region US");
+    let error = regiones
+        .asignar(&empresa_id.to_string(), "US", "", &actor)
+        .await
+        .expect_err("region no declarada");
+    assert_eq!(error.codigo, "REGION_NO_DISPONIBLE");
+
+    // Al declararla en el pack, el cambio actualiza perfil e historial.
+    sqlx::query(
+        "INSERT INTO identity.pack_regiones
+           (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+         VALUES ('pack_retail', 1, 'US', false, true)",
+    )
+    .execute(ctx.db.pool())
+    .await
+    .expect("pack region US");
+    let cambiada = regiones
+        .asignar(
+            &empresa_id.to_string(),
+            "US",
+            "Prueba de cambio fiscal",
+            &actor,
+        )
+        .await
+        .expect("cambio");
+    assert_eq!(cambiada.region.codigo, "US");
+    assert_eq!(cambiada.region.moneda_iso, "USD");
+
+    let (pais, moneda, zona): (String, String, String) =
+        sqlx::query_as("SELECT pais, moneda, zona_horaria FROM identity.empresas WHERE id = $1")
+            .bind(empresa_id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("empresa actualizada");
+    assert_eq!(pais, "Estados Unidos");
+    assert_eq!(moneda, "USD");
+    assert_eq!(zona, "America/New_York");
+
+    let historial: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM identity.empresa_region_historial WHERE empresa_id = $1",
+    )
+    .bind(empresa_id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("historial");
+    assert_eq!(historial, 1);
 }
