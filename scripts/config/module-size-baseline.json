@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/finance-service/src/facturacion.rs": {
-      "lines": 1580,
-      "publicFns": 20
-    },
     "packages/finance-service/src/tributacion.rs": {
       "lines": 1591,
       "publicFns": 25
