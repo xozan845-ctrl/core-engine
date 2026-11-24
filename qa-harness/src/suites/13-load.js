@@ -30,7 +30,7 @@ export async function suite13Carga(client, cfg) {
       const start = Date.now();
       const res = await client.post('/api/v2/auth/login', {
         correo: 'admin@core-engine.test',
-        contrasena: 'AdminCore Engine2026!',
+        contrasena: 'Fuego-Laguna-2026!',
       });
       if (res.status === 200 || res.status === 429) {
         loginTimes.push(Date.now() - start);
@@ -82,7 +82,7 @@ export async function suite13Carga(client, cfg) {
     for (let i = 0; i < 20; i++) {
       ratePromises.push(client.post('/api/v2/auth/login', {
         correo: 'admin@core-engine.test',
-        contrasena: 'AdminCore Engine2026!',
+        contrasena: 'Fuego-Laguna-2026!',
       }));
     }
     const rateResults = await Promise.all(ratePromises);

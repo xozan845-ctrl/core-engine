@@ -83,7 +83,7 @@ impl SmtpEmailProvider {
         let tls = if config.es_seguro() {
             Tls::Wrapper(tls)
         } else {
-            Tls::Opportunistic(tls)
+            Tls::Required(tls)
         };
         let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host)
             .port(config.smtp_port)

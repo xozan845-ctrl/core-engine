@@ -8,6 +8,7 @@ use crate::auth::UsuarioContexto;
 use crate::db::{iso_ms, Db};
 use crate::dominio::auditoria;
 use crate::dominio::features::features_de;
+use crate::dominio::regiones::{region_de_empresa_en, Regiones};
 use crate::errors::ApiError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -52,12 +53,31 @@ pub struct CapacidadManifiesto {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct RegionManifiesto {
+    pub codigo: String,
+    pub nombre: String,
+    pub pais_iso: String,
+    pub moneda: String,
+    pub moneda_iso: String,
+    pub simbolo_moneda: String,
+    pub locale: String,
+    pub zona_horaria: String,
+    pub tasa_iva: f64,
+    pub documento_fiscal: Value,
+    /// Features fiscales de la región, solo si `facturacion` está activa.
+    pub features: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Manifiesto {
     pub empresa_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub negocio_id: Option<String>,
     pub vertical_id: Option<String>,
     pub pack: Option<PackManifiesto>,
+    /// Región tributaria elegida por el tenant y features fiscales derivadas.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_tributaria: Option<RegionManifiesto>,
     pub modelos: Vec<ModeloManifiesto>,
     pub capacidades: Vec<CapacidadManifiesto>,
     pub features: Vec<String>,
@@ -206,6 +226,7 @@ impl Capacidades {
             }
             None => capacidades_de_empresa(&mut tx, empresa_id).await?,
         };
+        let region = region_de_empresa_en(&mut tx, empresa_id).await?;
         tx.commit().await.map_err(interno)?;
 
         let mut capacidades = Vec::with_capacity(filas.len());
@@ -220,12 +241,32 @@ impl Capacidades {
                 config: fila.try_get("config").map_err(interno)?,
             });
         }
+        let facturacion_activa = capacidades
+            .iter()
+            .any(|capacidad| capacidad.codigo == "facturacion" && capacidad.activo);
+        let region_tributaria = region.map(|region| RegionManifiesto {
+            codigo: region.region.codigo.clone(),
+            nombre: region.region.nombre.clone(),
+            pais_iso: region.region.pais_iso.clone(),
+            moneda: region.region.moneda.clone(),
+            moneda_iso: region.region.moneda_iso.clone(),
+            simbolo_moneda: region.region.simbolo_moneda.clone(),
+            locale: region.region.locale.clone(),
+            zona_horaria: region.region.zona_horaria.clone(),
+            tasa_iva: region.region.tasa_iva,
+            documento_fiscal: region.region.documento_fiscal.clone(),
+            features: Regiones::features_fiscales(&region.region, facturacion_activa),
+        });
+
         let mut features: Vec<String> = capacidades
             .iter()
             .filter(|capacidad| capacidad.activo)
             .flat_map(|capacidad| capacidad.features.iter().copied())
             .map(str::to_string)
             .collect();
+        if let Some(region) = &region_tributaria {
+            features.extend(region.features.iter().cloned());
+        }
         features.sort();
         features.dedup();
 
@@ -234,6 +275,7 @@ impl Capacidades {
             negocio_id: negocio_id.map(str::to_string),
             vertical_id,
             pack,
+            region_tributaria,
             modelos,
             capacidades,
             features,

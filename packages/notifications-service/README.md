@@ -43,6 +43,9 @@ API pública de negocio: su superficie HTTP es solo operativa (`/health`,
 | `SMTP_HOST` | Sí con `smtp` | — | Servidor |
 | `SMTP_PORT` | No | `587` | 465 activa TLS directo |
 | `SMTP_USER` / `SMTP_PASSWORD` | Juntos | — | Autenticación |
+| `WEBHOOK_TIMEOUT_MS` | No | `5000` | Timeout de entrega de webhooks |
+| `WEBHOOK_REINTENTO_SEGUNDOS` | No | `60` | Intervalo del worker de reintentos |
+| `WEBHOOK_HTTPS_OBLIGATORIO` | No | `true` en producción | Exige HTTPS en las URLs |
 
 Con `EMAIL_MODE=smtp` faltan host/remitente o el par usuario/contraseña está
 incompleto → **el proceso no arranca**.
@@ -104,7 +107,10 @@ Cola única `notifications.todos` con 7 routing keys:
 ## 4. Plantillas y correo
 
 - Asunto y cuerpo se generan en `plantillas.rs` como funciones **puras**.
-- Montos: `C$`/`US$` con dos decimales, calculados desde `total_cents`.
+- Montos: dos decimales desde `total_cents`, con símbolo resuelto por ISO 4217
+  o por el símbolo ya recibido (`NIO`/`C$`, `USD`/`US$`, `CRC`, `GTQ`, …). Si
+  la moneda no se conoce, se muestra el código en vez de asumir un país
+  (ADR-0049).
 - HTML escapado (`&`, `<`, `>`, `"`, `'`); se envía `text/plain` + `text/html`.
 - El número de pedido se muestra corto (8 caracteres).
 - El estado se traduce a texto legible (`pagada`, `enviada`, …).
@@ -129,9 +135,24 @@ En dev/E2E se usa Mailpit (`1025`/`8025`) para capturar los correos.
 | `GET /docs` | Swagger UI |
 | `GET /docs-json` | Contrato público |
 | `GET /docs-internal-json` | Contrato interno |
+| `GET /api/v2/admin/notifications/plantillas` | Plantillas efectivas |
+| `PUT /api/v2/admin/notifications/plantillas/{evento}/{canal}` | Crear/editar plantilla |
+| `GET/POST /api/v2/admin/notifications/webhooks` | Listar/crear webhooks |
+| `PATCH/DELETE /api/v2/admin/notifications/webhooks/{id}` | Actualizar/eliminar |
+| `POST /api/v2/admin/notifications/webhooks/{id}/rotar-secreto` | Rotar secreto HMAC |
+| `GET /api/v2/admin/notifications/webhooks/{id}/entregas` | Historial de entregas |
+| `POST /api/v2/admin/notifications/webhooks/entregas/{id}/reintentar` | Reintentar entrega |
 
-No hay endpoints de negocio ni rutas internas. El contrato OpenAPI existe para
-cumplir el gate de documentación, no porque haya operaciones.
+Las plantillas viven en `notifications.plantillas` (globales o por empresa).
+Canales opcionales: `NOTIFICACIONES_CANALES=email,whatsapp,sms`, con
+`WHATSAPP_TOKEN`/`WHATSAPP_PHONE_ID` y `SMS_URL`/`SMS_KEY`. Variables de
+plantilla: `{{pedido}}`, `{{total}}`, `{{estado}}`, `{{motivo}}`, `{{guia}}`,
+`{{cliente}}`, `{{vendedor}}`.
+
+Los webhooks salientes viven en `notifications.webhooks` y
+`notifications.webhook_entregas`: reciben todos los eventos del exchange,
+firman el cuerpo con HMAC-SHA256 (`x-core-signature`) y reintentan con backoff.
+Decisión: [ADR-0045](../../docs/adr/0045-webhooks-salientes.md).
 
 ---
 
@@ -140,7 +161,8 @@ cumplir el gate de documentación, no porque haya operaciones.
 - No lee esquemas ajenos: solo APIs internas con `x-internal-key`.
 - Los logs enmascaran el correo y omiten el cuerpo.
 - No se persiste el contenido del correo ni datos personales más allá de la
-  idempotencia del evento.
+  idempotencia del evento, las plantillas y las suscripciones de webhook.
+- La exportación/purga del tenant elimina sus plantillas y webhooks.
 - Los enlaces y tokens de negocio (reset, invitación) no pasan por este
   servicio; los envía `identity` con su propio proveedor.
 - El correo saliente depende de SMTP; en producción se configura por entorno

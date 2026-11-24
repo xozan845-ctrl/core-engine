@@ -226,8 +226,24 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
             get(finanzas::jurisdicciones_listar).post(finanzas::jurisdicciones_crear),
         )
         .route(
+            "/api/v2/finanzas/jurisdicciones/{codigo}",
+            patch(finanzas::jurisdicciones_actualizar),
+        )
+        .route(
+            "/api/v2/finanzas/jurisdicciones/{codigo}/tasas",
+            get(finanzas::tasas_listar).put(finanzas::tasas_guardar),
+        )
+        .route(
             "/api/v2/finanzas/configuracion-fiscal",
             get(finanzas::configuracion_fiscal_obtener).put(finanzas::configuracion_fiscal_guardar),
+        )
+        .route(
+            "/api/v2/finanzas/series",
+            get(finanzas::series_listar).post(finanzas::series_crear),
+        )
+        .route(
+            "/api/v2/finanzas/series/{serie}",
+            patch(finanzas::series_actualizar),
         )
         .route(
             "/api/v2/finanzas/regimenes",
@@ -308,6 +324,14 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         )
         .route("/internal/finance/tipos-cambio", get(interno::tipo_cambio))
         .route(
+            "/internal/finance/configuracion-fiscal",
+            get(interno::configuracion_fiscal),
+        )
+        .route(
+            "/internal/finance/notas-credito",
+            post(interno::nota_credito),
+        )
+        .route(
             "/internal/finance/creditos",
             post(interno::registrar_credito),
         )
@@ -318,5 +342,13 @@ pub fn registrar(router: Router<AppState>) -> Router<AppState> {
         .route(
             "/internal/finance/declaraciones",
             get(interno::declaraciones),
+        )
+        .route(
+            "/internal/finance/tenant/purgar",
+            post(interno::purgar_tenant),
+        )
+        .route(
+            "/internal/finance/tenant/exportar",
+            post(interno::exportar_tenant),
         )
 }

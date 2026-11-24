@@ -7,6 +7,7 @@ use axum::http::{Request, StatusCode};
 use axum::Router;
 use http_body_util::BodyExt;
 use identity_service::config::Config;
+use identity_service::crypto::CifradoSecreto;
 use identity_service::db::Db;
 use identity_service::dominio::api_keys::ApiKeys;
 use identity_service::dominio::auditoria::Auditoria;
@@ -17,16 +18,22 @@ use identity_service::dominio::configuracion_sitio::ConfiguracionSitio;
 use identity_service::dominio::empresas::Empresas;
 use identity_service::dominio::extensiones::Extensiones;
 use identity_service::dominio::negocios::Negocios;
+use identity_service::dominio::onboarding::Onboarding;
 use identity_service::dominio::packs::Packs;
 use identity_service::dominio::partes::Partes;
 use identity_service::dominio::password_reset::PasswordReset;
 use identity_service::dominio::personal::Personal;
+use identity_service::dominio::regiones::Regiones;
 use identity_service::dominio::registros::Registros;
 use identity_service::dominio::sesiones::Sesiones;
+use identity_service::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
+use identity_service::dominio::totp;
 use identity_service::dominio::usuarios::{CrearUsuario, Usuarios};
+use identity_service::dominio::verificacion::VerificacionEmail;
 use identity_service::email::{Email, EmailMessage};
 use identity_service::http::build_router;
 use identity_service::metrics::Metrics;
+use identity_service::purga::PurgaExterna;
 use identity_service::state::{AppState, Servicios};
 use identity_service::storage::Storage;
 use identity_service::stores::Stores;
@@ -106,7 +113,13 @@ async fn preparar() -> Option<Contexto> {
     ])
     .expect("config");
     let storage = Arc::new(Storage::nueva("http://127.0.0.1:9", None));
-    let usuarios = Arc::new(Usuarios::nueva(Arc::clone(&db), Arc::clone(&storage)));
+    let cifrado =
+        Arc::new(CifradoSecreto::nueva(config.clave_mfa().expect("clave mfa")).expect("cifrado"));
+    let usuarios = Arc::new(Usuarios::nueva(
+        Arc::clone(&db),
+        Arc::clone(&storage),
+        Arc::clone(&cifrado),
+    ));
     let sesiones = Arc::new(Sesiones::nueva(Arc::clone(&db)));
     let auth = Arc::new(Auth::nueva(
         Arc::clone(&usuarios),
@@ -121,9 +134,22 @@ async fn preparar() -> Option<Contexto> {
         email.clone(),
         "http://app.test".to_string(),
     ));
+    let verificacion = Arc::new(VerificacionEmail::nueva(
+        Arc::clone(&db),
+        Arc::clone(&usuarios),
+        email.clone(),
+        "http://app.test".to_string(),
+    ));
     let api_keys = Arc::new(ApiKeys::nueva(Arc::clone(&db), &config));
     let capacidades = Arc::new(Capacidades::nueva(Arc::clone(&db)));
-    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db)));
+    let suscripciones = Arc::new(SuscripcionesPlataforma::nueva(
+        Arc::clone(&db),
+        "empresario_plus".to_string(),
+        1,
+        1,
+    ));
+    let negocios = Arc::new(Negocios::nuevo(Arc::clone(&db), Arc::clone(&suscripciones)));
+    let onboarding = Arc::new(Onboarding::nuevo(Arc::clone(&db)));
     let auditoria = Arc::new(Auditoria::nueva(Arc::clone(&db)));
     let personal = Arc::new(Personal::nueva(
         Arc::clone(&db),
@@ -136,6 +162,7 @@ async fn preparar() -> Option<Contexto> {
     let extensiones = Arc::new(Extensiones::nueva(Arc::clone(&db)));
     let partes = Arc::new(Partes::nueva(Arc::clone(&db)));
     let registros = Arc::new(Registros::nueva(Arc::clone(&db), Arc::clone(&capacidades)));
+    let regiones = Arc::new(Regiones::nueva(Arc::clone(&db)));
     let metrics = Arc::new(Metrics::nueva("identity-service"));
     let estado = AppState::con_servicios(
         config,
@@ -158,14 +185,21 @@ async fn preparar() -> Option<Contexto> {
                 Arc::clone(&db),
                 Arc::clone(&usuarios),
                 Arc::clone(&storage),
+                Arc::new(PurgaExterna::vacia()),
+                Arc::clone(&regiones),
+                "clave-export-test".to_string(),
             )),
             extensiones,
             negocios,
+            onboarding,
             personal,
             partes,
+            regiones,
             registros,
+            suscripciones,
             packs: Arc::new(Packs::nueva(Arc::clone(&db))),
             password_reset,
+            verificacion,
         },
     );
     Some(Contexto {
@@ -216,6 +250,37 @@ fn autorizacion(id: &str, rol: &str) -> Vec<(&'static str, String)> {
     ]
 }
 
+async fn activar_suscripcion_plataforma(
+    app: &Router,
+    actor: &[(&'static str, String)],
+    empresa_id: &str,
+) {
+    let (status, solicitada) = enviar(
+        app,
+        "POST",
+        "/api/v2/plataforma/suscripciones",
+        json!({ "empresa_id": empresa_id }),
+        &headers(actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = solicitada["data"]["id"]
+        .as_str()
+        .expect("suscripcion")
+        .to_string();
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
+    let (status, confirmada) = enviar(
+        app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{id}/confirmar"),
+        json!({ "referencia": "prueba" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(confirmada["data"]["estado"], "activa");
+}
+
 fn headers<'a>(pares: &'a [(&'static str, String)]) -> Vec<(&'static str, &'a str)> {
     pares
         .iter()
@@ -237,7 +302,7 @@ async fn debe_registrar_login_me_refresh_y_logout() {
         json!({
             "nombre": "Ana Pérez",
             "correo": correo,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "comprador"
         }),
         &[],
@@ -260,7 +325,7 @@ async fn debe_registrar_login_me_refresh_y_logout() {
         &ctx.app,
         "POST",
         "/api/v2/auth/login",
-        json!({ "correo": correo, "contrasena": "secreto123" }),
+        json!({ "correo": correo, "contrasena": "ClaveSegura2026!" }),
         &[],
     )
     .await;
@@ -318,6 +383,350 @@ async fn debe_registrar_login_me_refresh_y_logout() {
 }
 
 #[tokio::test]
+async fn debe_bloquear_la_cuenta_tras_cinco_intentos_fallidos() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo = correo();
+    let (status, registro) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/registro",
+        json!({
+            "nombre": "Ana Lockout",
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "rol": "comprador"
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = registro["data"]["usuario"]["id"]
+        .as_str()
+        .expect("id")
+        .to_string();
+
+    for intento in 0..4 {
+        let (status, _) = enviar(
+            &ctx.app,
+            "POST",
+            "/api/v2/auth/login",
+            json!({ "correo": correo, "contrasena": "Incorrecta2026!" }),
+            &[],
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "intento {intento}");
+    }
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo, "contrasena": "Incorrecta2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::LOCKED);
+    assert_eq!(error["codigo"], "CUENTA_BLOQUEADA");
+
+    // Ni siquiera la contraseña correcta entra mientras dure el bloqueo.
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo, "contrasena": "ClaveSegura2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::LOCKED);
+    assert_eq!(error["codigo"], "CUENTA_BLOQUEADA");
+
+    sqlx::query(
+        "UPDATE identity.usuarios
+            SET bloqueado_hasta = NOW() - INTERVAL '1 minute'
+          WHERE id = $1::uuid",
+    )
+    .bind(&id)
+    .execute(ctx.db.pool())
+    .await
+    .expect("desbloquear");
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo, "contrasena": "ClaveSegura2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn debe_verificar_el_correo_por_token_de_un_solo_uso() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo = correo();
+    let (status, registro) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/registro",
+        json!({
+            "nombre": "Ana Verifica",
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "rol": "comprador"
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = registro["data"]["usuario"]["id"]
+        .as_str()
+        .expect("id")
+        .to_string();
+
+    let config = Config::from_pairs([
+        ("JWT_SECRET", "secreto-de-prueba"),
+        ("AUTH_EXIGIR_CORREO_VERIFICADO", "true"),
+    ])
+    .expect("config estricta");
+    let cifrado_estricto =
+        Arc::new(CifradoSecreto::nueva(config.clave_mfa().expect("clave mfa")).expect("cifrado"));
+    let usuarios_estrictos = Arc::new(Usuarios::nueva(
+        Arc::clone(&ctx.db),
+        Arc::new(Storage::nueva("http://127.0.0.1:9", None)),
+        cifrado_estricto,
+    ));
+    let auth_estricta = Auth::nueva(
+        usuarios_estrictos,
+        Arc::new(Sesiones::nueva(Arc::clone(&ctx.db))),
+        &config,
+    );
+    let error = auth_estricta
+        .login(&correo, "ClaveSegura2026!")
+        .await
+        .expect_err("correo sin verificar");
+    assert_eq!(error.codigo, "CORREO_NO_VERIFICADO");
+
+    let mensaje = ctx
+        .email
+        .enviados
+        .lock()
+        .expect("email")
+        .first()
+        .cloned()
+        .expect("correo de verificacion");
+    assert!(mensaje.subject.to_lowercase().contains("verifica"));
+    let token = mensaje
+        .text
+        .split("token=")
+        .nth(1)
+        .and_then(|resto| resto.split_whitespace().next())
+        .expect("token")
+        .to_string();
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/verificar-correo",
+        json!({ "token": token }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let verificado: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+        "SELECT correo_verificado_en FROM identity.usuarios WHERE id = $1::uuid",
+    )
+    .bind(&id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("verificado");
+    assert!(verificado.is_some());
+    auth_estricta
+        .login(&correo, "ClaveSegura2026!")
+        .await
+        .expect("login verificado");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/verificar-correo",
+        json!({ "token": token }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::GONE);
+    assert_eq!(error["codigo"], "TOKEN_USADO");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/reenviar-verificacion",
+        json!({ "correo": correo }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn debe_configurar_mfa_y_exigir_el_codigo_en_login() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo = correo();
+    let (status, registro) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/registro",
+        json!({
+            "nombre": "Ana MFA",
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "rol": "comprador"
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let id = registro["data"]["usuario"]["id"]
+        .as_str()
+        .expect("id")
+        .to_string();
+    let auth = autorizacion(&id, "comprador");
+
+    let (status, inicio) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/mfa/iniciar",
+        Value::Null,
+        &headers(&auth),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let secreto = inicio["data"]["secreto"]
+        .as_str()
+        .expect("secreto")
+        .to_string();
+    let codigo = totp::codigo(&secreto, chrono::Utc::now().timestamp() as u64).expect("totp");
+
+    let (status, confirmado) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/mfa/confirmar",
+        json!({ "codigo": codigo }),
+        &headers(&auth),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(confirmado["data"]["mfa_habilitado"], true);
+    let recuperacion = confirmado["data"]["codigos_recuperacion"]
+        .as_array()
+        .expect("codigos")
+        .first()
+        .and_then(Value::as_str)
+        .expect("codigo recuperacion")
+        .to_string();
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo, "contrasena": "ClaveSegura2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["codigo"], "MFA_REQUERIDO");
+
+    let codigo = totp::codigo(&secreto, chrono::Utc::now().timestamp() as u64).expect("totp");
+    let (status, sesion) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "codigo_mfa": codigo
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let refresh = sesion["data"]["refresh_token"]
+        .as_str()
+        .expect("refresh")
+        .to_string();
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "codigo_mfa": recuperacion
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({
+            "correo": correo,
+            "contrasena": "ClaveSegura2026!",
+            "codigo_mfa": recuperacion
+        }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["codigo"], "MFA_INVALIDO");
+
+    let (status, listado) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/auth/sesiones",
+        Value::Null,
+        &headers(&auth),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let sesiones = listado["data"].as_array().expect("sesiones");
+    assert!(!sesiones.is_empty());
+    for sesion_id in sesiones
+        .iter()
+        .filter_map(|sesion| sesion["id"].as_str())
+        .map(str::to_string)
+        .collect::<Vec<_>>()
+    {
+        let (status, _) = enviar(
+            &ctx.app,
+            "DELETE",
+            &format!("/api/v2/auth/sesiones/{sesion_id}"),
+            Value::Null,
+            &headers(&auth),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/refresh",
+        json!({ "refresh_token": refresh }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn debe_validar_el_cuerpo_y_los_guards() {
     let Some(ctx) = preparar().await else {
         eprintln!("TEST_DATABASE_URL no definida: se omite");
@@ -344,7 +753,7 @@ async fn debe_validar_el_cuerpo_y_los_guards() {
         json!({
             "nombre": "Otro",
             "correo": correo(),
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "admin"
         }),
         &headers(&lider),
@@ -361,7 +770,7 @@ async fn debe_validar_el_cuerpo_y_los_guards() {
         json!({
             "nombre": "Nuevo",
             "correo": correo(),
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "logistica"
         }),
         &headers(&admin),
@@ -376,6 +785,36 @@ async fn debe_crear_usuario_como_admin_y_cambiar_contrasena() {
         eprintln!("TEST_DATABASE_URL no definida: se omite");
         return;
     };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario usuario".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor_empresa = autorizacion(&empresario.id, "empresario");
+    let (status, empresa) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa usuario",
+            "slug": format!("usuario-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        }),
+        &headers(&actor_empresa),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let tenant_id = empresa["data"]["id"].as_str().expect("empresa").to_string();
+
     let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
     let correo = correo();
     let (status, creado) = enviar(
@@ -385,9 +824,9 @@ async fn debe_crear_usuario_como_admin_y_cambiar_contrasena() {
         json!({
             "nombre": "Nuevo Usuario",
             "correo": correo,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "operativo",
-            "tenant_id": Uuid::new_v4().to_string()
+            "tenant_id": tenant_id
         }),
         &headers(&admin),
     )
@@ -401,7 +840,7 @@ async fn debe_crear_usuario_como_admin_y_cambiar_contrasena() {
         &ctx.app,
         "POST",
         "/api/v2/auth/cambiar-contrasena",
-        json!({ "actual": "incorrecta", "nueva": "nueva1234" }),
+        json!({ "actual": "incorrecta", "nueva": "NuevaClave2026!" }),
         &headers(&auth),
     )
     .await;
@@ -412,7 +851,7 @@ async fn debe_crear_usuario_como_admin_y_cambiar_contrasena() {
         &ctx.app,
         "POST",
         "/api/v2/auth/cambiar-contrasena",
-        json!({ "actual": "secreto123", "nueva": "nueva1234" }),
+        json!({ "actual": "ClaveSegura2026!", "nueva": "NuevaClave2026!" }),
         &headers(&auth),
     )
     .await;
@@ -421,7 +860,7 @@ async fn debe_crear_usuario_como_admin_y_cambiar_contrasena() {
         &ctx.app,
         "POST",
         "/api/v2/auth/login",
-        json!({ "correo": correo, "contrasena": "nueva1234" }),
+        json!({ "correo": correo, "contrasena": "NuevaClave2026!" }),
         &[],
     )
     .await;
@@ -442,7 +881,7 @@ async fn debe_restablecer_con_correo_y_confirmar_el_token() {
         json!({
             "nombre": "Ana",
             "correo": correo,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "comprador"
         }),
         &[],
@@ -481,7 +920,7 @@ async fn debe_restablecer_con_correo_y_confirmar_el_token() {
         &ctx.app,
         "POST",
         "/api/v2/auth/restablecer-contrasena/confirmar",
-        json!({ "token": token, "contrasena": "reset1234" }),
+        json!({ "token": token, "contrasena": "ResetClave2026!" }),
         &[],
     )
     .await;
@@ -491,7 +930,7 @@ async fn debe_restablecer_con_correo_y_confirmar_el_token() {
         &ctx.app,
         "POST",
         "/api/v2/auth/restablecer-contrasena/confirmar",
-        json!({ "token": token, "contrasena": "otra1234" }),
+        json!({ "token": token, "contrasena": "OtraClave2026!" }),
         &[],
     )
     .await;
@@ -512,7 +951,7 @@ async fn debe_vincular_personal_y_actualizar_el_nombre() {
         json!({
             "nombre": "Ana",
             "correo": correo,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "comprador"
         }),
         &[],
@@ -639,6 +1078,32 @@ async fn debe_gestionar_packs_y_verticales() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(obtenido["data"]["vertical_codigo"], vertical);
 
+    let (status, regiones) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(regiones["data"]
+        .as_array()
+        .expect("regiones")
+        .iter()
+        .any(|region| region["codigo"] == "NI" && region["predeterminada"] == true));
+
+    let (status, actualizado) = enviar(
+        &ctx.app,
+        "PUT",
+        &format!("/api/v2/packs/{pack}/1/regiones"),
+        json!({ "regiones": [{ "codigo": "NI", "predeterminada": true }] }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actualizado["data"]["regiones"][0]["codigo"], "NI");
+
     let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
     let (status, _) = enviar(
         &ctx.app,
@@ -661,7 +1126,7 @@ async fn debe_listar_y_actualizar_capacidades_por_empresa() {
         .crear(CrearUsuario {
             nombre: "Admin de prueba".into(),
             correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "super_admin".into(),
             tenant_id: None,
             personal_id: None,
@@ -752,7 +1217,7 @@ async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
         .crear(CrearUsuario {
             nombre: "Admin manifiesto".into(),
             correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "super_admin".into(),
             tenant_id: None,
             personal_id: None,
@@ -807,6 +1272,13 @@ async fn debe_exponer_el_manifiesto_de_capacidades_y_features() {
     assert!(features.iter().any(|feature| feature == "catalogo.items"));
     assert!(features.iter().any(|feature| feature == "inventario.stock"));
     assert!(!features.iter().any(|feature| feature == "agenda.citas"));
+    // La región se resuelve aunque la empresa sea legacy (sin columna): usa la
+    // predeterminada del pack. Sin `facturacion`, no se exponen features fiscales.
+    assert_eq!(data["region_tributaria"]["codigo"], "NI");
+    assert_eq!(data["region_tributaria"]["moneda_iso"], "NIO");
+    assert!(!features.iter().any(|feature| feature
+        .as_str()
+        .is_some_and(|valor| valor.starts_with("fiscal."))));
 
     let comprador = autorizacion(&Uuid::new_v4().to_string(), "comprador");
     let (status, _) = enviar(
@@ -830,7 +1302,7 @@ async fn debe_exponer_el_manifiesto_de_capacidades_y_features_por_negocio() {
         .crear(CrearUsuario {
             nombre: "Admin manifiesto negocio".into(),
             correo: format!("admin-{}@tienda.test", Uuid::new_v4()),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "super_admin".into(),
             tenant_id: None,
             personal_id: None,
@@ -939,7 +1411,7 @@ async fn debe_listar_usuarios_y_limitar_el_avatar() {
         json!({
             "nombre": "Ana",
             "correo": correo_a,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "comprador"
         }),
         &[],
@@ -952,7 +1424,7 @@ async fn debe_listar_usuarios_y_limitar_el_avatar() {
         json!({
             "nombre": "Beto",
             "correo": correo_b,
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "rol": "comprador"
         }),
         &[],
@@ -1073,7 +1545,7 @@ async fn debe_crear_listar_y_canjear_api_keys() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo,
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: Some(empresa.clone()),
             personal_id: None,
@@ -1289,7 +1761,7 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo_empresario,
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1405,7 +1877,7 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
         json!({
             "nombre": "Vendedor de prueba",
             "correo": correo(),
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "participacion_porcentaje": 35
         }),
         &headers(&actor),
@@ -1422,6 +1894,14 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
     .execute(ctx.db.pool())
     .await
     .expect("pack v2");
+    sqlx::query(
+        "INSERT INTO identity.pack_regiones
+           (pack_codigo, pack_version, region_codigo, predeterminada, activo)
+         VALUES ('pack_retail', 2, 'NI', true, true) ON CONFLICT DO NOTHING",
+    )
+    .execute(ctx.db.pool())
+    .await
+    .expect("region pack v2");
     let admin = autorizacion(&Uuid::new_v4().to_string(), "admin");
     let (status, pack) = enviar(
         &ctx.app,
@@ -1436,6 +1916,436 @@ async fn debe_crear_gestionar_y_resolver_empresas() {
 }
 
 #[tokio::test]
+async fn debe_suspender_y_reactivar_la_empresa_bloqueando_el_login() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_empresario = correo();
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario ciclo".into(),
+            correo: correo_empresario.clone(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("ciclo-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa ciclo de vida",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "ruc": format!("RUC-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "moneda": "nio"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    let login = || {
+        let app = ctx.app.clone();
+        let correo = correo_empresario.clone();
+        async move {
+            enviar(
+                &app,
+                "POST",
+                "/api/v2/auth/login",
+                json!({ "correo": correo, "contrasena": "ClaveSegura2026!" }),
+                &[],
+            )
+            .await
+        }
+    };
+
+    let (status, sesion) = login().await;
+    assert_eq!(status, StatusCode::OK);
+    let refresh = sesion["data"]["refresh_token"]
+        .as_str()
+        .expect("refresh")
+        .to_string();
+
+    // El empresario no puede suspenderse a sí mismo.
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "suspendida" }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    let admin = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin ciclo".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin = autorizacion(&admin.id, "super_admin");
+
+    let (status, suspendida) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "suspendida", "motivo": "Prueba de suspensión" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(suspendida["data"]["estado"], "suspendida");
+
+    let (status, error) = login().await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["codigo"], "EMPRESA_SUSPENDIDA");
+
+    // La suspensión revoca las sesiones emitidas antes.
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/refresh",
+        json!({ "refresh_token": refresh }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["codigo"], "NO_AUTORIZADO");
+
+    let (status, activa) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "activa" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(activa["data"]["estado"], "activa");
+    let (status, _) = login().await;
+    assert_eq!(status, StatusCode::OK);
+
+    // `inactiva` es cierre operativo; no se puede volver a suspender.
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "inactiva" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, error) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "suspendida" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "TRANSICION_ESTADO_INVALIDA");
+}
+
+#[tokio::test]
+async fn debe_exportar_solicitar_y_purgar_la_eliminacion_del_tenant() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_empresario = correo();
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario export".into(),
+            correo: correo_empresario.clone(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("export-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa exportable",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    sqlx::query(
+        "INSERT INTO identity.partes
+           (empresa_id, tipo, nombre, nombre_comercial, identificador_tipo,
+            identificador_valor, estado, metadata, creado_por)
+         VALUES ($1::uuid, 'persona', 'Cliente', '', 'ninguno', '',
+                 'activo', '{}'::jsonb, $2::uuid)",
+    )
+    .bind(&empresa_id)
+    .bind(&empresario.id)
+    .execute(ctx.db.pool())
+    .await
+    .expect("parte");
+
+    let admin = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin export".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin = autorizacion(&admin.id, "super_admin");
+
+    let (status, exportado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/empresas/{empresa_id}/exportacion"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(exportado["data"]["formato"], "core-engine.tenant-export.v1");
+    assert_eq!(exportado["data"]["partes"][0]["nombre"], "Cliente");
+    assert!(exportado["data"]["usuarios"][0]
+        .get("contrasena_hash")
+        .is_none());
+    assert!(exportado["data"]["alcance"]["incluye"][0] == "identity");
+
+    let (status, solicitud) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion"),
+        json!({ "motivo": "Cierre de prueba", "retencion_dias": 0 }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(solicitud["data"]["purgable"], true);
+    assert_eq!(solicitud["data"]["solicitud"]["estado"], "pendiente");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo_empresario, "contrasena": "ClaveSegura2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["codigo"], "EMPRESA_INACTIVA");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion"),
+        json!({ "retencion_dias": 0 }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    let (status, purgada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion/purgar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(purgada["data"]["solicitud"]["estado"], "purgada");
+
+    let nombre: String =
+        sqlx::query_scalar("SELECT nombre FROM identity.empresas WHERE id = $1::uuid")
+            .bind(&empresa_id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("empresa");
+    assert_eq!(nombre, "Empresa eliminada");
+    let correo_borrado: String =
+        sqlx::query_scalar("SELECT correo FROM identity.usuarios WHERE id = $1::uuid")
+            .bind(&empresario.id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("usuario");
+    assert!(correo_borrado.starts_with("eliminado+"));
+    assert!(correo_borrado.ends_with("@core-engine.invalid"));
+    let parte: String = sqlx::query_scalar(
+        "SELECT nombre FROM identity.partes WHERE empresa_id = $1::uuid LIMIT 1",
+    )
+    .bind(&empresa_id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("parte");
+    assert_eq!(parte, "Parte eliminada");
+    let sesiones: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM identity.sesiones
+          WHERE usuario_id IN (SELECT id FROM identity.usuarios WHERE tenant_id = $1::uuid)",
+    )
+    .bind(&empresa_id)
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("sesiones");
+    assert_eq!(sesiones, 0);
+
+    // La purga externa es reintentable: una solicitud ya purgada puede repetirse.
+    let (status, repetida) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion/purgar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(repetida["data"]["solicitud"]["estado"], "purgada");
+    assert!(repetida["data"]["servicios"].is_array());
+}
+
+#[tokio::test]
+async fn debe_cancelar_la_solicitud_de_eliminacion_antes_de_la_retencion() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let correo_empresario = correo();
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario cancela".into(),
+            correo: correo_empresario.clone(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("cancela-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa cancelable",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    let admin = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin cancela".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin = autorizacion(&admin.id, "super_admin");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion"),
+        json!({ "retencion_dias": 30 }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion/purgar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    let (status, cancelada) = enviar(
+        &ctx.app,
+        "DELETE",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cancelada["data"]["solicitud"]["estado"], "cancelada");
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/eliminacion/purgar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "PATCH",
+        &format!("/api/v2/empresas/{empresa_id}/estado"),
+        json!({ "estado": "activa" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/auth/login",
+        json!({ "correo": correo_empresario, "contrasena": "ClaveSegura2026!" }),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
 async fn debe_activar_capacidades_extra_al_crear_empresa() {
     let Some(ctx) = preparar().await else {
         return;
@@ -1445,7 +2355,7 @@ async fn debe_activar_capacidades_extra_al_crear_empresa() {
         .crear(CrearUsuario {
             nombre: "Empresario fidelidad".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1512,7 +2422,7 @@ async fn debe_activar_capacidades_extra_al_crear_empresa() {
         .crear(CrearUsuario {
             nombre: "Empresario invalido".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1547,7 +2457,7 @@ async fn debe_negar_empresas_a_quien_no_es_miembro() {
         .crear(CrearUsuario {
             nombre: "Dueño".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1576,7 +2486,7 @@ async fn debe_negar_empresas_a_quien_no_es_miembro() {
         .crear(CrearUsuario {
             nombre: "Otro".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1609,7 +2519,7 @@ async fn debe_negar_empresas_a_quien_no_es_miembro() {
         .crear(CrearUsuario {
             nombre: "Comprador".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "comprador".into(),
             tenant_id: None,
             personal_id: None,
@@ -1643,7 +2553,7 @@ async fn debe_gestionar_personal_e_incorporaciones() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo_empresario,
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -1716,7 +2626,7 @@ async fn debe_gestionar_personal_e_incorporaciones() {
         json!({
             "nombre": "Vendedor",
             "correo": correo(),
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "participacion_porcentaje": 20
         }),
         &actor_headers,
@@ -1810,7 +2720,7 @@ async fn debe_gestionar_personal_e_incorporaciones() {
         &ctx.app,
         "POST",
         &format!("/api/v2/incorporaciones/{token}/aceptar"),
-        json!({ "nombre": "Nuevo Operativo", "contrasena": "secreto123" }),
+        json!({ "nombre": "Nuevo Operativo", "contrasena": "ClaveSegura2026!" }),
         &[],
     )
     .await;
@@ -1857,7 +2767,7 @@ async fn debe_gestionar_partes_contactos_direcciones_y_relaciones() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2054,7 +2964,7 @@ async fn debe_gestionar_registros_y_exigir_capacidad() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2165,7 +3075,7 @@ async fn debe_validar_registros_contra_esquemas_versionados() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2311,7 +3221,7 @@ async fn debe_gestionar_extensiones_y_validar_json_schema() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2521,7 +3431,7 @@ async fn debe_servir_la_api_interna_con_clave() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2737,7 +3647,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
         .crear(CrearUsuario {
             nombre: "Empresario".into(),
             correo: correo(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -2764,6 +3674,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
     let mut actor_pares = actor.clone();
     actor_pares.push(("x-tenant", empresa_id.clone()));
     let actor_headers = headers(&actor_pares);
+    activar_suscripcion_plataforma(&ctx.app, &actor, &empresa_id).await;
 
     // La empresa simple nace con su negocio principal, sin pasos extra.
     let (status, negocios) = enviar(
@@ -2952,7 +3863,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
         &ctx.app,
         "POST",
         &format!("/api/v2/incorporaciones/{token}/aceptar"),
-        json!({ "nombre": "Gerente", "contrasena": "secreto123" }),
+        json!({ "nombre": "Gerente", "contrasena": "ClaveSegura2026!" }),
         &[],
     )
     .await;
@@ -2968,7 +3879,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
         &ctx.app,
         "POST",
         "/api/v2/auth/login",
-        json!({ "correo": correo_gerente, "contrasena": "secreto123" }),
+        json!({ "correo": correo_gerente, "contrasena": "ClaveSegura2026!" }),
         &[],
     )
     .await;
@@ -3016,7 +3927,7 @@ async fn debe_crear_negocios_y_acotar_roles_e_invitaciones() {
         json!({
             "nombre": "Encargado",
             "correo": correo(),
-            "contrasena": "secreto123",
+            "contrasena": "ClaveSegura2026!",
             "participacion_porcentaje": 10
         }),
         &actor_headers,
@@ -3095,7 +4006,7 @@ async fn debe_cambiar_y_conservar_el_negocio_activo_de_la_sesion() {
         .crear(CrearUsuario {
             nombre: "Dueño".into(),
             correo: correo_owner.clone(),
-            contrasena: "secreto123".into(),
+            contrasena: "ClaveSegura2026!".into(),
             rol: "empresario".into(),
             tenant_id: None,
             personal_id: None,
@@ -3122,6 +4033,7 @@ async fn debe_cambiar_y_conservar_el_negocio_activo_de_la_sesion() {
     let mut actor_pares = actor.clone();
     actor_pares.push(("x-tenant", empresa_id.clone()));
     let actor_headers = headers(&actor_pares);
+    activar_suscripcion_plataforma(&ctx.app, &actor, &empresa_id).await;
 
     let (status, segundo) = enviar(
         &ctx.app,
@@ -3154,7 +4066,7 @@ async fn debe_cambiar_y_conservar_el_negocio_activo_de_la_sesion() {
         &ctx.app,
         "POST",
         "/api/v2/auth/login",
-        json!({ "correo": correo_owner, "contrasena": "secreto123" }),
+        json!({ "correo": correo_owner, "contrasena": "ClaveSegura2026!" }),
         &[],
     )
     .await;
@@ -3320,4 +4232,424 @@ async fn debe_aislar_roles_por_negocio_en_rls() {
         assert_eq!(total, esperados);
         tx.rollback().await.expect("rollback rls");
     }
+}
+
+#[tokio::test]
+async fn debe_generar_exportacion_asincrona_firmada() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario export async".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let slug = format!("export-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let (status, creada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        json!({
+            "nombre": "Empresa export async",
+            "slug": slug,
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creada["data"]["id"].as_str().expect("id").to_string();
+
+    let admin = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Admin export async".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "super_admin".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("admin");
+    let admin = autorizacion(&admin.id, "super_admin");
+
+    let (status, job) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/exportacion"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let job_id = job["data"]["job_id"].as_str().expect("job_id").to_string();
+    assert_eq!(job["data"]["estado"], "pendiente");
+
+    let mut completado = false;
+    for _ in 0..60 {
+        let (status, estado) = enviar(
+            &ctx.app,
+            "GET",
+            &format!("/api/v2/empresas/{empresa_id}/exportacion/{job_id}"),
+            Value::Null,
+            &headers(&admin),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        if estado["data"]["estado"] == "completado" {
+            assert!(estado["data"]["sha256"].as_str().is_some());
+            assert!(estado["data"]["firma"].as_str().is_some());
+            completado = true;
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    assert!(completado, "la exportación no terminó");
+
+    let (status, archivo) = enviar(
+        &ctx.app,
+        "GET",
+        &format!("/api/v2/exportaciones/{job_id}/descarga"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(archivo["formato"], "core-engine.tenant-export.v2");
+    assert_eq!(archivo["empresa_id"], empresa_id);
+    assert!(archivo["identidad"]["formato"].is_string());
+    assert!(archivo["servicios"].is_array());
+}
+
+#[tokio::test]
+async fn debe_cobrar_el_plan_para_operar_mas_de_un_negocio() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Empresario plan".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+
+    let crear_empresa = |sufijo: &str| {
+        json!({
+            "nombre": format!("Empresa {sufijo}"),
+            "slug": format!("plan-{sufijo}-{}", &Uuid::new_v4().simple().to_string()[..8]),
+            "vertical_id": "retail",
+            "pack_codigo": "pack_retail",
+            "moneda": "nio"
+        })
+    };
+
+    let (status, primera) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("uno"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = primera["data"]["id"].as_str().expect("empresa").to_string();
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("dos"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
+    assert_eq!(error["detalles"]["precio_cents"], 3500);
+
+    let crear_negocio = json!({
+        "codigo": format!("sucursal_{}", &Uuid::new_v4().simple().to_string()[..8]),
+        "nombre": "Sucursal",
+        "vertical_id": "retail",
+        "pack_codigo": "pack_retail",
+    });
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        crear_negocio.clone(),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
+
+    let (status, planes) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/plataforma/planes",
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(planes["data"]["planes"][0]["codigo"], "empresario_plus");
+    assert_eq!(planes["data"]["planes"][0]["precio_cents"], 3500);
+    assert_eq!(planes["data"]["planes"][0]["moneda"], "USD");
+
+    let (status, solicitada) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/plataforma/suscripciones",
+        json!({ "empresa_id": empresa_id }),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(solicitada["data"]["estado"], "pendiente");
+    let suscripcion_id = solicitada["data"]["id"]
+        .as_str()
+        .expect("suscripcion")
+        .to_string();
+
+    let admin = autorizacion(&Uuid::new_v4().to_string(), "super_admin");
+    let (status, confirmada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{suscripcion_id}/confirmar"),
+        json!({ "referencia": "transferencia-001" }),
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(confirmada["data"]["estado"], "activa");
+    assert_eq!(confirmada["data"]["referencia"], "transferencia-001");
+    assert!(confirmada["data"]["fin_en"].is_string());
+
+    let (status, actual) = enviar(
+        &ctx.app,
+        "GET",
+        "/api/v2/plataforma/suscripciones/me",
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(actual["data"]["suscripcion"]["vigente"], true);
+
+    let (status, _) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/empresas/{empresa_id}/negocios"),
+        crear_negocio,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, segunda) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("dos"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(
+        segunda["data"]["creado_por"].as_str(),
+        Some(empresario.id.as_str())
+    );
+
+    let (status, cancelada) = enviar(
+        &ctx.app,
+        "POST",
+        &format!("/api/v2/admin/plataforma/suscripciones/{suscripcion_id}/cancelar"),
+        Value::Null,
+        &headers(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cancelada["data"]["estado"], "cancelada");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/empresas",
+        crear_empresa("tres"),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(
+        error["codigo"],
+        "SUSCRIPCION_REQUIERIDA".replace("REQUIERIDA", "REQUERIDA")
+    );
+}
+
+#[tokio::test]
+async fn debe_hacer_onboarding_idempotente_y_devolver_token_con_tenant() {
+    let Some(ctx) = preparar().await else {
+        return;
+    };
+    let empresario = ctx
+        .usuarios
+        .crear(CrearUsuario {
+            nombre: "Onboarding".into(),
+            correo: correo(),
+            contrasena: "ClaveSegura2026!".into(),
+            rol: "empresario".into(),
+            tenant_id: None,
+            personal_id: None,
+        })
+        .await
+        .expect("empresario");
+    let actor = autorizacion(&empresario.id, "empresario");
+    let clave = format!("onboarding-{}", Uuid::new_v4());
+    let slug = format!("onboarding-{}", &Uuid::new_v4().simple().to_string()[..8]);
+    let cuerpo = json!({
+        "vertical": "retail",
+        "pack": "pack_retail",
+        "pack_version": 1,
+        "empresa": {
+            "nombre": "Empresa Onboarding",
+            "slug": slug,
+            "moneda": "nio",
+            "plantilla": "minimal",
+            "tema": { "color_primario": "#112233" }
+        }
+    });
+    let mut pares = actor.clone();
+    pares.push(("Idempotency-Key", clave.clone()));
+    let con_clave = headers(&pares);
+
+    let (status, creado) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let empresa_id = creado["data"]["empresa_id"]
+        .as_str()
+        .expect("empresa_id")
+        .to_string();
+    let negocio_id = creado["data"]["negocio_id"]
+        .as_str()
+        .expect("negocio_id")
+        .to_string();
+    assert_eq!(creado["data"]["estado"], "completado");
+    assert_eq!(creado["data"]["slug"], slug);
+    assert_eq!(creado["data"]["empresa"]["plantilla"], "minimal");
+    assert!(creado["data"]["capacidades"]
+        .as_array()
+        .expect("capacidades")
+        .iter()
+        .any(|capacidad| capacidad == "catalogo_items"));
+
+    let token = creado["data"]["access_token"]
+        .as_str()
+        .expect("access_token");
+    let payload = identity_service::auth::verificar_token(token, "secreto-de-prueba").expect("jwt");
+    assert_eq!(payload.rol, "empresario");
+    assert_eq!(payload.tenant_id.as_deref(), Some(empresa_id.as_str()));
+
+    let (status, replay) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(replay["data"]["empresa_id"], empresa_id);
+    assert_eq!(replay["data"]["negocio_id"], negocio_id);
+    let empresas: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM identity.empresas WHERE creado_por = $1::uuid")
+            .bind(&empresario.id)
+            .fetch_one(ctx.db.pool())
+            .await
+            .expect("empresas");
+    assert_eq!(empresas, 1);
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        json!({
+            "vertical": "retail",
+            "pack": "pack_retail",
+            "empresa": { "nombre": "Otro nombre", "slug": slug }
+        }),
+        &con_clave,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["codigo"], "IDEMPOTENCIA_CLAVE_REUTILIZADA");
+
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        cuerpo.clone(),
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(error["codigo"], "IDEMPOTENCIA_REQUERIDA");
+
+    let (status, estado) = enviar(
+        &ctx.app,
+        "GET",
+        &format!(
+            "/api/v2/onboarding/{}",
+            creado["data"]["onboarding_id"]
+                .as_str()
+                .expect("onboarding_id")
+        ),
+        Value::Null,
+        &headers(&actor),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(estado["data"]["estado"], "completado");
+    assert!(estado["data"]["access_token"].is_string());
+
+    // El primer negocio/empresa ya existe: un segundo onboarding sin plan paga.
+    let mut pares2 = actor.clone();
+    pares2.push(("Idempotency-Key", format!("onboarding-{}", Uuid::new_v4())));
+    let (status, error) = enviar(
+        &ctx.app,
+        "POST",
+        "/api/v2/onboarding",
+        json!({
+            "vertical": "retail",
+            "pack": "pack_retail",
+            "empresa": { "nombre": "Segunda Empresa", "slug": format!("segunda-{}", &Uuid::new_v4().simple().to_string()[..8]) }
+        }),
+        &headers(&pares2),
+    )
+    .await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED);
+    assert_eq!(error["codigo"], "SUSCRIPCION_REQUERIDA");
 }

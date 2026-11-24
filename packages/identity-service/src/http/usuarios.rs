@@ -51,6 +51,49 @@ pub async fn obtener(
     ok(serde_json::to_value(usuario).map_err(|_| ApiError::interno())?)
 }
 
+/// POST /api/v2/usuarios/:id/mfa/reset (admin).
+pub async fn reset_mfa(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let servicios = state.servicios()?;
+    servicios.usuarios.reset_mfa(&id).await?;
+    // Un reset de MFA debe forzar reautenticación.
+    servicios.auth.cerrar_sesion(&id, None).await?;
+    ok(serde_json::json!({ "ok": true, "mfa_habilitado": false }))
+}
+
+/// PATCH /api/v2/usuarios/:id/telefono
+pub async fn actualizar_telefono(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    if actor.user_id != id {
+        actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    }
+    let telefono = match dto.get("telefono") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(valor)) => Some(valor.as_str()),
+        _ => {
+            return Err(ApiError::validacion(serde_json::json!([
+                {"campo": "telefono", "restricciones": ["isString"]}
+            ])))
+        }
+    };
+    state
+        .servicios()?
+        .usuarios
+        .actualizar_telefono(&id, telefono)
+        .await?;
+    ok(serde_json::json!({ "ok": true, "telefono": telefono }))
+}
+
 /// PATCH /api/v2/usuarios/:id/avatar
 pub async fn actualizar_avatar(
     State(state): State<AppState>,

@@ -6,7 +6,7 @@ use crate::auth::{UsuarioContexto, ROLES_LOGISTICA, ROLES_REGISTRABLES};
 use crate::dominio::usuarios::{roles_creables, CrearUsuario};
 use crate::errors::ApiError;
 use crate::state::AppState;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -15,13 +15,14 @@ use serde_json::{json, Value};
 const REGISTRO: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 120)]),
     campo("correo", true, &[Regla::Correo]),
-    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(8)]),
+    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(12)]),
     campo("rol", true, &[Regla::En(&ROLES_REGISTRABLES)]),
 ];
 
 const LOGIN: &[ReglaCampo] = &[
     campo("correo", true, &[Regla::Correo]),
     campo("contrasena", true, &[Regla::Texto]),
+    campo("codigo_mfa", false, &[Regla::Texto, Regla::MaxLongitud(32)]),
 ];
 
 const REFRESH: &[ReglaCampo] = &[campo("refresh_token", true, &[Regla::Texto])];
@@ -35,7 +36,7 @@ const LOGOUT: &[ReglaCampo] = &[campo("refresh_token", false, &[Regla::Texto])];
 const CREAR_USUARIO: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 120)]),
     campo("correo", true, &[Regla::Correo]),
-    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(8)]),
+    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(12)]),
     campo(
         "rol",
         true,
@@ -55,14 +56,14 @@ const CREAR_USUARIO: &[ReglaCampo] = &[
 
 const CAMBIAR_CONTRASENA: &[ReglaCampo] = &[
     campo("actual", true, &[Regla::Texto, Regla::MinLongitud(1)]),
-    campo("nueva", true, &[Regla::Texto, Regla::MinLongitud(8)]),
+    campo("nueva", true, &[Regla::Texto, Regla::MinLongitud(12)]),
 ];
 
 const RESTABLECER: &[ReglaCampo] = &[campo("correo", true, &[Regla::Correo])];
 
 const CONFIRMAR_RESTABLECIMIENTO: &[ReglaCampo] = &[
     campo("token", true, &[Regla::Texto, Regla::Longitud(16, 256)]),
-    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(8)]),
+    campo("contrasena", true, &[Regla::Texto, Regla::MinLongitud(12)]),
 ];
 
 const VINCULAR_PERSONAL: &[ReglaCampo] = &[
@@ -73,6 +74,22 @@ const VINCULAR_PERSONAL: &[ReglaCampo] = &[
     ),
     campo("nombre", false, &[Regla::Texto, Regla::Longitud(1, 120)]),
 ];
+
+const VERIFICAR_CORREO: &[ReglaCampo] = &[campo(
+    "token",
+    true,
+    &[Regla::Texto, Regla::Longitud(16, 256)],
+)];
+
+const REENVIAR_VERIFICACION: &[ReglaCampo] = &[campo("correo", true, &[Regla::Correo])];
+
+const MFA_CODIGO: &[ReglaCampo] = &[campo(
+    "codigo",
+    true,
+    &[Regla::Texto, Regla::Longitud(6, 32)],
+)];
+
+const MFA_DESACTIVAR: &[ReglaCampo] = &[campo("contrasena", true, &[Regla::Texto])];
 
 fn valor(dto: &Value, campo: &str) -> Option<String> {
     dto.get(campo)
@@ -89,36 +106,88 @@ fn ok(cuerpo: Value) -> Result<Response, ApiError> {
     Ok(Json(cuerpo).into_response())
 }
 
+/// Construye el alta pública. `tenant_id` y `personal_id` solo se asignan
+/// server-side (onboarding/aceptar invitación): un cliente anónimo no puede
+/// elegir la empresa ni el personal de otra cuenta.
+fn datos_registro_publico(dto: &Value) -> CrearUsuario {
+    CrearUsuario {
+        nombre: valor(dto, "nombre").unwrap_or_default(),
+        correo: valor(dto, "correo").unwrap_or_default(),
+        contrasena: valor(dto, "contrasena").unwrap_or_default(),
+        rol: valor(dto, "rol").unwrap_or_default(),
+        tenant_id: None,
+        personal_id: None,
+    }
+}
+
 /// POST /api/v2/auth/registro
 pub async fn registrar(
     State(state): State<AppState>,
     Cuerpo(dto): Cuerpo,
 ) -> Result<Response, ApiError> {
     validar(REGISTRO, &dto)?;
-    let datos = CrearUsuario {
-        nombre: valor(&dto, "nombre").unwrap_or_default(),
-        correo: valor(&dto, "correo").unwrap_or_default(),
-        contrasena: valor(&dto, "contrasena").unwrap_or_default(),
-        rol: valor(&dto, "rol").unwrap_or_default(),
-        tenant_id: valor(&dto, "tenant_id"),
-        personal_id: valor(&dto, "personal_id"),
-    };
+    let datos = datos_registro_publico(&dto);
+    if state.config.exigir_correo_verificado {
+        let usuario = state.servicios()?.auth.registrar_usuario(datos).await?;
+        if let Err(error) = state
+            .servicios()?
+            .verificacion
+            .solicitar(&usuario.id, &usuario.correo)
+            .await
+        {
+            crate::logs::error(
+                "identity.verificacion",
+                crate::campos! { "msg": "no se pudo enviar verificacion", "err": error.mensaje },
+            );
+        }
+        return created(json!({
+            "usuario": usuario,
+            "verificacion_requerida": true,
+        }));
+    }
     let sesion = state.servicios()?.auth.registrar(datos).await?;
+    if let Err(error) = state
+        .servicios()?
+        .verificacion
+        .solicitar(&sesion.usuario.id, &sesion.usuario.correo)
+        .await
+    {
+        crate::logs::error(
+            "identity.verificacion",
+            crate::campos! { "msg": "no se pudo enviar verificacion", "err": error.mensaje },
+        );
+    }
     created(serde_json::to_value(sesion).map_err(|_| ApiError::interno())?)
 }
 
 /// POST /api/v2/auth/login
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Cuerpo(dto): Cuerpo,
 ) -> Result<Response, ApiError> {
     validar(LOGIN, &dto)?;
+    let codigo_mfa = valor(&dto, "codigo_mfa");
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+    let ip = headers
+        .get("x-client-ip")
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string);
     let sesion = state
         .servicios()?
         .auth
-        .login(
+        .login_con_mfa(
             &valor(&dto, "correo").unwrap_or_default(),
             &valor(&dto, "contrasena").unwrap_or_default(),
+            codigo_mfa.as_deref(),
+            user_agent,
+            ip.as_deref(),
         )
         .await?;
     ok(serde_json::to_value(sesion).map_err(|_| ApiError::interno())?)
@@ -272,10 +341,130 @@ pub async fn confirmar_restablecimiento(
     ok(json!({ "ok": true }))
 }
 
-/// GET /api/v2/auth/me
-pub async fn me(headers: HeaderMap) -> Result<Response, ApiError> {
+/// POST /api/v2/auth/verificar-correo
+pub async fn verificar_correo(
+    State(state): State<AppState>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(VERIFICAR_CORREO, &dto)?;
+    state
+        .servicios()?
+        .verificacion
+        .confirmar(&valor(&dto, "token").unwrap_or_default())
+        .await?;
+    ok(json!({ "ok": true }))
+}
+
+/// POST /api/v2/auth/reenviar-verificacion
+pub async fn reenviar_verificacion(
+    State(state): State<AppState>,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(REENVIAR_VERIFICACION, &dto)?;
+    state
+        .servicios()?
+        .verificacion
+        .reenviar(&valor(&dto, "correo").unwrap_or_default())
+        .await?;
+    created(json!({ "ok": true }))
+}
+
+/// POST /api/v2/auth/mfa/iniciar
+pub async fn mfa_iniciar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
     let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
-    ok(serde_json::to_value(usuario).map_err(|_| ApiError::interno())?)
+    let datos = state
+        .servicios()?
+        .usuarios
+        .iniciar_mfa(&usuario.user_id)
+        .await?;
+    ok(datos)
+}
+
+/// POST /api/v2/auth/mfa/confirmar
+pub async fn mfa_confirmar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(MFA_CODIGO, &dto)?;
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let datos = state
+        .servicios()?
+        .usuarios
+        .confirmar_mfa(&usuario.user_id, &valor(&dto, "codigo").unwrap_or_default())
+        .await?;
+    ok(datos)
+}
+
+/// POST /api/v2/auth/mfa/desactivar
+pub async fn mfa_desactivar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(MFA_DESACTIVAR, &dto)?;
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    state
+        .servicios()?
+        .usuarios
+        .desactivar_mfa(
+            &usuario.user_id,
+            &valor(&dto, "contrasena").unwrap_or_default(),
+        )
+        .await?;
+    ok(json!({ "mfa_habilitado": false }))
+}
+
+/// GET /api/v2/auth/sesiones
+pub async fn sesiones(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let sesiones = state
+        .servicios()?
+        .auth
+        .listar_sesiones(&usuario.user_id)
+        .await?;
+    ok(Value::Array(sesiones))
+}
+
+/// DELETE /api/v2/auth/sesiones/:id
+pub async fn revocar_sesion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let revocada = state
+        .servicios()?
+        .auth
+        .revocar_sesion(&usuario.user_id, &id)
+        .await?;
+    if !revocada {
+        return Err(ApiError::no_encontrado("Sesion", &id));
+    }
+    ok(json!({ "ok": true }))
+}
+
+/// GET /api/v2/auth/me
+pub async fn me(State(state): State<AppState>, headers: HeaderMap) -> Result<Response, ApiError> {
+    let usuario = UsuarioContexto::desde_headers_o_error(&headers)?;
+    let mut valor = serde_json::to_value(&usuario).map_err(|_| ApiError::interno())?;
+    let seguridad = state
+        .servicios()?
+        .usuarios
+        .estado_seguridad(&usuario.user_id)
+        .await?;
+    if let (Some(salida), Some(seguridad)) = (valor.as_object_mut(), seguridad.as_object()) {
+        for (clave, dato) in seguridad {
+            salida.insert(clave.clone(), dato.clone());
+        }
+    }
+    ok(valor)
 }
 
 /// POST /api/v2/auth/vincular-personal
@@ -325,7 +514,7 @@ mod tests {
             &json!({
                 "nombre": "Ana Pérez",
                 "correo": "ana@tienda.test",
-                "contrasena": "secreto123",
+                "contrasena": "ClaveSegura2026!",
                 "rol": "comprador"
             })
         )
@@ -339,7 +528,7 @@ mod tests {
             &json!({
                 "nombre": "Ana",
                 "correo": "ana@tienda.test",
-                "contrasena": "secreto123",
+                "contrasena": "ClaveSegura2026!",
                 "rol": "admin"
             }),
         )
@@ -351,10 +540,25 @@ mod tests {
     }
 
     #[test]
+    fn debe_ignorar_tenant_y_personal_en_el_registro_publico() {
+        let datos = datos_registro_publico(&json!({
+            "nombre": "Ana",
+            "correo": "ana@tienda.test",
+            "contrasena": "ClaveSegura2026!",
+            "rol": "empresario",
+            "tenant_id": "11111111-1111-4111-8111-111111111111",
+            "personal_id": "22222222-2222-4222-8222-222222222222"
+        }));
+        assert_eq!(datos.tenant_id, None);
+        assert_eq!(datos.personal_id, None);
+        assert_eq!(datos.rol, "empresario");
+    }
+
+    #[test]
     fn debe_rechazar_un_token_de_restablecimiento_corto() {
         let error = validar(
             CONFIRMAR_RESTABLECIMIENTO,
-            &json!({ "token": "corto", "contrasena": "secreto123" }),
+            &json!({ "token": "corto", "contrasena": "ClaveSegura2026!" }),
         )
         .expect_err("token");
         assert_eq!(

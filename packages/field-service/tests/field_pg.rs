@@ -13,6 +13,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 static MIGRACION: OnceLock<Mutex<()>> = OnceLock::new();
+static DB_LOCK: Mutex<()> = Mutex::const_new(());
 
 fn url() -> Option<String> {
     std::env::var("TEST_DATABASE_URL").ok()
@@ -62,6 +63,7 @@ fn servicio(db: Arc<Db>) -> FieldService {
 
 #[tokio::test]
 async fn debe_hacer_crud_y_borrado_logico_de_clientes() {
+    let _guard = DB_LOCK.lock().await;
     let Some(url) = url() else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
@@ -117,6 +119,7 @@ async fn debe_hacer_crud_y_borrado_logico_de_clientes() {
 
 #[tokio::test]
 async fn debe_crear_rutas_con_paradas_ordenadas_y_filtrar_por_personal() {
+    let _guard = DB_LOCK.lock().await;
     let Some(url) = url() else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
@@ -207,6 +210,7 @@ async fn debe_crear_rutas_con_paradas_ordenadas_y_filtrar_por_personal() {
 
 #[tokio::test]
 async fn debe_filtrar_pedidos_asistencia_tracking_e_incidencias() {
+    let _guard = DB_LOCK.lock().await;
     let Some(url) = url() else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
@@ -320,6 +324,7 @@ async fn debe_filtrar_pedidos_asistencia_tracking_e_incidencias() {
 
 #[tokio::test]
 async fn debe_hacer_upsert_de_cumplimiento_y_sync_offline() {
+    let _guard = DB_LOCK.lock().await;
     let Some(url) = url() else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
@@ -382,6 +387,7 @@ async fn debe_hacer_upsert_de_cumplimiento_y_sync_offline() {
 
 #[tokio::test]
 async fn debe_validar_la_parte_contra_identity() {
+    let _guard = DB_LOCK.lock().await;
     let Some(url) = url() else {
         eprintln!("TEST_DATABASE_URL no definida: se omite la integración");
         return;
@@ -413,4 +419,23 @@ async fn debe_validar_la_parte_contra_identity() {
 
     db.cerrar().await;
     pool.close().await;
+}
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(url) = url() else { return };
+    let (db, _pool) = preparar(&url).await;
+    let req = field_service::lifecycle::TenantRequest {
+        empresa_id: Uuid::new_v4().to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = field_service::lifecycle::exportar(db.pool(), &req)
+        .await
+        .expect("exportar");
+    assert!(datos["rutas"].is_array());
+    field_service::lifecycle::purgar(db.pool(), &req)
+        .await
+        .expect("purgar");
 }

@@ -37,8 +37,8 @@ export const options = {
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@core-engine.test';
-const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'AdminCore Engine2026!';
-const PASSWORD = 'Contrasena123!';
+const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'Fuego-Laguna-2026!';
+const PASSWORD = 'Fuego-Laguna-2026!';
 
 function sufijo() {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;

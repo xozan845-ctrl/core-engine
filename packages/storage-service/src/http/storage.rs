@@ -11,6 +11,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::Response;
 use axum::Json;
+use base64::Engine;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 use tokio_util::io::ReaderStream;
@@ -339,6 +340,28 @@ pub async fn interno_recalcular(
     Ok((StatusCode::CREATED, Json(json!(estado))))
 }
 
+pub async fn interno_purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_clave_interna(
+        &headers,
+        state.config.internal_api_key.as_deref().unwrap_or(""),
+    )?;
+    let tenant_id = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .filter(|valor| es_uuid(valor))
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "empresa_id", "restricciones": ["isUuid"]}]))
+        })?;
+    let resultado = state.objetos()?.purgar_tenant(tenant_id).await?;
+    Ok(Json(
+        json!({ "servicio": "storage", "estado": "completado", "detalle": resultado }),
+    ))
+}
+
 pub async fn interno_objeto(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -355,6 +378,135 @@ pub async fn interno_objeto(
         ]))
     })?;
     Ok(Json(json!(state.objetos()?.obtener(tenant_id, &id).await?)))
+}
+
+/// POST /internal/storage/tenant/exportar
+pub async fn interno_exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_clave_interna(
+        &headers,
+        state.config.internal_api_key.as_deref().unwrap_or(""),
+    )?;
+    let tenant_id = cuerpo
+        .get("empresa_id")
+        .and_then(Value::as_str)
+        .filter(|valor| es_uuid(valor))
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "empresa_id", "restricciones": ["isUuid"]}]))
+        })?;
+    let datos = state.objetos()?.exportar_tenant(tenant_id).await?;
+    Ok(Json(json!({
+        "servicio": "storage",
+        "estado": "completado",
+        "datos": datos,
+    })))
+}
+
+/// POST /internal/storage/objetos — subida directa servicio→servicio.
+pub async fn interno_subir(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(cuerpo): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    exigir_clave_interna(
+        &headers,
+        state.config.internal_api_key.as_deref().unwrap_or(""),
+    )?;
+    let tenant_id = cuerpo
+        .get("tenant_id")
+        .and_then(Value::as_str)
+        .filter(|valor| es_uuid(valor))
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "tenant_id", "restricciones": ["isUuid"]}]))
+        })?;
+    let nombre = cuerpo
+        .get("nombre")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "nombre", "restricciones": ["isString"]}]))
+        })?;
+    let content_type = cuerpo
+        .get("content_type")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .ok_or_else(|| {
+            ApiError::validacion(json!([{"campo": "content_type", "restricciones": ["isString"]}]))
+        })?;
+    let contenido = cuerpo
+        .get("contenido_base64")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            ApiError::validacion(
+                json!([{"campo": "contenido_base64", "restricciones": ["isString"]}]),
+            )
+        })?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(contenido.trim())
+        .map_err(|_| {
+            ApiError::validacion(
+                json!([{"campo": "contenido_base64", "restricciones": ["isBase64"]}]),
+            )
+        })?;
+    let objeto = state
+        .objetos()?
+        .subir_contenido(
+            tenant_id,
+            cuerpo.get("subido_por").and_then(Value::as_str),
+            nombre,
+            content_type,
+            bytes,
+            cuerpo
+                .get("publico")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            cuerpo
+                .get("descripcion")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+        )
+        .await?;
+    Ok(Json(json!(objeto)))
+}
+
+/// GET /internal/storage/objetos/{id}/contenido?tenant_id=... — bytes.
+pub async fn interno_contenido(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Response, ApiError> {
+    exigir_clave_interna(
+        &headers,
+        state.config.internal_api_key.as_deref().unwrap_or(""),
+    )?;
+    let tenant_id = query.get("tenant_id").ok_or_else(|| {
+        ApiError::validacion(json!([{"campo": "tenant_id", "restricciones": ["required"]}]))
+    })?;
+    let objeto = state.objetos()?.leer_contenido(tenant_id, &id).await?;
+    let stream = ReaderStream::new(objeto.cuerpo.cuerpo.into_async_read());
+    let mut respuesta = Response::new(Body::from_stream(stream));
+    *respuesta.status_mut() = StatusCode::OK;
+    let cabeceras = respuesta.headers_mut();
+    if let Ok(valor) = HeaderValue::from_str(&objeto.content_type) {
+        cabeceras.insert(header::CONTENT_TYPE, valor);
+    }
+    if let Ok(valor) = HeaderValue::from_str(&objeto.tamano_bytes.to_string()) {
+        cabeceras.insert(header::CONTENT_LENGTH, valor);
+    }
+    if let Some(etag) = objeto
+        .etag
+        .as_deref()
+        .and_then(|valor| HeaderValue::from_str(valor).ok())
+    {
+        cabeceras.insert(header::ETAG, etag);
+    }
+    Ok(respuesta)
 }
 
 // ── validación de cuerpos ───────────────────────────────────────────────────

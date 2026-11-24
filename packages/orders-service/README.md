@@ -28,9 +28,9 @@ capacidad de **fidelización**.
 | Outbox | `orders.outbox` |
 | Capacidades | `cotizaciones`, `fulfillment_delivery`, `fulfillment_pickup`, `fulfillment_onsite`, `fulfillment_digital`, `contratos`, `suscripciones`, `mesas`, `fidelizacion`, `ventas_credito` (vía finance) |
 | Consume | `stock.reservado`, `stock.fallido`, `stock.reintegrado` (cola `orders.stock`) |
-| Publica | `order.created`, `order.status.updated`, `payment.procesado`, `devolucion.solicitada` |
+| Publica | `order.created`, `order.status.updated`, `order.cancelled`, `payment.procesado`, `devolucion.solicitada`, `devolucion.recibida`, `devolucion.reembolsada` |
 | Dependencias | `stores`, `item`, `pricing`, `inventory`, `identity`, `scheduling`, `finance` |
-| Workers | suscripciones cada 1 h; expiración de puntos cada 6 h; outbox cada 1 s |
+| Workers | expiración de órdenes impagas cada 60 s; suscripciones cada 1 h; expiración de puntos cada 6 h; outbox cada 1 s |
 | Expuesto al host | No |
 
 ### Variables de entorno
@@ -45,9 +45,18 @@ capacidad de **fidelización**.
 | `INTERNAL_API_KEY` | Recomendada | — | Internos + clientes |
 | `COMMISSION_RATE` | No | `0.12` | Comisión RN-04 |
 | `PAGO_WEBHOOK_SECRET` | Recomendada | — | Webhook de pagos (`x-webhook-secret`) |
-| `PAGO_PROVEEDOR` | No | `simulado` | Adaptador de pagos (`simulado`/`http`) |
-| `PAGO_PROVEEDOR_URL` | Solo `http` | — | Base de la pasarela (`/cargos`, `/reembolsos`, `/contracargos`) |
-| `PAGO_PROVEEDOR_KEY` | No | — | Bearer de la pasarela |
+| `PAGO_PROVEEDOR` | No | `simulado` | Proveedor global (`simulado`/`http`/`manual`/`tilopay`/`pagadito`) |
+| `PAGO_PROVEEDOR_URL` | Solo `http`/pasarela | — | Base de la pasarela (Tilopay) o endpoint APIPG (Pagadito) |
+| `PAGO_PROVEEDOR_KEY` | No | — | Bearer de la pasarela `http` |
+| `TILOPAY_APIUSER` | Solo `tilopay` | — | Usuario API de Tilopay |
+| `TILOPAY_PASSWORD` | Solo `tilopay` | — | Contraseña API de Tilopay |
+| `TILOPAY_KEY` | Solo `tilopay` | — | Integration key de Tilopay |
+| `PAGADITO_UID` | Solo `pagadito` | — | UID del comercio Pagadito |
+| `PAGADITO_WSK` | Solo `pagadito` | — | WSK del comercio Pagadito |
+| `ORDEN_PAGO_TTL_MINUTOS` | No | `30` | Minutos antes de cancelar una orden impaga (`0` desactiva) |
+| `ORDEN_EXPIRACION_INTERVALO_SEGUNDOS` | No | `60` | Frecuencia del barrido de órdenes impagas |
+| `PAGOS_CONCILIACION_INTERVALO_SEGUNDOS` | No | `900` | Frecuencia de la conciliación con la pasarela |
+| `PAGOS_CONCILIACION_MINUTOS` | No | `10` | Ventana de gracia antes de consultar un pago pendiente |
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Ofertas |
 | `ITEM_SERVICE_URL` | No | `http://item-service:3015` | Items |
 | `PRICING_SERVICE_URL` | No | `http://pricing-service:3014` | Precios |
@@ -168,13 +177,35 @@ Validaciones en orden:
    orden trae `cupon_codigo`, pricing valida y canjea el cupón sobre el total
    (ADR-0028). El modelo `venta_directa` del pack desactiva la comisión por
    línea y permite `vendedor_id` nulo (ADR-0023). En cotización la comisión es
-   0 hasta aceptar.
+   0 hasta aceptar. La configuración fiscal la resuelve finance con el orden
+   negocio → empresa → región tributaria del tenant (ADR-0026, ADR-0049). Si
+   tiene `impuesto_activo=true`, cada línea resuelve su `impuesto_codigo`
+   (override de la línea o `atributos.impuesto_codigo` del ítem) contra el
+   catálogo de tasas de la región y guarda `impuesto_cents`,
+   `tasa_impuesto_bps`, `impuesto_codigo` y `total_linea_cents`. Un código
+   desconocido falla con `IMPUESTO_NO_DISPONIBLE`; una tasa `EXENTA` no suma
+   IVA. El cupón se reparte antes del cálculo y el comprobante reutiliza el
+   snapshot (ADR-0038).
 7. Crédito: registra la venta en finance antes de confirmar; si falla, se
    anula el crédito y no se crea la orden.
 8. Todo se persiste en una transacción: evento + outbox + proyección.
 
 La orden nace `creada`; inventory consume `order.created` y responde
 `stock.reservado` (→ `pagada`) o `stock.fallido` (→ `cancelada`).
+
+### Idempotencia HTTP (ADR-0033)
+
+Las mutaciones aceptan la cabecera opcional `Idempotency-Key` (máx. 255
+caracteres). El gateway la reenvía; orders la aplica a `POST/PUT/PATCH/DELETE`
+bajo `/api/v2/**`.
+
+- Misma clave + mismo actor + mismo método/ruta/cuerpo → se devuelve la
+  respuesta 2xx original con `Idempotency-Replayed: true`, sin reejecutar.
+- Misma clave con otro cuerpo/método/ruta → `422
+  IDEMPOTENCIA_CLAVE_REUTILIZADA`.
+- Solicitud concurrente con la misma clave → `409 IDEMPOTENCIA_EN_PROCESO`.
+- Las respuestas no 2xx no se cachean.
+- Limpieza: respuestas completadas a los 7 días; `en_proceso` a los 15 minutos.
 
 ---
 
@@ -212,8 +243,67 @@ Campos: `codigo`, `nombre`, `requiere_confirmacion`, `activo`, `config`.
 
 ### Proveedor, reembolsos y contracargos
 
-- `PAGO_PROVEEDOR=simulado|http` elige el adaptador (ACL `ProveedorPagos`).
-  `http` usa `PAGO_PROVEEDOR_URL` y `PAGO_PROVEEDOR_KEY` (Bearer).
+- `PAGO_PROVEEDOR=simulado|http` es el **fallback global** del ACL
+  `ProveedorPagos`.
+- Cada empresa/negocio puede elegir su proveedor con
+  `GET/PUT /api/v2/empresas/{id}/configuracion-pagos` (empresario o admin).
+  El catálogo se administra en `GET/POST /api/v2/admin/proveedores-pago` y
+  `PATCH /api/v2/admin/proveedores-pago/{codigo}`.
+- **Pago manual (MVP):** configurar `proveedor_codigo=manual` en
+  `PUT /api/v2/empresas/{id}/configuracion-pagos`; el pago queda `pendiente` y
+  un admin lo confirma en `POST /api/v2/admin/pagos/{id}/confirmar`. No exige
+  pasarela externa y conserva reembolso/conciliación manuales.
+- Tipos disponibles: `simulado`, `http`, `manual`, `tilopay`, `pagadito`. Un
+  `http` activo exige `config.url`; Tilopay/Pagadito leen URL y credenciales de
+  `config.base_url` y de los nombres de variable (`apiuser_env`,
+  `password_env`, `key_env`, `uid_env`, `wsk_env`), nunca de la base.
+- Los adaptadores concretos viven en `src/pasarelas/`: Tilopay usa la API v1
+  (`/api/v1/login`, `createLinkPayment`, `consult`, `processModification`) y
+  Pagadito usa APIPG (`connect`, `exec_trans`, `get_status`). Añadir otra
+  pasarela es un `tipo` nuevo en la fábrica, sin tocar checkout ni finanzas.
+- URLs de Pagadito: producción
+  `https://comercios.pagadito.com/apipg/charges.php`; sandbox
+  `https://sandbox.pagadito.com/comercios/apipg/charges.php`. Se configura en
+  `config.base_url` del proveedor. Tilopay usa `https://app.tilopay.com` por
+  defecto y las credenciales de prueba se generan en su panel de desarrolladores.
+- Sin configuración por tenant se usa el proveedor global. `PAGO_PROVEEDOR`
+  desconocido o sin credenciales impide el arranque: nunca se degrada a
+  simulado en producción.
+- Los pagos con pasarela real nacen `pendiente`; solo el proveedor `simulado`
+  confirma al instante. Un método con `cargo_externo` que no sea `simulado`
+  falla si el proveedor resuelto es el simulado, salvo opt-in explícito con
+  `config.simulado=true`.
+- Webhooks públicos por pasarela:
+  - `POST /api/v2/pagos/tilopay/webhook`
+  - `POST /api/v2/pagos/pagadito/webhook`
+  Ambos son solo una señal: el handler busca el pago y **consulta el estado
+  real** antes de mover la orden. El identificador de la transacción que
+  informa la pasarela (`orderNumber`/`token`) se guarda en
+  `orders.pagos.referencia_proveedor` para reembolsos y conciliación.
+- Conciliación programada: cada 15 minutos consulta pagos `pendiente` con
+  pasarela y más de 10 minutos de antigüedad. Cubre webhooks perdidos; no
+  confirma nada que la pasarela no informe como aprobado.
+- Un pago aprobado cuando la orden ya expiró no se entrega: se registra
+  `pago.tardio` en `orders.pagos_eventos` y queda para reembolso manual.
+
+Ejemplo de configuración por empresa:
+
+```json
+PUT /api/v2/empresas/{id}/configuracion-pagos
+{
+  "proveedor_codigo": "http",
+  "activo": true,
+  "config": {
+    "url": "https://pasarela.ejemplo",
+    "clave_env": "PAGO_PROVEEDOR_KEY",
+    "webhook_secreto_env": "PAGO_WEBHOOK_SECRET"
+  }
+}
+```
+
+La URL puede vivir en la configuración; las credenciales siempre se resuelven
+desde variables de entorno. Añadir Stripe/BAC/POS es implementar un nuevo
+`tipo` y su adaptador en la fábrica, sin tocar checkout ni finanzas.
 - Los métodos con `config.cargo_externo=true` (o `simulado`) crean un cargo y
   guardan `referencia` + `proveedor`.
 - `POST /api/v2/admin/pagos/{id}/reembolsar` body `{monto_cents, motivo?}`:
@@ -366,8 +456,11 @@ Idempotencia por `event_id` en `orders.eventos_procesados`.
 |---|---|
 | `order.created` | Alta de orden/cotización/reserva |
 | `order.status.updated` | Toda transición |
+| `order.cancelled` | Cancelación (manual, TTL o rechazo de pago); inventario libera stock |
 | `payment.procesado` | Pago confirmado (automático, manual o webhook) |
-| `devolucion.solicitada` | Devolución aceptada |
+| `devolucion.solicitada` | Devolución/cancelación de una orden ya pagada |
+| `devolucion.recibida` | RMA recibida con líneas y cantidades devueltas |
+| `devolucion.reembolsada` | La pasarela confirmó un reembolso total o parcial |
 
 ---
 
@@ -388,7 +481,8 @@ Idempotencia por `event_id` en `orders.eventos_procesados`.
 
 - `/health`, `/metrics`, `/docs`, `/docs-json`.
 - Métricas HTTP + outbox; logs con `x-request-id`.
-- Workers: outbox 1 s, suscripciones 1 h, expiración de puntos 6 h.
+- Workers: outbox 1 s, expiración de órdenes impagas 60 s, suscripciones
+  1 h, expiración de puntos 6 h.
 - Supervisor RabbitMQ, reintento cada 10 s, DLQ.
 - Apagado ordenado: aborta workers, cierra Rabbit y pool.
 
@@ -428,5 +522,13 @@ cargo test
 - `GET /api/v2/orders/{id}/devoluciones`: historial de la orden.
 - `POST /api/v2/admin/devoluciones/{id}/aprobar|recibir|rechazar`.
 - `recibir` llama `POST /internal/inventario/devolucion` (stock, series y lotes
-  idempotentes) y emite `devolucion.recibida` para compensar la comisión
-  proporcional.
+  idempotentes), emite `devolucion.recibida`, reembolsa el importe proporcional
+  contra el pago confirmado y solicita la nota de crédito a finance.
+- La línea del RMA guarda `base_cents`, `impuesto_cents` y `total_cents`
+  prorrateados desde el snapshot fiscal de la orden.
+- Reintentos: `POST /api/v2/admin/devoluciones/{id}/reembolsar` y
+  `POST /api/v2/admin/devoluciones/{id}/nota-credito`. Los estados
+  `reembolso_estado`/`nota_credito_estado` evitan duplicados.
+- Purga de tenant: `POST /internal/{servicio}/tenant/purgar` elimina carritos, fidelización,
+  mesas, suscripciones y configuración; anonimiza dirección, comprador, vendedor,
+  entregas digitales y timeline. Conserva órdenes y pagos por retención contable.

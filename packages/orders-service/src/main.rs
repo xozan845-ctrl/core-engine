@@ -4,18 +4,22 @@
 use orders_service::carrito::Carrito;
 use orders_service::checkout::Checkout;
 use orders_service::clients::Clientes;
+use orders_service::conciliacion::ConciliacionPagos;
 use orders_service::config::Config;
 use orders_service::consumer::PedidosConsumer;
 use orders_service::contratos::Contratos;
 use orders_service::db::Db;
 use orders_service::entregas::EntregasDigitales;
+use orders_service::expiracion::ExpiracionOrdenes;
 use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
 use orders_service::http::build_router;
+use orders_service::idempotencia::Idempotencia;
 use orders_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use orders_service::metrics::Metrics;
 use orders_service::outbox::Outbox;
 use orders_service::pagos::Pagos;
+use orders_service::pagos_flujo::FlujoPagos;
 use orders_service::pedidos::Pedidos;
 use orders_service::rabbit::{ColaConfig, Handler, Rabbit};
 use orders_service::salon::Salon;
@@ -87,7 +91,13 @@ async fn main() {
         tasa_comision: config.tasa_comision,
     });
     let entregas = Arc::new(EntregasDigitales::nueva(Arc::clone(&db)));
-    let pagos = Arc::new(Pagos::con_config(Arc::clone(&db), &config));
+    let pagos = match Pagos::con_config(Arc::clone(&db), &config) {
+        Ok(pagos) => Arc::new(pagos),
+        Err(error) => {
+            eprintln!("Configuracion de pagos invalida: {}", error.mensaje);
+            std::process::exit(1);
+        }
+    };
     let checkout = Arc::new(Checkout {
         db: Arc::clone(&db),
         clientes: Arc::clone(&clientes),
@@ -126,6 +136,25 @@ async fn main() {
     );
     let tarea_suscripciones = iniciar_suscripciones(Arc::clone(&suscripciones));
     let tarea_fidelizacion = iniciar_fidelizacion(Arc::clone(&fidelizacion));
+    let tarea_expiracion = iniciar_expiracion(
+        Arc::new(ExpiracionOrdenes::nueva(
+            Arc::clone(&db),
+            Arc::clone(&checkout),
+            config.orden_pago_ttl_minutos,
+        )),
+        config.orden_expiracion_intervalo_segundos,
+    );
+    let tarea_idempotencia =
+        iniciar_limpieza_idempotencia(Arc::new(Idempotencia::nueva(Arc::clone(&db))));
+    let tarea_conciliacion = iniciar_conciliacion(
+        Arc::new(ConciliacionPagos::nueva(
+            Arc::clone(&pagos),
+            Arc::new(FlujoPagos::nuevo(Arc::clone(&checkout))),
+            config.pagos_conciliacion_minutos,
+            orders_service::conciliacion::LOTE_MAXIMO,
+        )),
+        config.pagos_conciliacion_intervalo_segundos,
+    );
 
     let estado = AppState::con_dependencias(
         config,
@@ -171,6 +200,9 @@ async fn main() {
         tarea_outbox.abort();
         tarea_suscripciones.abort();
         tarea_fidelizacion.abort();
+        tarea_expiracion.abort();
+        tarea_idempotencia.abort();
+        tarea_conciliacion.abort();
         rabbit.cerrar().await;
     })
     .await;
@@ -227,6 +259,109 @@ fn iniciar_suscripciones(suscripciones: Arc<Suscripciones>) -> tokio::task::Join
                     "orders.suscripciones",
                     orders_service::campos! {
                         "msg": "Fallo al renovar suscripciones",
+                        "err": error.mensaje,
+                    },
+                ),
+            }
+        }
+    })
+}
+
+/// Barre órdenes impagas cada `intervalo_segundos`. Si el TTL es 0, el propio
+/// barrido no hace nada (expiración desactivada).
+fn iniciar_expiracion(
+    expiracion: Arc<ExpiracionOrdenes>,
+    intervalo_segundos: u64,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let intervalo = Duration::from_secs(intervalo_segundos.max(1));
+        let mut ticker = tokio::time::interval(intervalo);
+        ticker.tick().await;
+        loop {
+            ticker.tick().await;
+            match expiracion.expirar().await {
+                Ok(expiradas) if expiradas > 0 => orders_service::logs::info(
+                    "orders.expiracion",
+                    orders_service::campos! {
+                        "msg": "Ordenes impagas expiradas",
+                        "expiradas": expiradas,
+                    },
+                ),
+                Ok(_) => {}
+                Err(error) => orders_service::logs::error(
+                    "orders.expiracion",
+                    orders_service::campos! {
+                        "msg": "Fallo al expirar ordenes impagas",
+                        "err": error.mensaje,
+                    },
+                ),
+            }
+        }
+    })
+}
+
+/// Consulta los pagos pendientes con pasarela cada `intervalo_segundos`.
+///
+/// Es la red de seguridad de los webhooks: si uno se pierde, el barrido
+/// pregunta el estado real y avanza la orden.
+fn iniciar_conciliacion(
+    conciliacion: Arc<ConciliacionPagos>,
+    intervalo_segundos: u64,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let intervalo = Duration::from_secs(intervalo_segundos.max(1));
+        let mut ticker = tokio::time::interval(intervalo);
+        ticker.tick().await;
+        loop {
+            ticker.tick().await;
+            match conciliacion.ejecutar().await {
+                Ok(resumen)
+                    if resumen.confirmados > 0 || resumen.rechazados > 0 || resumen.errores > 0 =>
+                {
+                    orders_service::logs::info(
+                        "orders.conciliacion",
+                        orders_service::campos! {
+                            "msg": "Conciliacion de pagos ejecutada",
+                            "revisados": resumen.revisados,
+                            "confirmados": resumen.confirmados,
+                            "rechazados": resumen.rechazados,
+                            "errores": resumen.errores,
+                        },
+                    )
+                }
+                Ok(_) => {}
+                Err(error) => orders_service::logs::error(
+                    "orders.conciliacion",
+                    orders_service::campos! {
+                        "msg": "Fallo al conciliar pagos",
+                        "err": error.mensaje,
+                    },
+                ),
+            }
+        }
+    })
+}
+
+/// Limpia respuestas idempotentes antiguas una vez por hora.
+fn iniciar_limpieza_idempotencia(idempotencia: Arc<Idempotencia>) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(3600));
+        ticker.tick().await;
+        loop {
+            ticker.tick().await;
+            match idempotencia.limpiar().await {
+                Ok(limpiadas) if limpiadas > 0 => orders_service::logs::info(
+                    "orders.idempotencia",
+                    orders_service::campos! {
+                        "msg": "Registros de idempotencia limpiados",
+                        "limpiadas": limpiadas,
+                    },
+                ),
+                Ok(_) => {}
+                Err(error) => orders_service::logs::error(
+                    "orders.idempotencia",
+                    orders_service::campos! {
+                        "msg": "Fallo al limpiar idempotencia",
                         "err": error.mensaje,
                     },
                 ),

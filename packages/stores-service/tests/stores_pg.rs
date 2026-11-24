@@ -407,3 +407,20 @@ async fn debe_asignar_y_desasignar_vendedor_y_listar_por_ids() {
         .expect("vendedor")
         .is_none());
 }
+
+#[tokio::test]
+async fn debe_exportar_y_purgar_el_tenant() {
+    let (_guard, db, _tiendas, _ofertas) = preparar().await;
+    let req = stores_service::lifecycle::TenantRequest {
+        empresa_id: EMPRESA.to_string(),
+        negocio_ids: vec![],
+        usuario_ids: vec![],
+    };
+    let datos = stores_service::lifecycle::exportar(db.pool(), &req)
+        .await
+        .expect("exportar");
+    assert!(datos["tiendas"].is_array());
+    stores_service::lifecycle::purgar(db.pool(), &req)
+        .await
+        .expect("purgar");
+}

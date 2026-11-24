@@ -3,6 +3,8 @@
 use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::comisiones::{ComisionesNoDisponible, ComisionesPort};
 use crate::config::Config;
+use crate::db::Db;
+use crate::errors::ApiError;
 use crate::liquidaciones::{LiquidacionesNoDisponible, LiquidacionesPort};
 use crate::metrics::Metrics;
 use crate::reportes::{ReportesNoDisponible, ReportesPort};
@@ -19,6 +21,7 @@ pub struct AppState {
     pub ventas: Arc<dyn VentasPort>,
     pub reportes: Arc<dyn ReportesPort>,
     pub capacidades: Arc<dyn Capacidades>,
+    pub db: Option<Arc<Db>>,
     pub inicio: Instant,
 }
 
@@ -33,6 +36,7 @@ impl AppState {
             ventas: Arc::new(VentasNoDisponible),
             reportes: Arc::new(ReportesNoDisponible),
             capacidades: Arc::new(CapacidadesNoDisponible),
+            db: None,
             inicio: Instant::now(),
         }
     }
@@ -55,7 +59,17 @@ impl AppState {
             ventas,
             reportes,
             capacidades,
+            db: None,
             inicio: Instant::now(),
         }
+    }
+
+    pub fn con_db(mut self, db: Arc<Db>) -> Self {
+        self.db = Some(db);
+        self
+    }
+
+    pub fn db(&self) -> Result<&Arc<Db>, ApiError> {
+        self.db.as_ref().ok_or_else(ApiError::interno)
     }
 }

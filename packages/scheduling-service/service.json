@@ -1,0 +1,64 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "scheduling-service",
+    "boundedContext": "scheduling",
+    "description": "Recursos reservables, disponibilidad, bloqueos, citas y recordatorios.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "agenda"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3011,
+    "schema": "scheduling",
+    "outboxTable": "scheduling.outbox",
+    "capabilities": [
+      "agenda_recursos",
+      "sala"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "appointment.created",
+        "appointment.cancelled",
+        "appointment.reminder.due"
+      ],
+      "consumes": [
+        "order.created"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/scheduling-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 71,
+      "functions": 65
+    }
+  }
+}

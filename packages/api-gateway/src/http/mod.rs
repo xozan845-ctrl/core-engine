@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::diagnostics;
 use crate::errors::ApiError;
 use crate::metrics::Metrics;
-use crate::rate_limit::{es_login, es_media_publica, ip_de, ResultadoLimite};
+use crate::rate_limit::{es_login, es_media_publica, es_onboarding, ip_de, ResultadoLimite};
 use crate::readiness;
 use crate::state::AppState;
 use axum::body::Body;
@@ -158,11 +158,13 @@ async fn borde(State(state): State<AppState>, mut request: Request, next: Next) 
     }
 
     if !es_media_publica(metodo.as_str(), &ruta) {
-        let ip = ip_de(request.headers());
+        let ip = ip_de(request.headers(), state.config.confiar_en_forwarded);
         let (clave, limite) = if ruta == "/ready" {
             ("ready", 10)
         } else if es_login(metodo.as_str(), &ruta) {
             ("login", 10)
+        } else if es_onboarding(metodo.as_str(), &ruta) {
+            ("onboarding", 10)
         } else {
             ("global", 300)
         };
@@ -284,11 +286,11 @@ fn aplicar_cors(headers: &mut HeaderMap, config: &Config, origen: Option<&str>) 
     );
     headers.insert(
         header::ACCESS_CONTROL_ALLOW_HEADERS,
-        HeaderValue::from_static("Content-Type, Authorization, x-request-id"),
+        HeaderValue::from_static("Content-Type, Authorization, x-request-id, Idempotency-Key"),
     );
     headers.insert(
         header::ACCESS_CONTROL_EXPOSE_HEADERS,
-        HeaderValue::from_static("x-request-id"),
+        HeaderValue::from_static("x-request-id, Idempotency-Replayed"),
     );
 }
 
@@ -317,6 +319,23 @@ mod tests {
             .expect("cuerpo")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("utf8")
+    }
+
+    #[test]
+    fn debe_anunciar_la_idempotencia_en_cors() {
+        let config = Config::from_pairs([("CORS_ORIGINS", "https://a.test")]).expect("config");
+        let mut headers = HeaderMap::new();
+        aplicar_cors(&mut headers, &config, Some("https://a.test"));
+        let permitidas = headers
+            .get(header::ACCESS_CONTROL_ALLOW_HEADERS)
+            .and_then(|valor| valor.to_str().ok())
+            .unwrap_or("");
+        assert!(permitidas.contains("Idempotency-Key"));
+        let expuestas = headers
+            .get(header::ACCESS_CONTROL_EXPOSE_HEADERS)
+            .and_then(|valor| valor.to_str().ok())
+            .unwrap_or("");
+        assert!(expuestas.contains("Idempotency-Replayed"));
     }
 
     #[tokio::test]

@@ -1,0 +1,7 @@
+{
+  "limits": {
+    "lines": 800,
+    "publicFns": 20
+  },
+  "debt": {}
+}

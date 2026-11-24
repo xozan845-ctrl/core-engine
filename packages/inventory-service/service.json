@@ -1,0 +1,69 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "inventory-service",
+    "boundedContext": "inventory",
+    "description": "Stock, lotes FEFO, ubicaciones, movimientos, reservas y saga de stock.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "stock",
+      "saga"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3013,
+    "schema": "inventory",
+    "outboxTable": "inventory.outbox",
+    "capabilities": [
+      "inventario_stock",
+      "inventario_lotes"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "item-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "stock.reservado",
+        "stock.fallido",
+        "stock.reintegrado",
+        "stock.updated"
+      ],
+      "consumes": [
+        "order.created",
+        "order.cancelled",
+        "devolucion.solicitada"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/inventory-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 79,
+      "functions": 72
+    }
+  }
+}

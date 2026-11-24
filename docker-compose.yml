@@ -25,6 +25,8 @@ x-servicio-base: &servicio-base
   environment:
     TZ: America/Managua
   depends_on:
+    db-migrate:
+      condition: service_completed_successfully
     postgres:
       condition: service_healthy
     rabbitmq:
@@ -32,27 +34,118 @@ x-servicio-base: &servicio-base
   networks:
     - core-engine
   restart: unless-stopped
+  stop_grace_period: 30s
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$$PORT/health >/dev/null || exit 1"]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  deploy:
+    resources:
+      limits:
+        cpus: "1.0"
+        memory: 512M
 
 services:
   # ── Datos y BaaS (AD-08: Supabase-compatible, SQL estandar en Docker) ──
   postgres:
     image: postgis/postgis:16-3.4-alpine
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "wal_level=replica"
+      - "-c"
+      - "archive_mode=off"
+    shm_size: 256mb
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-core_engine}
       POSTGRES_USER: ${POSTGRES_USER:-core_engine}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida en .env}
+      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
     volumes:
       - pg_data:/var/lib/postgresql/data
       # Solo el esquema estandar entra en Docker local; 99_rls.sql (Supabase)
       # vive en infra/db/supabase/ y se aplica manualmente en staging/prod.
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-core_engine} -d ${POSTGRES_DB:-core_engine}"]
       interval: 5s
       timeout: 5s
       retries: 12
     networks:
       - core-engine
+
+  # ── Migraciones versionadas con ledger (R-DB-6) ───────────────────────
+  db-migrate:
+    image: postgis/postgis:16-3.4-alpine
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-core_engine}
+      PGUSER: ${POSTGRES_USER:-core_engine}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
+      CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
+      MIGRATIONS_DIR: /migrations
+      APPLY_RLS: "false"
+    volumes:
+      - ./infra/db:/migrations:ro
+    command: ["sh", "/migrations/apply.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core-engine
+    restart: "no"
+
+  # ── Backup lógico diario (ADR-0044) ────────────────────────────────────
+  # Dump custom con retención local. El envío fuera del host se hace desde
+  # `backup.yml` o el almacenamiento externo que configure operación.
+  db-backup:
+    image: postgres:16-alpine
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-core_engine}
+      PGUSER: ${POSTGRES_USER:-core_engine}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
+      # El dump necesita un rol con BYPASSRLS (owner); DATABASE_URL del .env
+      # apunta a core_engine_app y pg_dump fallaria en tablas con RLS.
+      DATABASE_URL: ${POSTGRES_URL:-}
+      BACKUP_DIR: /backups
+      BACKUP_RETENCION_DIAS: ${BACKUP_RETENCION_DIAS:-14}
+      BACKUP_INTERVALO_SEGUNDOS: ${BACKUP_INTERVALO_SEGUNDOS:-86400}
+    volumes:
+      - ./infra/db/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./infra/db/restore-verify.sh:/usr/local/bin/restore-verify.sh:ro
+      - db_backups:/backups
+    command:
+      - sh
+      - -c
+      - while true; do sh /usr/local/bin/backup.sh || true; sleep "$$BACKUP_INTERVALO_SEGUNDOS"; done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core-engine
+    restart: unless-stopped
 
   # ── Broker de mensajeria (AD-02: RabbitMQ con DLQ) ─────────────────────
   rabbitmq:
@@ -244,6 +337,7 @@ volumes:
   pg_data:
   rabbitmq_data:
   minio_data:
+  db_backups:
 
 networks:
   core-engine:

@@ -25,6 +25,8 @@ pub struct Config {
     pub emitir_comprobantes_fiscales: bool,
     pub facturacion_proveedor_url: Option<String>,
     pub facturacion_proveedor_key: Option<String>,
+    pub storage_service_url: Option<String>,
+    pub pdf_almacenamiento: String,
     pub outbox_tabla: String,
 }
 
@@ -78,6 +80,15 @@ impl Config {
             database_url: leer("DATABASE_URL"),
             rabbitmq_url: leer("RABBITMQ_URL"),
             internal_api_key: leer("INTERNAL_API_KEY"),
+            storage_service_url: leer("STORAGE_SERVICE_URL")
+                .map(|valor| valor.trim_end_matches('/').to_string()),
+            pdf_almacenamiento: leer("PDF_ALMACENAMIENTO").unwrap_or_else(|| {
+                if leer("STORAGE_SERVICE_URL").is_some() {
+                    "storage".to_string()
+                } else {
+                    "db".to_string()
+                }
+            }),
             orders_service_url: leer("ORDERS_SERVICE_URL")
                 .unwrap_or_else(|| "http://orders-service:3004".to_string())
                 .trim_end_matches('/')

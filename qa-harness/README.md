@@ -21,7 +21,7 @@ Genera reportes HTML, Markdown y JSON.
 | `06-cart` | Carrito y checkout (RN-05) |
 | `07-logistics` | Logística y envíos |
 | `08-commissions` | Comisiones y liquidaciones (RN-04, RN-06, RN-07) |
-| `09-finanzas` | Finanzas, contabilidad, régimen fiscal NIC |
+| `09-finanzas` | Finanzas, contabilidad y régimen fiscal (piloto NI, ADR-0049) |
 | `10-admin` | Reportes admin e inventario |
 | `11-fuzzing` | Fuzzing y validación agresiva (SQLi, XSS, tipos) |
 | `12-concurrency` | Concurrencia y race conditions (oversell, double submit) |
@@ -119,7 +119,7 @@ El harness lee `.env` del proyecto padre (`../../.env`). Variables relevantes:
 ```env
 BASE_URL=http://localhost:8080
 ADMIN_EMAIL=admin@core-engine.test
-ADMIN_PASSWORD=AdminCore Engine2026!
+ADMIN_PASSWORD=Fuego-Laguna-2026!
 DATABASE_URL=postgres://core_engine:core_engine_dev@postgres:5432/core_engine
 INTERNAL_API_KEY=dev_internal_key
 QA_TIMEOUT=30000

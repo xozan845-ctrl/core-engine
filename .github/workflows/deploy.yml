@@ -22,6 +22,10 @@ on:
           - dev
           - stage
           - prod
+      source:
+        description: 'Tag a fijar por digest (vacío = stage/prod del entorno)'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy-${{ github.event.inputs.environment }}
@@ -64,10 +68,27 @@ jobs:
         id: cfg
         run: |
           case "${{ github.event.inputs.environment }}" in
-            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT" ;;
-            stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
-            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT" ;;
+            dev)   echo "files=-f docker-compose.dev.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=--build" >> "$GITHUB_OUTPUT"; echo "digest=" >> "$GITHUB_OUTPUT" ;;
+            stage) echo "files=-f docker-compose.stage.yml" >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT"; echo "digest=-f docker-compose.digest.yml" >> "$GITHUB_OUTPUT" ;;
+            prod)  echo "files=-f docker-compose.yml"  >> "$GITHUB_OUTPUT"; echo "port=8080" >> "$GITHUB_OUTPUT"; echo "build=" >> "$GITHUB_OUTPUT"; echo "digest=-f docker-compose.digest.yml" >> "$GITHUB_OUTPUT" ;;
           esac
+
+      - name: 🔒 Fijar imágenes por digest (R-CD-3)
+        if: github.event.inputs.environment != 'dev'
+        env:
+          SOURCE: ${{ github.event.inputs.source }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          TAG="${SOURCE:-$ENVIRONMENT}"
+          node scripts/tools/render-compose-digest.mjs \
+            --source "$TAG" --environment "$ENVIRONMENT" --output docker-compose.digest.yml
+
+      - name: 🧹 Limpiar stack anterior (dev/stage efímero)
+        if: github.event.inputs.environment != 'prod'
+        env:
+          FILES: ${{ steps.cfg.outputs.files }}
+          DIGEST: ${{ steps.cfg.outputs.digest }}
+        run: docker compose $FILES $DIGEST down -v --remove-orphans || true
 
       - name: 🧰 Prepare environment file
         # Dev y stage levantan un stack efímero en el runner: si no hay `.env`
@@ -76,22 +97,51 @@ jobs:
         if: github.event.inputs.environment != 'prod'
         run: |
           if [ ! -f .env ]; then cp .env.example .env; fi
+          # Las imágenes se construyen con NODE_ENV=production e identity exige
+          # una MFA_ENCRYPTION_KEY válida (32 bytes en base64). En el runner
+          # efímero se genera una; en el entorno real viene del Environment.
+          if ! grep -Eq '^MFA_ENCRYPTION_KEY=.+' .env; then
+            KEY="$(openssl rand -base64 32)"
+            if grep -q '^MFA_ENCRYPTION_KEY=' .env; then
+              sed -i "s|^MFA_ENCRYPTION_KEY=.*|MFA_ENCRYPTION_KEY=$KEY|" .env
+            else
+              printf '\nMFA_ENCRYPTION_KEY=%s\n' "$KEY" >> .env
+            fi
+          fi
 
       - name: 🚀 Bring the stack up
         env:
           FILES: ${{ steps.cfg.outputs.files }}
+          DIGEST: ${{ steps.cfg.outputs.digest }}
           BUILD: ${{ steps.cfg.outputs.build }}
         run: |
           # En dev se construye; en stage/prod se consumen las imágenes de GHCR
-          # promovidas por `promote.yml` (R-CD-3), sin `build`.
-          docker compose $FILES up -d $BUILD
+          # fijadas por digest (R-CD-3), sin `build`.
+          docker compose $FILES $DIGEST up -d $BUILD
 
       - name: ⏳ Wait for gateway readiness (R-CD-12)
+        env:
+          INTERNAL_KEY: ${{ secrets.INTERNAL_API_KEY }}
         run: |
-          for i in $(seq 1 60); do
-            if curl -fsS "http://localhost:${{ steps.cfg.outputs.port }}/health" >/dev/null; then
-              echo "healthy"
-              exit 0
+          URL="http://localhost:${{ steps.cfg.outputs.port }}"
+          for i in $(seq 1 90); do
+            if curl -fsS "$URL/health" >/dev/null; then
+              # En prod /ready exige clave interna y puede no estar configurada
+              # en el runner; alli basta el liveness del gateway.
+              if [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+                echo "healthy"
+                exit 0
+              fi
+              if [ -n "${INTERNAL_KEY:-}" ]; then
+                READY=$(curl -sS -H "x-internal-key: $INTERNAL_KEY" "$URL/ready" || true)
+              else
+                READY=$(curl -sS "$URL/ready" || true)
+              fi
+              if printf '%s' "$READY" | grep -q '"status":"ok"'; then
+                echo "ready: $READY"
+                exit 0
+              fi
+              echo "esperando servicios: $READY"
             fi
             sleep 5
           done
@@ -103,7 +153,25 @@ jobs:
         if: github.event.inputs.environment != 'prod'
         env:
           BASE_URL: http://localhost:${{ steps.cfg.outputs.port }}
-        run: npm run demo
+        run: |
+          # El admin se siembra con las credenciales del .env del stack; el
+          # demo debe usar esas mismas, no sus defaults. No se hace `source`
+          # porque los valores pueden contener espacios.
+          ADMIN_EMAIL="$(sed -n 's/^ADMIN_EMAIL=//p' .env | head -1)"
+          ADMIN_PASSWORD="$(sed -n 's/^ADMIN_PASSWORD=//p' .env | head -1)"
+          if [ -z "$ADMIN_EMAIL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+            echo "ADMIN_EMAIL/ADMIN_PASSWORD vacios en .env" >&2
+            exit 1
+          fi
+          export ADMIN_EMAIL ADMIN_PASSWORD
+          npm run demo
+
+      - name: 🔎 Logs de orders al fallar
+        if: failure() && github.event.inputs.environment != 'prod'
+        env:
+          FILES: ${{ steps.cfg.outputs.files }}
+          DIGEST: ${{ steps.cfg.outputs.digest }}
+        run: docker compose $FILES $DIGEST logs --no-color --tail=160 orders-service
 
       - name: 🧾 Verificar logs sin errores inesperados (R-E-8)
         if: github.event.inputs.environment != 'prod' && success()

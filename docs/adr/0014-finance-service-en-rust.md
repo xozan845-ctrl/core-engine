@@ -8,7 +8,8 @@
   [ADR-0004](./0004-scheduling-service-en-rust.md),
   [ADR-0006](./0006-notifications-service-en-rust.md),
   [ADR-0008](./0008-field-service-en-rust.md),
-  [ADR-0010](./0010-logistics-service-en-rust.md)
+  [ADR-0010](./0010-logistics-service-en-rust.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -143,3 +144,21 @@ y `orders`; este ADR no invade su alcance.
   consumidor financiero de la saga se valida en `tests/finance_pg.rs` (la saga
   Node conserva la coreografía hasta `payment.procesado` y el contrato de
   `comision.acreditada`).
+
+## Actualización (2026-11-23)
+
+[ADR-0049](./0049-regiones-tributarias.md) generaliza el descriptor fiscal y
+mueve la selección de país al alta del tenant:
+
+- `finance.jurisdicciones` se enriquece con `pais_iso`, `subdivision`,
+  `moneda_iso`, `locale`, `zona_horaria`, `documento_fiscal`, `perfil` y
+  `vigente_desde`.
+- `jurisdiccion_de` resuelve negocio → empresa → región elegida por el tenant →
+  primera activa (solo legacy).
+- La emisión de comprobantes falla con `SIN_JURISDICCION` si la serie apunta a
+  una región inexistente; ya no asume `15 %`/`NIO`.
+- Nicaragua deja de ser un default de código; queda como datos del piloto en la
+  migración `99_regiones_tributarias.sql`.
+- Cobertura actual del crate: 93 pruebas unitarias y 18 de integración
+  PostgreSQL, incluida la migración de región desde cero, tasas, retención,
+  series por tenant y declaraciones por tenant.

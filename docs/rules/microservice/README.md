@@ -11,6 +11,7 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 |---|---|---|
 | `01-estructura.md` | Layout del crate Rust, capas internas, DI por `AppState`, DTOs, env fail-fast, shutdown, división de módulos y README por paquete | `R-MS` (1–8) |
 | `02-excepcion-olap.md` | Excepción OLAP de `market-intelligence-service`: CQRS analítico, PostGIS, data contracts, Kafka fase 2, feature store | `R-MI` (1–5) |
+| `03-contrato-servicio.md` | Manifiesto `service.json`, perfiles, `/health` vs `/ready`, 12-factor, catálogo, eventos y propiedad de datos | `R-MS` (9–16) |
 
 > Los documentos derivados de este área (**AUDIT, CHECKLIST, historiales**) no
 > viven aquí: están en [`../_meta/`](../_meta/README.md). Un área de reglas solo
@@ -20,7 +21,7 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 
 | Prefijo | Rango | Archivo | Ámbito |
 |---|---|---|---|
-| `R-MS-*` | 1–8 | `01-estructura.md` | Estructura, modularidad y ciclo de vida de un servicio |
+| `R-MS-*` | 1–16 | `01-estructura.md` + `03-contrato-servicio.md` | Estructura, modularidad, contrato de servicio y ciclo de vida |
 | `R-MI-*` | 1–5 | `02-excepcion-olap.md` | Excepción analítica (OLAP) de market-intelligence |
 
 ## Reglas de otras áreas que exige esta (cross-refs)
@@ -37,3 +38,10 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
 - `01-estructura.md` se audita en cada revisión de `R-COV-3`; la suite
   `microservices-ci-contract` valida que cada servicio declare su crate, su
   Dockerfile y su README.
+- `03-contrato-servicio.md` se verifica con la suite `services-contract`
+  (manifiesto, perfil, módulos, compose, esquema, arranque, observabilidad,
+  eventos y documentación) y con `npm run architecture:check`.
+- `R-MS-7` tiene check propio en la suite `microservices-tamano-modulos`: falla
+  si un archivo de `packages/*/src` supera los presupuestos de responsabilidad
+  (800 líneas de producción o 20 funciones públicas en dominio con SQL) y
+  `baseline:guard` impide añadir deuda nueva o relajar los presupuestos.

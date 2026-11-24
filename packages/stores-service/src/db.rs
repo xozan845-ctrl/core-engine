@@ -13,6 +13,16 @@ use serde_json::{json, Map, Value};
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use sqlx::{Column, PgPool, Postgres, Row, Transaction, TypeInfo, ValueRef};
 
+/// Conexiones máximas por servicio. El presupuesto total (servicios x pool)
+/// debe caber en `max_connections` de PostgreSQL o pasar por PgBouncer.
+fn pool_max() -> u32 {
+    std::env::var("DATABASE_POOL_MAX")
+        .ok()
+        .and_then(|valor| valor.parse::<u32>().ok())
+        .filter(|valor| *valor > 0)
+        .unwrap_or(4)
+}
+
 pub struct Db {
     pool: PgPool,
 }
@@ -20,7 +30,18 @@ pub struct Db {
 impl Db {
     pub async fn conectar(url: &str) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
-            .max_connections(10)
+            .max_connections(pool_max())
+            // Claim por defecto para jobs y conexiones sin usuario; las
+            // transacciones HTTP lo sobreescriben con el usuario real.
+            .after_connect(|conn, _| {
+                Box::pin(async move {
+                    sqlx::query("SELECT set_config('request.jwt.claims', $1, false)")
+                        .bind(serde_json::json!({ "rol": "super_admin" }).to_string())
+                        .execute(conn)
+                        .await?;
+                    Ok::<(), sqlx::Error>(())
+                })
+            })
             .connect(url)
             .await?;
         sqlx::query("SELECT 1").execute(&pool).await?;

@@ -14,6 +14,7 @@ use serde_json::{json, Map, Value};
 use std::sync::Arc;
 
 const EVENTO_ORDER_CREATED: &str = "order.created";
+const EVENTO_ORDER_CANCELLED: &str = "order.cancelled";
 const EVENTO_DEVOLUCION_SOLICITADA: &str = "devolucion.solicitada";
 const EVENTO_STOCK_RESERVADO: &str = "stock.reservado";
 const EVENTO_STOCK_FALLIDO: &str = "stock.fallido";
@@ -36,7 +37,10 @@ impl PedidosConsumer {
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_string();
-        if tipo != EVENTO_ORDER_CREATED && tipo != EVENTO_DEVOLUCION_SOLICITADA {
+        if tipo != EVENTO_ORDER_CREATED
+            && tipo != EVENTO_ORDER_CANCELLED
+            && tipo != EVENTO_DEVOLUCION_SOLICITADA
+        {
             return Ok(());
         }
         let event_id = evento
@@ -56,7 +60,16 @@ impl PedidosConsumer {
         ejecutar_con_contexto(contexto, async move {
             match tipo.as_str() {
                 EVENTO_ORDER_CREATED => consumer.orden_creada(&evento, &event_id).await,
-                EVENTO_DEVOLUCION_SOLICITADA => consumer.devolucion(&evento, &event_id).await,
+                EVENTO_ORDER_CANCELLED => {
+                    consumer
+                        .liberar(&evento, &event_id, EVENTO_ORDER_CANCELLED)
+                        .await
+                }
+                EVENTO_DEVOLUCION_SOLICITADA => {
+                    consumer
+                        .liberar(&evento, &event_id, EVENTO_DEVOLUCION_SOLICITADA)
+                        .await
+                }
                 _ => Ok(()),
             }
         })
@@ -200,13 +213,17 @@ impl PedidosConsumer {
         Ok(())
     }
 
-    async fn devolucion(&self, evento: &Value, event_id: &str) -> Result<(), String> {
+    async fn liberar(
+        &self,
+        evento: &Value,
+        event_id: &str,
+        tipo_evento: &str,
+    ) -> Result<(), String> {
         let data = evento.get("data").cloned().unwrap_or(Value::Null);
         let order_id = texto(&data, "order_id");
         let lineas = lineas_devolucion(&data);
         let lineas_valor = Value::Array(lineas.clone());
         let claves = claves_stock(&lineas);
-        let tipo_evento = EVENTO_DEVOLUCION_SOLICITADA;
 
         let mut tx = self
             .db
@@ -221,9 +238,27 @@ impl PedidosConsumer {
             return Ok(());
         }
 
-        Reservas::reintegrar_en_transaccion(&mut tx, &order_id, &lineas_valor)
+        let liberado = Reservas::reintegrar_en_transaccion(&mut tx, &order_id, &lineas_valor)
             .await
             .map_err(mensaje)?;
+        if !liberado {
+            // La orden no tiene reserva vigente: ya se liberó, la reserva
+            // falló o este evento llegó antes que `order.created`. Marcamos el
+            // evento como procesado para no repetir el intento.
+            Reservas::registrar_procesado_en_transaccion(&mut tx, event_id, tipo_evento)
+                .await
+                .map_err(mensaje)?;
+            tx.commit().await.map_err(|error| error.to_string())?;
+            crate::logs::info(
+                "inventory.pedidos",
+                crate::campos! {
+                    "msg": "Liberacion sin reserva vigente",
+                    "order_id": order_id,
+                    "tipo": tipo_evento,
+                },
+            );
+            return Ok(());
+        }
         Reservas::devolver_series_en_transaccion(&mut tx, &order_id, &lineas_valor)
             .await
             .map_err(mensaje)?;
@@ -269,7 +304,11 @@ impl PedidosConsumer {
         crate::logs::info(
             "inventory.pedidos",
             crate::campos! {
-                "msg": "Stock reintegrado por devolucion",
+                "msg": if tipo_evento == EVENTO_ORDER_CANCELLED {
+                    "Stock liberado por cancelacion"
+                } else {
+                    "Stock reintegrado por devolucion"
+                },
                 "order_id": order_id,
             },
         );
@@ -293,6 +332,7 @@ pub fn cola() -> crate::rabbit::ColaConfig {
         nombre: "inventory.pedidos".to_string(),
         routing_keys: vec![
             EVENTO_ORDER_CREATED.to_string(),
+            EVENTO_ORDER_CANCELLED.to_string(),
             EVENTO_DEVOLUCION_SOLICITADA.to_string(),
         ],
     }
@@ -318,7 +358,14 @@ fn lineas_orden(data: &Value) -> Vec<Value> {
         .map(|items| {
             items
                 .iter()
-                .filter(|item| item.get("fulfillment").and_then(Value::as_str) != Some("digital"))
+                .filter(|item| {
+                    item.get("fulfillment").and_then(Value::as_str) != Some("digital")
+                        && item
+                            .get("item_type")
+                            .and_then(Value::as_str)
+                            .unwrap_or("producto")
+                            == "producto"
+                })
                 .map(|item| {
                     let mut linea = Map::new();
                     linea.insert(
@@ -330,12 +377,14 @@ fn lineas_orden(data: &Value) -> Vec<Value> {
                         "cantidad".into(),
                         item.get("cantidad").cloned().unwrap_or(json!(0)),
                     );
-                    if let Some(item_id) = item
-                        .get("item_id")
-                        .and_then(Value::as_str)
-                        .filter(|valor| !valor.is_empty())
-                    {
-                        linea.insert("item_id".into(), Value::String(item_id.to_string()));
+                    for clave in ["item_id", "ubicacion_id"] {
+                        if let Some(valor) = item
+                            .get(clave)
+                            .and_then(Value::as_str)
+                            .filter(|valor| !valor.is_empty())
+                        {
+                            linea.insert(clave.into(), Value::String(valor.to_string()));
+                        }
                     }
                     Value::Object(linea)
                 })
@@ -344,7 +393,8 @@ fn lineas_orden(data: &Value) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// Líneas de devolución: solo `(empresa, sku, cantidad)`.
+/// Líneas de liberación: `(empresa, sku, cantidad)` y, si el evento los trae,
+/// `item_id`/`ubicacion_id` para devolver el stock a su ubicación original.
 fn lineas_devolucion(data: &Value) -> Vec<Value> {
     data.get("items")
         .and_then(Value::as_array)
@@ -352,11 +402,26 @@ fn lineas_devolucion(data: &Value) -> Vec<Value> {
             items
                 .iter()
                 .map(|item| {
-                    json!({
-                        "empresa_id": texto(item, "empresa_id"),
-                        "sku": texto(item, "sku"),
-                        "cantidad": item.get("cantidad").cloned().unwrap_or(json!(0)),
-                    })
+                    let mut linea = Map::new();
+                    linea.insert(
+                        "empresa_id".into(),
+                        Value::String(texto(item, "empresa_id")),
+                    );
+                    linea.insert("sku".into(), Value::String(texto(item, "sku")));
+                    linea.insert(
+                        "cantidad".into(),
+                        item.get("cantidad").cloned().unwrap_or(json!(0)),
+                    );
+                    for clave in ["item_id", "ubicacion_id"] {
+                        if let Some(valor) = item
+                            .get(clave)
+                            .and_then(Value::as_str)
+                            .filter(|valor| !valor.is_empty())
+                        {
+                            linea.insert(clave.into(), Value::String(valor.to_string()));
+                        }
+                    }
+                    Value::Object(linea)
                 })
                 .collect()
         })
@@ -389,6 +454,7 @@ mod tests {
             cola.routing_keys,
             vec![
                 "order.created".to_string(),
+                "order.cancelled".to_string(),
                 "devolucion.solicitada".to_string()
             ]
         );
@@ -413,15 +479,52 @@ mod tests {
     }
 
     #[test]
-    fn debe_construir_lineas_de_devolucion_sin_item_id() {
+    fn debe_conservar_item_y_ubicacion_en_las_lineas_de_liberacion() {
         let lineas = lineas_devolucion(&json!({
             "items": [
-                {"empresa_id": "e-1", "sku": "SKU-01", "cantidad": 1, "item_id": "i-1"}
+                {
+                    "empresa_id": "e-1",
+                    "sku": "SKU-01",
+                    "cantidad": 1,
+                    "item_id": "i-1",
+                    "ubicacion_id": "u-1"
+                }
             ]
         }));
         assert_eq!(
             lineas,
-            vec![json!({"empresa_id": "e-1", "sku": "SKU-01", "cantidad": 1})]
+            vec![json!({
+                "empresa_id": "e-1",
+                "sku": "SKU-01",
+                "cantidad": 1,
+                "item_id": "i-1",
+                "ubicacion_id": "u-1"
+            })]
+        );
+    }
+
+    #[test]
+    fn debe_conservar_la_ubicacion_al_reservar() {
+        let lineas = lineas_orden(&json!({
+            "items": [
+                {
+                    "empresa_id": "e-1",
+                    "sku": "SKU-01",
+                    "cantidad": 2,
+                    "item_id": "i-1",
+                    "ubicacion_id": "u-1"
+                }
+            ]
+        }));
+        assert_eq!(
+            lineas,
+            vec![json!({
+                "empresa_id": "e-1",
+                "sku": "SKU-01",
+                "cantidad": 2,
+                "item_id": "i-1",
+                "ubicacion_id": "u-1"
+            })]
         );
     }
 

@@ -10,10 +10,13 @@ use serde_json::json;
 use std::collections::HashMap;
 
 pub fn rutas() -> Router<AppState> {
-    Router::new().route(
-        "/internal/analytics/reportes/ejecutar",
-        post(ejecutar_reportes),
-    )
+    Router::new()
+        .route(
+            "/internal/analytics/reportes/ejecutar",
+            post(ejecutar_reportes),
+        )
+        .route("/internal/analytics/tenant/exportar", post(exportar_tenant))
+        .route("/internal/analytics/tenant/purgar", post(purgar_tenant))
 }
 
 async fn ejecutar_reportes(
@@ -43,4 +46,36 @@ fn exigir_interna(state: &AppState, headers: &HeaderMap) -> Result<(), ApiError>
         ));
     }
     Ok(())
+}
+
+pub async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let datos = crate::lifecycle::exportar(state.db()?.pool(), &dto)
+        .await
+        .map_err(error_interno)?;
+    Ok(Json(
+        json!({ "servicio": "analytics", "estado": "completado", "datos": datos }),
+    ))
+}
+
+pub async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    exigir_interna(&state, &headers)?;
+    let detalle = crate::lifecycle::purgar(state.db()?.pool(), &dto)
+        .await
+        .map_err(error_interno)?;
+    Ok(Json(
+        json!({ "servicio": "analytics", "estado": "completado", "detalle": detalle }),
+    ))
+}
+
+fn error_interno(_: sqlx::Error) -> ApiError {
+    ApiError::interno()
 }

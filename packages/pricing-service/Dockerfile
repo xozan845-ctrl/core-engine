@@ -14,7 +14,7 @@ RUN touch packages/pricing-service/src/main.rs \
     && cargo build --release --locked
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /repo/packages/pricing-service/target/release/pricing-service /usr/local/bin/pricing-service

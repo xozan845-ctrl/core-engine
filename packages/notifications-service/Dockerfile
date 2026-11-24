@@ -20,7 +20,7 @@ RUN touch packages/notifications-service/src/main.rs \
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /repo/packages/notifications-service/target/release/notifications-service /usr/local/bin/notifications-service

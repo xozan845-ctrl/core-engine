@@ -8,14 +8,18 @@ use notifications_service::db::Db;
 use notifications_service::email::crear_proveedor;
 use notifications_service::http::build_router;
 use notifications_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
+use notifications_service::mensajeria::{Sms, WhatsApp};
 use notifications_service::metrics::Metrics;
 use notifications_service::notificaciones::{Notificaciones, NotificacionesPort};
+use notifications_service::plantillas_db::Plantillas;
 use notifications_service::rabbit::{ColaConfig, Rabbit};
 use notifications_service::state::AppState;
+use notifications_service::webhooks::{handler_webhooks, Webhooks};
 use std::sync::Arc;
 use std::time::Duration;
 
 const COLA_NOTIFICACIONES: &str = "notifications.todos";
+const COLA_WEBHOOKS: &str = "notifications.webhooks";
 const ROUTING_KEYS: [&str; 7] = [
     "order.created",
     "order.status.updated",
@@ -66,14 +70,20 @@ async fn main() {
         std::process::exit(1);
     }
     if rabbit
-        .declarar_colas(vec![ColaConfig {
-            nombre: COLA_NOTIFICACIONES.to_string(),
-            routing_keys: ROUTING_KEYS.iter().map(|clave| clave.to_string()).collect(),
-        }])
+        .declarar_colas(vec![
+            ColaConfig {
+                nombre: COLA_NOTIFICACIONES.to_string(),
+                routing_keys: ROUTING_KEYS.iter().map(|clave| clave.to_string()).collect(),
+            },
+            ColaConfig {
+                nombre: COLA_WEBHOOKS.to_string(),
+                routing_keys: vec!["#".to_string()],
+            },
+        ])
         .await
         .is_err()
     {
-        eprintln!("No se pudo declarar la cola {COLA_NOTIFICACIONES}");
+        eprintln!("No se pudieron declarar las colas de notifications");
         std::process::exit(1);
     }
 
@@ -90,8 +100,34 @@ async fn main() {
         config.internal_api_key.clone(),
         config.internal_request_timeout_ms,
     ));
-    let notificaciones: Arc<dyn NotificacionesPort> =
-        Arc::new(Notificaciones::nueva(clientes, email));
+    let plantillas = Arc::new(Plantillas::nueva(Arc::clone(&db)));
+    let mut notificaciones = Notificaciones::nueva(clientes, email)
+        .con_plantillas(Arc::clone(&plantillas))
+        .con_canales(config.canales.clone());
+    if let (Some(token), Some(phone_id)) = (
+        config.whatsapp_token.clone(),
+        config.whatsapp_phone_id.clone(),
+    ) {
+        notificaciones = notificaciones.con_whatsapp(Arc::new(WhatsApp::nueva(
+            phone_id,
+            token,
+            config.internal_request_timeout_ms,
+        )));
+    }
+    if let Some(url) = config.sms_url.clone() {
+        notificaciones = notificaciones.con_sms(Arc::new(Sms::nuevo(
+            url,
+            config.sms_key.clone(),
+            config.internal_request_timeout_ms,
+        )));
+    }
+    let notificaciones: Arc<dyn NotificacionesPort> = Arc::new(notificaciones);
+    let webhooks = Arc::new(Webhooks::nueva(
+        Arc::clone(&db),
+        config.webhook_timeout_ms,
+        config.webhook_https_obligatorio,
+    ));
+    let reintento_segundos = config.webhook_reintento_segundos;
     let consumidor = Arc::new(ConsumidorNotificaciones::nuevo(
         Arc::clone(&db),
         notificaciones,
@@ -99,6 +135,30 @@ async fn main() {
     rabbit
         .consumir(COLA_NOTIFICACIONES, handler_consumidor(consumidor))
         .await;
+    rabbit
+        .consumir(COLA_WEBHOOKS, handler_webhooks(Arc::clone(&webhooks)))
+        .await;
+    let webhooks_bg = Arc::clone(&webhooks);
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(reintento_segundos)).await;
+            match webhooks_bg.reintentar_pendientes().await {
+                Ok(0) => {}
+                Ok(intentos) => notifications_service::logs::info(
+                    "notifications.webhooks",
+                    notifications_service::campos! {
+                        "msg": "reintentos procesados", "entregas": intentos
+                    },
+                ),
+                Err(error) => notifications_service::logs::error(
+                    "notifications.webhooks",
+                    notifications_service::campos! {
+                        "msg": "reintento fallido", "err": error.to_string()
+                    },
+                ),
+            }
+        }
+    });
     notifications_service::consumidor::anunciar_consumidor();
     rabbit.iniciar_supervisor();
     rabbit.activar_reintento(Duration::from_secs(10));
@@ -107,6 +167,9 @@ async fn main() {
     let estado = AppState {
         config: Arc::new(config),
         metrics: Arc::clone(&metrics),
+        db: Some(Arc::clone(&db)),
+        plantillas: Some(plantillas),
+        webhooks: Some(webhooks),
     };
     let app = build_router(estado);
 

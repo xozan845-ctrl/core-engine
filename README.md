@@ -104,6 +104,9 @@ dental              pack_dental v1                logistica_rutas
 flota               pack_flota v1                 cotizaciones
 tecnologia_         pack_tecnologia_              facturacion
 reparacion *        reparacion v1                 liquidaciones
+                                │
+                                └──▶ región tributaria (NI, …)  ← misma empresa,
+                                     elige moneda, IVA y documento fiscal
 ```
 
 \* La vertical de tecnología y reparación es un **blueprint de configuración**,
@@ -116,31 +119,63 @@ logística, crédito y registros).
 1. El usuario elige una **vertical** (`retail`, `farmacia`, `belleza`, `dental`,
    `flota`, o una creada por un admin).
 2. Elige un **pack** de esa vertical (`pack_retail`, `pack_farmacia`, …).
-3. El pack trae **capacidades activas**; el usuario puede sumar **add-ons**
+3. Elige la **región tributaria** que el pack admite (`NI` en el piloto). El
+   pack trae **capacidades activas**; el usuario puede sumar **add-ons**
    permitidos por la vertical.
 4. Se crea la empresa con `POST /api/v2/empresas` indicando `vertical_id`,
-   `pack_codigo` y, opcionalmente, `capacidades_extra`.
+   `pack_codigo`, `region_tributaria` y, opcionalmente, `capacidades_extra`.
 5. `GET /api/v2/empresas/:id/features` devuelve el **manifiesto**; el frontend
-   muestra solo los módulos activos.
+   muestra solo los módulos activos y compone la fiscalidad con la región
+   (`region_tributaria` + features `fiscal.*`).
 6. Un admin puede crear **verticales, modelos y packs** por API
    (`/api/v2/packs/...`) usando capacidades existentes.
 
 ```bash
-# 1) consultar verticales y packs disponibles
+# 1) consultar verticales, packs y regiones tributarias disponibles
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/packs/verticales
 curl -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v2/packs?vertical_id=retail"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/v2/regiones-tributarias?pack_codigo=pack_retail&pack_version=1"
 
-# 2) crear la empresa con el pack y un add-on (ej. fidelización)
+# 2) crear la empresa con el pack, la región y un add-on (ej. fidelización)
 curl -X POST http://localhost:8080/api/v2/empresas \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"nombre":"TechFix","slug":"techfix","vertical_id":"retail",
-       "pack_codigo":"pack_retail","pack_version":1,
+       "pack_codigo":"pack_retail","pack_version":1,"region_tributaria":"NI",
        "capacidades_extra":["fidelizacion"]}'
 
 # 3) verificar el manifiesto efectivo
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/v2/empresas/<empresaId>/features
 ```
+
+### Regiones tributarias (ADR-0049)
+
+La región tributaria es **configuración del tenant**, no un servicio nuevo:
+
+- `finance.jurisdicciones` es el catálogo de reglas (moneda ISO, IVA, IR,
+  documento fiscal, locale, zona horaria, features fiscales).
+- `identity.pack_regiones` declara qué regiones admite cada pack.
+- `identity.empresas.region_tributaria` guarda la elección del dueño.
+- El onboarding recibe `region_tributaria`; si se omite, usa la predeterminada
+  del pack. Sin región disponible el alta falla cerrado.
+- `PUT /api/v2/empresas/:id/region-tributaria` cambia la región con historial
+  y auditoría. Aplica a operaciones futuras; no reescribe comprobantes.
+- Finance resuelve `negocio → empresa → región del tenant → primera activa`
+  (este último solo como compatibilidad legacy).
+
+El bloque fiscal está cerrado: catálogo de tasas (`GENERAL`, `EXENTA` y
+adicionales), exenciones/múltiples tasas por línea vía `impuesto_codigo`,
+retenciones por región, series por empresa/región, declaraciones por tenant,
+formato de moneda sin país asumido y adaptador DGI de referencia para
+facturación electrónica.
+
+**Piloto Nicaragua.** `NI` queda activa con IVA 15 %, moneda `NIO`/`C$`, RUC
+como documento fiscal y `America/Managua`. Para añadir otro país: se inserta la
+fila fiscal, se declara en los packs y, si aplica, se configura su proveedor
+electrónico. No se toca el dominio. Ver
+[ADR-0049](docs/adr/0049-regiones-tributarias.md) y el
+[runbook de regiones](docs/runbook-regiones-tributarias.md).
 
 ### Niveles de extensibilidad
 
@@ -330,25 +365,45 @@ curl -X POST http://localhost:8080/api/v2/packs/verticales \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"codigo":"tecnologia_reparacion","nombre":"Tecnología y reparación","modelo_operacion":"mixto"}'
 
-# 2) consultar verticales, packs y capacidades disponibles
+# 2) consultar verticales, packs y regiones disponibles
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/packs/verticales
 curl -H "Authorization: Bearer $TOKEN" "http://localhost:8080/api/v2/packs?vertical_id=tecnologia_reparacion"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/v2/regiones-tributarias?pack_codigo=pack_tecnologia_reparacion&pack_version=1"
 
-# 3) crear la empresa eligiendo vertical + pack
+# 3) crear la empresa eligiendo vertical + pack + región tributaria
 curl -X POST http://localhost:8080/api/v2/empresas \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"nombre":"TechFix","slug":"techfix","vertical_id":"tecnologia_reparacion",
-       "pack_codigo":"pack_tecnologia_reparacion","pack_version":1}'
+       "pack_codigo":"pack_tecnologia_reparacion","pack_version":1,
+       "region_tributaria":"NI"}'
 
-# 4) verificar capacidades efectivas del tenant
+# 4) verificar capacidades y región efectivas del tenant
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/api/v2/empresas/<empresaId>/capacidades
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v2/empresas/<empresaId>/features
 ```
+
+Alternativa de una sola llamada para el frontend (idempotente y con token
+fresco): `POST /api/v2/onboarding` con `Idempotency-Key`; ver
+[`packages/identity-service/README.md`](packages/identity-service/README.md#onboarding-idempotente).
 
 Migración de tenants existentes, pilotos y rollback:
 [`docs/runbook-multi-vertical.md`](docs/runbook-multi-vertical.md).
 
+Backup, restore y recuperación:
+[`docs/runbook-backup-restore.md`](docs/runbook-backup-restore.md). Deuda de
+plataforma priorizada: [`docs/backlog-plataforma.md`](docs/backlog-plataforma.md).
+
 ## Arquitectura
+
+La declaración completa (principios, C4, contrato de servicio, fitness
+functions y guía para añadir un servicio) vive en
+[`docs/architecture/`](./docs/architecture/README.md). Cada servicio publica su
+contrato en `packages/<servicio>/service.json`; el catálogo, la matriz de
+eventos y la deuda arquitectónica se generan desde ahí con
+`npm run architecture:report`.
 
 ```text
                     ┌─────────────┐   TLS/CORS/Throttling en el borde
@@ -646,13 +701,15 @@ RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
    hashes (R-DB-6); no edite una migración ya aplicada.
 3. Ejecute `99_rls.sql` (activa RLS por rol).
 4. Iguale el secreto JWT HS256 y las URL de los servicios al proyecto. La
-   diferencia de implementacion queda aislada en `jwt.utils.ts`.
+   diferencia de implementacion queda aislada en `packages/api-gateway/src/auth.rs`.
 
 ## Contribuir
 
-El proyecto se gobierna por reglas ejecutables en `docs/rules/` y por PR
-obligatorio (`R-PR-1..9`, `R-IA-5`): rama semántica desde `develop`, commits
-Conventional Commits en español con el ID de regla, y checks verdes en la cabeza
-del PR antes de mergear con `--rebase`. Punto de entrada:
+El proyecto se gobierna por reglas ejecutables en `docs/rules/`, un contrato de
+servicio declarativo en `packages/<servicio>/service.json` y por PR obligatorio
+(`R-PR-1..9`, `R-IA-5`): rama semántica desde `develop`, commits Conventional
+Commits en español con el ID de regla, y checks verdes en la cabeza del PR antes
+de mergear con `--rebase`. Puntos de entrada:
+[`docs/architecture/README.md`](docs/architecture/README.md),
 [`docs/rules/README.md`](docs/rules/README.md) y
 [`docs/rules/_meta/CHECKLIST.md`](docs/rules/_meta/CHECKLIST.md).

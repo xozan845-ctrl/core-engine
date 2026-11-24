@@ -1,0 +1,135 @@
+name: Database Backup
+
+# Backup lógico diario + verificación de restore (ADR-0044) y espejo de MinIO.
+# Si los secrets no están configurados, el run termina con warning y no falla
+# (para no romper el repositorio antes de la puesta en marcha); cuando existen,
+# la copia es diaria y obligatoria.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: dump + checksum
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      enabled: ${{ steps.preflight.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preflight de secrets
+        id: preflight
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ]; then
+            echo "::warning::BACKUP_DATABASE_URL no configurado; se omite el backup diario."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PostgreSQL client
+        if: steps.preflight.outputs.enabled == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        if: steps.preflight.outputs.enabled == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_DIR: backups
+          BACKUP_RETENCION_DIAS: 0
+        run: |
+          sh infra/db/backup.sh
+          ls -lh backups
+
+      - name: Upload offsite artifact
+        if: steps.preflight.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backups
+          retention-days: 30
+          if-no-files-found: error
+
+  restore-verify:
+    name: restore drill
+    needs: backup
+    if: needs.backup.outputs.enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Download backup
+        uses: actions/download-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backups
+      - name: Restore and verify
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: test_only
+          PGDATABASE: postgres
+        run: |
+          sh infra/db/restore-verify.sh "$(ls backups/*.dump | head -1)"
+
+  minio:
+    name: MinIO mirror
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Preflight de secrets
+        id: preflight
+        env:
+          ORIGEN: ${{ secrets.MINIO_BACKUP_SOURCE }}
+          DESTINO: ${{ secrets.MINIO_BACKUP_DEST }}
+        run: |
+          if [ -z "$ORIGEN" ] || [ -z "$DESTINO" ]; then
+            echo "::warning::MINIO_BACKUP_SOURCE/DEST no configurados; se omite el espejo de MinIO."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar mc
+        if: steps.preflight.outputs.enabled == 'true'
+        run: |
+          curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+
+      - name: Espejo incremental
+        if: steps.preflight.outputs.enabled == 'true'
+        env:
+          ORIGEN: ${{ secrets.MINIO_BACKUP_SOURCE }}
+          DESTINO: ${{ secrets.MINIO_BACKUP_DEST }}
+        run: |
+          mc alias set origen "$ORIGEN" "${{ secrets.MINIO_BACKUP_ACCESS_KEY }}" "${{ secrets.MINIO_BACKUP_SECRET_KEY }}"
+          mc alias set destino "$DESTINO" "${{ secrets.MINIO_BACKUP_DEST_ACCESS_KEY }}" "${{ secrets.MINIO_BACKUP_DEST_SECRET_KEY }}"
+          mc mirror --overwrite --remove origen destino/core-engine-minio

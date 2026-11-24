@@ -77,8 +77,9 @@ horaria, bloqueos, citas y recordatorios. Sirve a verticales de servicios
   en el día de la semana y zona horaria de ese intervalo, y dentro de su
   vigencia.
 - No puede solaparse con un **bloqueo** (`tstzrange && tstzrange`).
-- No puede solaparse con otra cita en estado activo: `reservada`,
-  `confirmada`, `en_atencion`.
+- No puede superar la `capacidad` del recurso con citas activas solapadas
+  (`reservada`, `confirmada`, `en_atencion`). `capacidad = 1` equivale a una
+  cita por recurso; `> 1` permite clases/grupos.
 - El recurso debe estar `activo` y pertenecer a la empresa.
 - La parte debe pertenecer al tenant (`PARTE_INVALIDA` si no).
 - Una reserva de orden exige `recurso_id`, fechas y cantidad 1 (validado en

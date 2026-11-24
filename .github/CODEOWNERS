@@ -9,8 +9,10 @@
 # Muro de gobernanza y automatización
 /.github/                    @xozan845-ctrl
 /docs/rules/                 @xozan845-ctrl
+/docs/architecture/          @xozan845-ctrl
 /docs/decisiones.md          @xozan845-ctrl
 /scripts/                    @xozan845-ctrl
+/packages/*/service.json     @xozan845-ctrl
 
 # Entrega y contenedores
 /Dockerfile                  @xozan845-ctrl

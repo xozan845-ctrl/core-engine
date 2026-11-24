@@ -1,6 +1,6 @@
 {
   "name": "core-engine",
-  "version": "1.11.0",
+  "version": "1.9.0",
   "private": true,
   "description": "Core Engine - plataforma multi-vertical por capacidades sobre microservicios Rust + PostgreSQL/Supabase + Docker",
   "scripts": {
@@ -8,6 +8,9 @@
     "smoke:remote": "node scripts/tools/smoke-remote.mjs",
     "lint": "eslint .",
     "rules:check": "node scripts/cli.mjs rules",
+    "architecture:report": "node scripts/tools/architecture-report.mjs",
+    "architecture:check": "node scripts/tools/architecture-report.mjs --check",
+    "architecture:baseline": "node scripts/tools/architecture-baseline.mjs",
     "release:check": "node scripts/tools/release-check.mjs",
     "version:bump": "node scripts/tools/version-bump.mjs",
     "test:engine": "node --test scripts/engine/lib/*.test.mjs scripts/engine/*.test.mjs",
@@ -21,6 +24,7 @@
     "multi-vertical:check": "node scripts/tools/multi-vertical-check.mjs",
     "baseline:guard": "node scripts/tools/baseline-guard.mjs",
     "swagger:export": "node scripts/cli.mjs swagger",
+    "deploy:digest": "node scripts/tools/render-compose-digest.mjs",
     "demo:verticals": "node scripts/tools/smoke-verticals.mjs"
   },
   "engines": {

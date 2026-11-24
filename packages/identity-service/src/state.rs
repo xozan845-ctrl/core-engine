@@ -10,12 +10,16 @@ use crate::dominio::configuracion_sitio::ConfiguracionSitio;
 use crate::dominio::empresas::Empresas;
 use crate::dominio::extensiones::Extensiones;
 use crate::dominio::negocios::Negocios;
+use crate::dominio::onboarding::Onboarding;
 use crate::dominio::packs::Packs;
 use crate::dominio::partes::Partes;
 use crate::dominio::password_reset::PasswordReset;
 use crate::dominio::personal::Personal;
+use crate::dominio::regiones::Regiones;
 use crate::dominio::registros::Registros;
+use crate::dominio::suscripciones_plataforma::SuscripcionesPlataforma;
 use crate::dominio::usuarios::Usuarios;
+use crate::dominio::verificacion::VerificacionEmail;
 use crate::metrics::Metrics;
 use std::sync::Arc;
 use std::time::Instant;
@@ -32,11 +36,15 @@ pub struct Servicios {
     pub empresas: Arc<Empresas>,
     pub extensiones: Arc<Extensiones>,
     pub negocios: Arc<Negocios>,
+    pub onboarding: Arc<Onboarding>,
     pub personal: Arc<Personal>,
     pub partes: Arc<Partes>,
+    pub regiones: Arc<Regiones>,
     pub registros: Arc<Registros>,
+    pub suscripciones: Arc<SuscripcionesPlataforma>,
     pub packs: Arc<Packs>,
     pub password_reset: Arc<PasswordReset>,
+    pub verificacion: Arc<VerificacionEmail>,
 }
 
 #[derive(Clone)]

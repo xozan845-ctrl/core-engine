@@ -105,6 +105,14 @@ pub fn build_router(state: AppState) -> Router {
             post(internal::desasignar_vendedor),
         )
         .route("/internal/tiendas/{id}", get(internal::tienda_por_id))
+        .route(
+            "/internal/stores/tenant/exportar",
+            post(internal::exportar_tenant),
+        )
+        .route(
+            "/internal/stores/tenant/purgar",
+            post(internal::purgar_tenant),
+        )
         .merge(resenas::rutas())
         .merge(favoritos::rutas())
         .fallback(no_encontrado)

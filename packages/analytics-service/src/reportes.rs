@@ -118,7 +118,7 @@ pub async fn ejecuciones(db: &Db, empresa_id: &str, id: &str) -> Result<Vec<Valu
 /// Calcula y guarda una ejecución del reporte. Devuelve la ejecución creada.
 pub async fn ejecutar(db: &Db, empresa_id: &str, id: &str) -> Result<Value, ApiError> {
     let definicion = sqlx::query(
-        "SELECT id, negocio_id, tipo, formato, frecuencia, proxima_ejecucion
+        "SELECT id, negocio_id, tipo, formato, frecuencia, proxima_ejecucion, destino
            FROM analytics.reportes_programados
           WHERE id = $1::uuid AND empresa_id = $2::uuid",
     )
@@ -135,6 +135,7 @@ pub async fn ejecutar(db: &Db, empresa_id: &str, id: &str) -> Result<Value, ApiE
     let tipo: String = definicion.try_get("tipo").map_err(error_db)?;
     let formato: String = definicion.try_get("formato").map_err(error_db)?;
     let frecuencia: String = definicion.try_get("frecuencia").map_err(error_db)?;
+    let destino: String = definicion.try_get("destino").map_err(error_db)?;
     let proxima: DateTime<Utc> = definicion.try_get("proxima_ejecucion").map_err(error_db)?;
 
     let (contenido, error) =
@@ -177,7 +178,69 @@ pub async fn ejecutar(db: &Db, empresa_id: &str, id: &str) -> Result<Value, ApiE
     .await
     .map_err(error_db)?;
     tx.commit().await.map_err(error_db)?;
-    fila.try_get("datos").map_err(error_db)
+    let ejecucion: Value = fila.try_get("datos").map_err(error_db)?;
+    let ejecucion_id = ejecucion
+        .get("id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    entregar_webhook(db, &ejecucion_id, &destino, &contenido, &formato).await?;
+    if ejecucion_id.is_empty() {
+        return Ok(ejecucion);
+    }
+    let actualizado: Option<Value> = sqlx::query_scalar(
+        "SELECT to_jsonb(e) FROM analytics.reporte_ejecuciones e WHERE e.id = $1::uuid",
+    )
+    .bind(&ejecucion_id)
+    .fetch_optional(db.pool())
+    .await
+    .map_err(error_db)?;
+    Ok(actualizado.unwrap_or(ejecucion))
+}
+
+async fn entregar_webhook(
+    db: &Db,
+    ejecucion_id: &str,
+    destino: &str,
+    contenido: &str,
+    formato: &str,
+) -> Result<(), ApiError> {
+    if !(destino.starts_with("http://") || destino.starts_with("https://")) {
+        return Ok(());
+    }
+    let cliente = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|_| ApiError::interno())?;
+    let respuesta = cliente
+        .post(destino)
+        .json(&serde_json::json!({
+            "ejecucion_id": ejecucion_id,
+            "formato": formato,
+            "contenido": contenido,
+        }))
+        .send()
+        .await;
+    let (estado, error) = match respuesta {
+        Ok(respuesta) if respuesta.status().is_success() => ("entregado", String::new()),
+        Ok(respuesta) => ("fallido", format!("http {}", respuesta.status().as_u16())),
+        Err(error) => ("fallido", error.to_string()),
+    };
+    sqlx::query(
+        "UPDATE analytics.reporte_ejecuciones
+            SET destino = $2, entrega_estado = $3, entrega_error = $4,
+                entregado_en = CASE WHEN $3 = 'entregado' THEN NOW() ELSE NULL END,
+                intentos_entrega = intentos_entrega + 1
+          WHERE id = $1::uuid",
+    )
+    .bind(ejecucion_id)
+    .bind(destino)
+    .bind(estado)
+    .bind(error)
+    .execute(db.pool())
+    .await
+    .map_err(error_db)?;
+    Ok(())
 }
 
 /// Ejecuta los reportes vencidos. Devuelve la cantidad procesada.

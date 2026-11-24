@@ -39,14 +39,22 @@ async fn sembrar_admin(usuarios: &Usuarios, config: &Config) {
         })
         .await;
     match resultado {
-        Ok(admin) => logs::info(
-            "seed",
-            campos! {
-                "msg": "Administrador inicial creado",
-                "email": admin.correo,
-                "consejo": "cambie la contrasena en produccion",
-            },
-        ),
+        Ok(admin) => {
+            if let Err(error) = usuarios.marcar_correo_verificado(&admin.id).await {
+                logs::warn(
+                    "seed",
+                    campos! { "msg": "No se pudo verificar el correo del administrador", "err": error.mensaje },
+                );
+            }
+            logs::info(
+                "seed",
+                campos! {
+                    "msg": "Administrador inicial creado",
+                    "email": admin.correo,
+                    "consejo": "cambie la contrasena en produccion",
+                },
+            )
+        }
         Err(error) => logs::error(
             "seed",
             campos! { "msg": "No se pudo crear el administrador inicial", "err": error.mensaje },
@@ -99,8 +107,17 @@ async fn sembrar_tenant_plataforma(db: &Db, config: &Config) {
     };
     let insertado = sqlx::query(
         "INSERT INTO identity.empresas
-           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por)
-         VALUES ($1::uuid, 'Plataforma logística', 'plataforma-logistica', 'flota', 'pack_flota', 1, $2::uuid)
+           (id, nombre, slug, vertical_id, pack_codigo, pack_version, creado_por,
+            region_tributaria, region_tributaria_desde)
+         VALUES ($1::uuid, 'Plataforma logística', 'plataforma-logistica', 'flota',
+                 'pack_flota', 1, $2::uuid,
+                 (SELECT pr.region_codigo
+                    FROM identity.pack_regiones pr
+                   WHERE pr.pack_codigo = 'pack_flota' AND pr.pack_version = 1
+                     AND pr.activo
+                   ORDER BY pr.predeterminada DESC, pr.region_codigo
+                   LIMIT 1),
+                 CURRENT_DATE)
          ON CONFLICT DO NOTHING",
     )
     .bind(id)

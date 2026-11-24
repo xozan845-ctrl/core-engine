@@ -69,6 +69,53 @@ impl Auditoria {
             .map(|fila| fila.try_get("datos").map_err(interno))
             .collect()
     }
+
+    /// Aplica la retención configurada a `identity.auditoria`.
+    ///
+    /// Elimina eventos más antiguos que `dias`; `0` desactiva la limpieza.
+    /// La purga de tenants ya anonimiza sus datos, pero los eventos de
+    /// auditoría deben seguir una política legal explícita.
+    pub async fn purgar_retencion(&self, dias: i64, modo: &str) -> Result<Value, ApiError> {
+        if dias <= 0 {
+            return Ok(json!({
+                "retencion_dias": dias,
+                "modo": modo,
+                "desactivado": true,
+                "afectados": 0,
+            }));
+        }
+        let mut tx = self.db.transaccion().await.map_err(interno)?;
+        let afectados = if modo == "eliminar" {
+            sqlx::query(
+                "DELETE FROM identity.auditoria
+                  WHERE creado_en < NOW() - ($1::int * INTERVAL '1 day')",
+            )
+            .bind(dias as i32)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?
+            .rows_affected()
+        } else {
+            // Conserva el rastro legal (acción, recurso, fechas) y redacta PII.
+            sqlx::query(
+                "UPDATE identity.auditoria
+                    SET actor_usuario_id = NULL, request_id = NULL, datos = '{}'::jsonb
+                  WHERE creado_en < NOW() - ($1::int * INTERVAL '1 day')",
+            )
+            .bind(dias as i32)
+            .execute(&mut *tx)
+            .await
+            .map_err(interno)?
+            .rows_affected()
+        };
+        tx.commit().await.map_err(interno)?;
+        Ok(json!({
+            "retencion_dias": dias,
+            "modo": modo,
+            "desactivado": false,
+            "afectados": afectados,
+        }))
+    }
 }
 
 /// Inserta un evento dentro de la transacción del cambio auditado.
@@ -84,6 +131,7 @@ pub async fn registrar(
     datos: Value,
 ) -> Result<(), ApiError> {
     let request_id = crate::logs::contexto_actual().map(|ctx| ctx.request_id);
+    let actor = uuid::Uuid::parse_str(actor_usuario_id).ok();
     sqlx::query(
         "INSERT INTO identity.auditoria
            (empresa_id, negocio_id, actor_usuario_id, accion, recurso, recurso_id,
@@ -92,7 +140,7 @@ pub async fn registrar(
     )
     .bind(empresa_id)
     .bind(negocio_id)
-    .bind(actor_usuario_id)
+    .bind(actor)
     .bind(accion)
     .bind(recurso)
     .bind(recurso_id)

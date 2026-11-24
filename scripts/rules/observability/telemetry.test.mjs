@@ -27,7 +27,7 @@ function prometheusServiceTargets(config) {
 }
 
 function alertBlocks(config) {
-  const starts = [...config.matchAll(/^\s{4}- alert:\s*(\S+)\s*$/gm)];
+  const starts = [...config.matchAll(/^\s*- alert:\s*(\S+)\s*$/gm)];
   return starts.map((match, index) => ({
     name: match[1],
     text: config.slice(match.index, starts[index + 1]?.index ?? config.length),

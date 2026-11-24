@@ -16,6 +16,7 @@ pub mod db;
 pub mod errors;
 pub mod favoritos;
 pub mod http;
+pub mod lifecycle;
 pub mod logs;
 pub mod metrics;
 pub mod ofertas;

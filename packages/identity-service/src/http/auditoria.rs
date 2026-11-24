@@ -28,6 +28,24 @@ fn fecha(valor: Option<&String>) -> Result<Option<String>, ApiError> {
     Ok(Some(valor.to_string()))
 }
 
+/// POST /api/v2/admin/auditoria/retencion
+pub async fn purgar_retencion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin"], &[])?;
+    let resultado = state
+        .servicios()?
+        .auditoria
+        .purgar_retencion(
+            state.config.auditoria_retencion_dias,
+            &state.config.auditoria_retencion_modo,
+        )
+        .await?;
+    ok(resultado)
+}
+
 /// GET /api/v2/empresas/:empresaId/auditoria
 pub async fn listar(
     State(state): State<AppState>,

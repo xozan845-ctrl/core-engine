@@ -67,6 +67,7 @@ async fn main() {
                     "order.completado".to_string(),
                     "payment.procesado".to_string(),
                     "devolucion.solicitada".to_string(),
+                    "devolucion.recibida".to_string(),
                 ],
             },
             ColaConfig {
@@ -145,7 +146,8 @@ async fn main() {
         ventas,
         reportes,
         capacidades,
-    );
+    )
+    .con_db(Arc::clone(&db));
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

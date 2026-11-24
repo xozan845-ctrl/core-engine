@@ -1705,3 +1705,180 @@ CREATE POLICY favoritos_admin ON stores.favoritos
 DROP POLICY IF EXISTS favoritos_app ON stores.favoritos;
 CREATE POLICY favoritos_app ON stores.favoritos
   FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders.idempotencia_http (ADR-0033) ────────────────────────────────────
+ALTER TABLE orders.idempotencia_http ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS idempotencia_http_app ON orders.idempotencia_http;
+CREATE POLICY idempotencia_http_app ON orders.idempotencia_http
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.solicitudes_eliminacion_tenant (ADR-0035) ─────────────────────
+ALTER TABLE identity.solicitudes_eliminacion_tenant ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS solicitudes_eliminacion_app
+  ON identity.solicitudes_eliminacion_tenant;
+CREATE POLICY solicitudes_eliminacion_app
+  ON identity.solicitudes_eliminacion_tenant
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── orders proveedores/configuración de pago (ADR-0037) ───────────────────
+ALTER TABLE orders.proveedores_pago ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS proveedores_pago_app ON orders.proveedores_pago;
+CREATE POLICY proveedores_pago_app ON orders.proveedores_pago
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE orders.configuracion_pagos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS configuracion_pagos_app ON orders.configuracion_pagos;
+CREATE POLICY configuracion_pagos_app ON orders.configuracion_pagos
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── notifications.plantillas (ADR-0043) ───────────────────────────────────
+ALTER TABLE notifications.plantillas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notificaciones_plantillas_app ON notifications.plantillas;
+CREATE POLICY notificaciones_plantillas_app ON notifications.plantillas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.exportacion_jobs (ADR-0042) ──────────────────────────────────
+ALTER TABLE identity.exportacion_jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS exportacion_jobs_app ON identity.exportacion_jobs;
+CREATE POLICY exportacion_jobs_app ON identity.exportacion_jobs
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── finance.comprobante_pdf (ADR-0040) ────────────────────────────────────
+ALTER TABLE finance.comprobante_pdf ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comprobante_pdf_app ON finance.comprobante_pdf;
+CREATE POLICY comprobante_pdf_app ON finance.comprobante_pdf
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity auth hardening (ADR-0036) ────────────────────────────────────
+ALTER TABLE identity.correo_verificacion_tokens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS correo_verificacion_app ON identity.correo_verificacion_tokens;
+CREATE POLICY correo_verificacion_app ON identity.correo_verificacion_tokens
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE identity.mfa_codigos_recuperacion ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mfa_codigos_app ON identity.mfa_codigos_recuperacion;
+CREATE POLICY mfa_codigos_app ON identity.mfa_codigos_recuperacion
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.planes_plataforma y suscripciones (ADR-0046) ─────────────────
+ALTER TABLE identity.planes_plataforma ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS planes_plataforma_app ON identity.planes_plataforma;
+CREATE POLICY planes_plataforma_app ON identity.planes_plataforma
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE identity.suscripciones_plataforma ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS suscripciones_plataforma_app ON identity.suscripciones_plataforma;
+CREATE POLICY suscripciones_plataforma_app ON identity.suscripciones_plataforma
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── notifications.webhooks y entregas (ADR-0045) ──────────────────────────
+ALTER TABLE notifications.webhooks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_webhooks_app ON notifications.webhooks;
+CREATE POLICY notifications_webhooks_app ON notifications.webhooks
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+ALTER TABLE notifications.webhook_entregas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS notifications_webhook_entregas_app ON notifications.webhook_entregas;
+CREATE POLICY notifications_webhook_entregas_app ON notifications.webhook_entregas
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity.provisioning_jobs (ADR-0047) ─────────────────────────────────
+ALTER TABLE identity.provisioning_jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS provisioning_jobs_app ON identity.provisioning_jobs;
+CREATE POLICY provisioning_jobs_app ON identity.provisioning_jobs
+  FOR ALL TO core_engine_app USING (true) WITH CHECK (true);
+
+-- ── identity regiones tributarias (ADR-0049) ──────────────────────────────
+ALTER TABLE identity.pack_regiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pack_regiones_lectura ON identity.pack_regiones;
+DROP POLICY IF EXISTS pack_regiones_admin ON identity.pack_regiones;
+CREATE POLICY pack_regiones_lectura ON identity.pack_regiones
+  FOR SELECT TO anon, authenticated
+  USING (activo AND EXISTS (
+    SELECT 1 FROM identity.packs p
+     WHERE p.codigo = pack_codigo
+       AND p.version = pack_version
+       AND p.activo
+  ));
+CREATE POLICY pack_regiones_admin ON identity.pack_regiones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+ALTER TABLE identity.empresa_region_historial ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS empresa_region_historial_admin ON identity.empresa_region_historial;
+DROP POLICY IF EXISTS empresa_region_historial_tenant ON identity.empresa_region_historial;
+DROP POLICY IF EXISTS empresa_region_historial_tenant_insert ON identity.empresa_region_historial;
+CREATE POLICY empresa_region_historial_admin ON identity.empresa_region_historial
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY empresa_region_historial_tenant ON identity.empresa_region_historial
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+CREATE POLICY empresa_region_historial_tenant_insert ON identity.empresa_region_historial
+  FOR INSERT TO authenticated
+  WITH CHECK (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+-- ── finance declaraciones y tasas por región (ADR-0049) ───────────────────
+ALTER TABLE finance.declaraciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS declaraciones_admin ON finance.declaraciones;
+DROP POLICY IF EXISTS declaraciones_tenant ON finance.declaraciones;
+CREATE POLICY declaraciones_admin ON finance.declaraciones
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+CREATE POLICY declaraciones_tenant ON finance.declaraciones
+  FOR SELECT TO authenticated
+  USING (empresa_id::text = (auth.jwt() ->> 'tenant_id'));
+
+ALTER TABLE finance.tasas_impuesto ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tasas_impuesto_lectura ON finance.tasas_impuesto;
+DROP POLICY IF EXISTS tasas_impuesto_admin ON finance.tasas_impuesto;
+CREATE POLICY tasas_impuesto_lectura ON finance.tasas_impuesto
+  FOR SELECT TO anon, authenticated USING (activa);
+CREATE POLICY tasas_impuesto_admin ON finance.tasas_impuesto
+  FOR ALL TO authenticated
+  USING (auth.rol() IN ('super_admin', 'admin'))
+  WITH CHECK (auth.rol() IN ('super_admin', 'admin'));
+
+DROP POLICY IF EXISTS series_comprobantes_empresa_restrictiva ON finance.series_comprobantes;
+CREATE POLICY series_comprobantes_empresa_restrictiva ON finance.series_comprobantes
+  AS RESTRICTIVE FOR ALL TO authenticated
+  USING (
+    empresa_id IS NULL
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+    OR auth.rol() IN ('super_admin', 'admin')
+  )
+  WITH CHECK (
+    empresa_id IS NULL
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+    OR auth.rol() IN ('super_admin', 'admin')
+  );
+
+-- ── finance.ventas_lineas y devoluciones_reembolsadas (ADR-0050) ──────────
+ALTER TABLE finance.ventas_lineas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ventas_lineas_tenant ON finance.ventas_lineas;
+CREATE POLICY ventas_lineas_tenant ON finance.ventas_lineas
+  FOR ALL TO authenticated
+  USING (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  )
+  WITH CHECK (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  );
+
+ALTER TABLE finance.devoluciones_reembolsadas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS devoluciones_reembolsadas_tenant ON finance.devoluciones_reembolsadas;
+CREATE POLICY devoluciones_reembolsadas_tenant ON finance.devoluciones_reembolsadas
+  FOR ALL TO authenticated
+  USING (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  )
+  WITH CHECK (
+    auth.rol() IN ('super_admin', 'admin')
+    OR empresa_id::text = (auth.jwt() ->> 'tenant_id')
+  );

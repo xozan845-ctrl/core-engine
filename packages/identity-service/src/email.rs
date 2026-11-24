@@ -65,10 +65,13 @@ impl EmailSmtp {
     }
 
     fn transporte(&self) -> SmtpTransport {
+        // 465 = TLS implícito; cualquier otro puerto (587) exige STARTTLS.
+        // Nunca `builder_dangerous`: las credenciales SMTP y los tokens de
+        // reset/verificación no viajan en claro.
         let constructor = if self.port == 465 {
             SmtpTransport::relay(&self.host).expect("host SMTP valido")
         } else {
-            SmtpTransport::builder_dangerous(&self.host)
+            SmtpTransport::starttls_relay(&self.host).expect("host SMTP valido")
         };
         let constructor = constructor.port(self.port);
         match (&self.user, &self.password) {
