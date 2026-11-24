@@ -76,10 +76,6 @@
       "lines": 1183,
       "publicFns": 18
     },
-    "packages/orders-service/src/pagos.rs": {
-      "lines": 1719,
-      "publicFns": 25
-    },
     "packages/pricing-service/src/precios/mod.rs": {
       "lines": 1267,
       "publicFns": 15
