@@ -75,10 +75,14 @@ CREATE TABLE IF NOT EXISTS commissions.compensaciones_devoluciones (
   negocio_id             uuid,
   monto_cents            integer NOT NULL,
   monto_empresario_cents integer,
+  monto_comision_cents   integer NOT NULL DEFAULT 0,
+  cantidad               integer NOT NULL DEFAULT 0,
   motivo                 text NOT NULL,
   creado_en              timestamptz NOT NULL DEFAULT NOW()
 );
 ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS negocio_id uuid;
+ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS monto_comision_cents integer NOT NULL DEFAULT 0;
+ALTER TABLE commissions.compensaciones_devoluciones ADD COLUMN IF NOT EXISTS cantidad integer NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS commissions.eventos_procesados (
   event_id     uuid PRIMARY KEY,

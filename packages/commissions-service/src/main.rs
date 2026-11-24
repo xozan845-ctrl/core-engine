@@ -67,6 +67,7 @@ async fn main() {
                     "order.completado".to_string(),
                     "payment.procesado".to_string(),
                     "devolucion.solicitada".to_string(),
+                    "devolucion.recibida".to_string(),
                 ],
             },
             ColaConfig {

@@ -124,11 +124,11 @@ impl PedidosConsumer {
         let data = datos(evento)?;
         let order_id = campo(data, "order_id")?.to_string();
         let orden = self.ordenes.obtener(&order_id).await.ok_or_else(|| {
-            ApiError::interno_mensaje("Orden no disponible para acreditar comision.")
+            ApiError::interno_mensaje("Orden no disponible para acreditar comisión.")
         })?;
         if orden.items.is_empty() {
             return Err(ApiError::interno_mensaje(
-                "La orden no tiene lineas asignadas.",
+                "La orden no tiene líneas asignadas.",
             ));
         }
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
@@ -137,24 +137,49 @@ impl PedidosConsumer {
             return Ok(());
         }
         let mut acreditadas = 0usize;
+        let mut ventas_directas = 0usize;
         for item in &orden.items {
-            if !item.comision {
-                continue;
-            }
-            let (Some(vendedor_id), Some(empresa_id), Some(tienda_id), Some(participacion)) = (
-                item.vendedor_id.clone(),
-                item.empresa_id.clone(),
-                item.tienda_id.clone(),
-                item.participacion_porcentaje,
-            ) else {
-                // Venta directa sin vendedor: no hay comisión que acreditar.
-                continue;
-            };
             let venta_cents = item
                 .precio_unitario_cents
                 .checked_mul(item.cantidad)
                 .and_then(|bruto| bruto.checked_sub(item.descuento_cents))
-                .ok_or_else(|| ApiError::interno_mensaje("La linea desborda el monto."))?;
+                .ok_or_else(|| ApiError::interno_mensaje("La línea desborda el monto."))?
+                .max(0);
+            let Some(empresa_id) = item.empresa_id.clone() else {
+                return Err(ApiError::interno_mensaje(format!(
+                    "La línea {} no tiene empresa para contabilizar la venta.",
+                    item.oferta_id
+                )));
+            };
+            if !item.comision || item.vendedor_id.is_none() {
+                self.outbox
+                    .insertar_en_transaccion(
+                        &mut tx,
+                        "venta.directa.acreditada",
+                        serde_json::json!({
+                            "order_id": order_id,
+                            "linea_clave": item.oferta_id,
+                            "empresa_id": empresa_id,
+                            "negocio_id": item.negocio_id,
+                            "base_cents": venta_cents,
+                            "impuesto_cents": item.impuesto_cents,
+                            "cantidad": item.cantidad,
+                        }),
+                    )
+                    .await?;
+                ventas_directas += 1;
+                continue;
+            }
+            let (Some(vendedor_id), Some(tienda_id), Some(participacion)) = (
+                item.vendedor_id.clone(),
+                item.tienda_id.clone(),
+                item.participacion_porcentaje,
+            ) else {
+                return Err(ApiError::interno_mensaje(format!(
+                    "La línea comisionable {} no tiene vendedor/tienda/participación.",
+                    item.oferta_id
+                )));
+            };
             let comision = self
                 .comisiones
                 .acreditar_linea(
@@ -178,6 +203,9 @@ impl PedidosConsumer {
             let payload = serde_json::json!({
                 "order_id": order_id,
                 "linea_clave": item.oferta_id,
+                "base_cents": venta_cents,
+                "impuesto_cents": item.impuesto_cents,
+                "cantidad": item.cantidad,
                 "monto_cents": comision.comision_cents,
                 "monto_vendedor_cents": comision.monto_vendedor_cents,
                 "monto_empresario_cents": comision.monto_empresario_cents.unwrap_or(0),
@@ -191,14 +219,6 @@ impl PedidosConsumer {
                 .insertar_en_transaccion(&mut tx, COMISION_ACREDITADA, payload)
                 .await?;
             acreditadas += 1;
-            crate::logs::info(
-                "commissions.pedidos",
-                campos! {
-                    "msg": "Comision acreditada",
-                    "order_id": order_id,
-                    "comision_cents": comision.comision_cents,
-                },
-            );
         }
         self.marcar_procesado(&mut tx, event_id, EVENTO_ORDER_COMPLETADO)
             .await?;
@@ -206,9 +226,10 @@ impl PedidosConsumer {
         crate::logs::info(
             "commissions.pedidos",
             campos! {
-                "msg": "Comisiones procesadas",
+                "msg": "Ventas del pedido procesadas",
                 "order_id": order_id,
-                "lineas": acreditadas,
+                "lineas_comisionadas": acreditadas,
+                "lineas_directas": ventas_directas,
             },
         );
         Ok(())

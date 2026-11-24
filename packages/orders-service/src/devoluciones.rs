@@ -385,10 +385,14 @@ impl Devoluciones {
                 "order_id": devolucion.order_id,
                 "devolucion_id": devolucion.id,
                 "actor_id": actor.user_id,
+                "empresa_id": devolucion.empresa_id,
                 "items": devolucion.lineas.iter().map(|linea| json!({
+                    "empresa_id": devolucion.empresa_id,
                     "linea_clave": linea.oferta_id,
                     "sku": linea.sku,
                     "cantidad": linea.cantidad,
+                    "base_cents": linea.base_cents,
+                    "impuesto_cents": linea.impuesto_cents,
                     "monto_cents": linea.total_cents,
                 })).collect::<Vec<_>>(),
             }
@@ -429,7 +433,8 @@ impl Devoluciones {
             return Ok(devolucion);
         }
         if devolucion.total_cents <= 0 {
-            self.actualizar_reembolso(id, "no_aplica", 0, "").await?;
+            self.actualizar_reembolso(id, "no_aplica", 0, "", None)
+                .await?;
             return self.obtener(id).await?.ok_or_else(ApiError::interno);
         }
         let pagos = self.pagos.listar_por_orden(&devolucion.order_id).await?;
@@ -474,7 +479,35 @@ impl Devoluciones {
         if estado == "no_aplica" {
             error.clear();
         }
-        self.actualizar_reembolso(id, estado, reembolsado, &error)
+        let confirmado = reembolsado - devolucion.reembolsado_cents;
+        let evento = (confirmado > 0).then(|| {
+            json!({
+                "event_id": Uuid::new_v4().to_string(),
+                "tipo": "devolucion.reembolsada",
+                "ocurrido_en": iso_ms(Utc::now()),
+                "data": {
+                    "order_id": devolucion.order_id,
+                    "devolucion_id": devolucion.id,
+                    "empresa_id": devolucion.empresa_id,
+                    "negocio_id": devolucion.negocio_id,
+                    "actor_id": actor.user_id,
+                    "moneda": devolucion.moneda,
+                    "monto_cents": confirmado,
+                    "reembolsado_cents": reembolsado,
+                    "total_cents": devolucion.total_cents,
+                    "estado": estado,
+                    "items": devolucion.lineas.iter().map(|linea| json!({
+                        "linea_clave": linea.oferta_id,
+                        "sku": linea.sku,
+                        "cantidad": linea.cantidad,
+                        "base_cents": linea.base_cents,
+                        "impuesto_cents": linea.impuesto_cents,
+                        "monto_cents": linea.total_cents,
+                    })).collect::<Vec<_>>(),
+                }
+            })
+        });
+        self.actualizar_reembolso(id, estado, reembolsado, &error, evento)
             .await?;
         self.obtener(id).await?.ok_or_else(ApiError::interno)
     }
@@ -541,7 +574,13 @@ impl Devoluciones {
         estado: &str,
         reembolsado_cents: i64,
         error: &str,
+        evento: Option<Value>,
     ) -> Result<(), ApiError> {
+        let mut tx = self
+            .db
+            .transaccion()
+            .await
+            .map_err(crate::event_store::error_db)?;
         sqlx::query(
             "UPDATE orders.devoluciones
                 SET reembolso_estado = $2,
@@ -554,9 +593,24 @@ impl Devoluciones {
         .bind(estado)
         .bind(reembolsado_cents as i32)
         .bind(error)
-        .execute(self.db.pool())
+        .execute(&mut *tx)
         .await
         .map_err(crate::event_store::error_db)?;
+        if let Some(evento) = evento {
+            let sql = format!(
+                "INSERT INTO {} (event_id, tipo, payload, estado, creado_en)
+                 VALUES ($1::uuid, $2, $3::jsonb, 'pendiente', NOW())",
+                self.outbox.tabla()
+            );
+            sqlx::query(&sql)
+                .bind(evento["event_id"].as_str().unwrap_or_default())
+                .bind(evento["tipo"].as_str().unwrap_or_default())
+                .bind(evento.to_string())
+                .execute(&mut *tx)
+                .await
+                .map_err(crate::event_store::error_db)?;
+        }
+        tx.commit().await.map_err(crate::event_store::error_db)?;
         Ok(())
     }
 

@@ -10,7 +10,8 @@ use serde::Deserialize;
 pub struct OrdenExterna {
     pub id: String,
     pub comprador_id: String,
-    pub vendedor_id: String,
+    #[serde(default)]
+    pub vendedor_id: Option<String>,
     pub estado: String,
     pub total_cents: i64,
     pub moneda: String,
@@ -24,6 +25,12 @@ pub struct ItemOrdenExterno {
     pub producto_nombre: Option<String>,
     #[serde(default)]
     pub cantidad: Option<i64>,
+    #[serde(default)]
+    pub empresa_id: Option<String>,
+    #[serde(default)]
+    pub vendedor_id: Option<String>,
+    #[serde(default)]
+    pub total_linea_cents: i64,
 }
 
 /// Usuario mínimo que necesita una notificación (API interna de identity).
