@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/inventory-service/src/inventario/mod.rs": {
-      "lines": 861,
-      "publicFns": 11
-    },
     "packages/inventory-service/src/reservas.rs": {
       "lines": 863,
       "publicFns": 9
