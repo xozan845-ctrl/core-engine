@@ -150,9 +150,12 @@ export default defineSuite({
     });
 
     test('R-AR-5: el pack builder mantiene vertical y pack sincronizados', () => {
-      const packs = readText(
-        join(repoRoot, 'packages/identity-service/src/dominio/packs.rs'),
-      );
+      const packs = walkFiles(
+        join(repoRoot, 'packages/identity-service/src/dominio/packs'),
+        (name) => name.endsWith('.rs'),
+      )
+        .map((file) => readText(file))
+        .join('\n');
       assert.match(
         packs,
         /INSERT INTO identity\.vertical_capacidades/,
