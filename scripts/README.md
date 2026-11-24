@@ -187,11 +187,11 @@ Cobertura ejecutable: 52/241 IDs de regla tienen check.
 ```
 
 La suite `microservices-tamano-modulos` vigila **R-MS-7**: ningún archivo Rust
-de `packages/*/src` puede superar **800 líneas de producción**, **20 funciones
-públicas** (dominio con SQL; `http/` queda fuera) ni **8 tablas SQL** distintas.
-Los presupuestos viven en `config/module-size-baseline.json` junto a la deuda
-existente; `baseline:guard` impide añadir entradas, hacer crecer las registradas
-o relajar los límites, y una división debe retirar la entrada en el mismo PR.
+de `packages/*/src` puede superar **800 líneas de producción** ni **20 funciones
+públicas** (dominio con SQL; `http/` queda fuera). Los presupuestos viven en
+`config/module-size-baseline.json` junto a la deuda existente; `baseline:guard`
+impide añadir entradas, hacer crecer las registradas o relajar los límites, y
+una división debe retirar la entrada en el mismo PR.
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
 > en los scripts sin existir como reglas. Se resolvió definiendo **R-CI-7**
