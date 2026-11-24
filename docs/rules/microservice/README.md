@@ -39,5 +39,5 @@ globales (hoy: la excepción OLAP de Inteligencia de Mercado).
   Dockerfile y su README.
 - `R-MS-7` tiene check propio en la suite `microservices-tamano-modulos`: falla
   si un archivo de `packages/*/src` supera los presupuestos de responsabilidad
-  (800 líneas de producción, 20 funciones públicas en dominio con SQL u 8 tablas
-  SQL) y `baseline:guard` impide añadir deuda nueva o relajar los presupuestos.
+  (800 líneas de producción o 20 funciones públicas en dominio con SQL) y
+  `baseline:guard` impide añadir deuda nueva o relajar los presupuestos.
