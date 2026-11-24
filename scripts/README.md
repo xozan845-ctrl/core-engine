@@ -47,6 +47,7 @@ scripts/
 │   ├── spec-baseline.json    #   services/consumers sin spec (R-COV-2)
 │   ├── db-migrations.json    #   SHA-256 de migraciones init (R-DB-6)
 │   ├── rls-baseline.json     #   tablas sin RLS/policy (deuda R-SB-2)
+│   ├── module-size-baseline.json # presupuestos y deuda R-MS-7
 │   ├── stryker.base.mjs      #   configuración base de mutación (R-MT-1/2)
 │   └── manifest.mjs          #   suites exigidas (id + archivo)
 │
@@ -59,7 +60,8 @@ scripts/
 │   ├── delivery/compose.test.mjs   # R-CD-1/3/7/8
 │   ├── microservices/
 │   │   ├── structure.test.mjs      # R-CD-3/4/14
-│   │   └── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
+│   │   ├── ci-contract.test.mjs    # R-MS-1, R-QA-1, R-COV-2/4, R-CI-5
+│   │   └── tamano-modulos.test.mjs # R-MS-7 (módulos >1.500 líneas)
 │   ├── contract/
 │   │   └── openapi.test.mjs        # R-DO-8, R-DS-5: superficies y contrato OpenAPI
 │   └── observability/
@@ -181,8 +183,15 @@ Al terminar, el runner imprime cuántos IDs de regla tienen check ejecutable y
 `docs/rules`:
 
 ```
-Cobertura ejecutable: 41/238 IDs de regla tienen check.
+Cobertura ejecutable: 52/241 IDs de regla tienen check.
 ```
+
+La suite `microservices-tamano-modulos` vigila **R-MS-7**: ningún archivo Rust
+de `packages/*/src` puede superar **800 líneas de producción**, **20 funciones
+públicas** (dominio con SQL; `http/` queda fuera) ni **8 tablas SQL** distintas.
+Los presupuestos viven en `config/module-size-baseline.json` junto a la deuda
+existente; `baseline:guard` impide añadir entradas, hacer crecer las registradas
+o relajar los límites, y una división debe retirar la entrada en el mismo PR.
 
 > El reporte nació exponiendo un hallazgo real: `R-CI-9` y `R-CD-22` se citaban
 > en los scripts sin existir como reglas. Se resolvió definiendo **R-CI-7**
