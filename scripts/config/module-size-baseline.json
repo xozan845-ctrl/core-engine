@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/logistics-service/src/envios/mod.rs": {
-      "lines": 975,
-      "publicFns": 18
-    },
     "packages/pricing-service/src/precios/mod.rs": {
       "lines": 1267,
       "publicFns": 15
