@@ -12,6 +12,7 @@ las demás (`R-AR-2` es la regla más citada del repo).
 |---|---|---|
 | `01-arquitectura.md` | CQRS/Event Sourcing por dominio, coreografía vs HTTP síncrono, outbox, DLQ, autonomía, ACL, caché con TTL | `R-AR` (1–7) |
 | `02-naming.md` | Archivos y carpetas Rust, módulos por agregado, tipos/DTOs, `snake_case`, `snake_case` en BD, idioma, Conventional Commits | `R-NC` (1–8) |
+| `03-conformidad.md` | Fitness functions, baseline de deuda, fuente única de verdad, documentación derivada y ADR obligatorio | `R-AF` (1–5) |
 
 > Los documentos derivados de este área (**AUDIT, CHECKLIST, historiales**) no
 > viven aquí: están en [`../_meta/`](../_meta/README.md). Un área de reglas solo
@@ -23,6 +24,7 @@ las demás (`R-AR-2` es la regla más citada del repo).
 |---|---|---|---|
 | `R-AR-*` | 1–7 | `01-arquitectura.md` | Patrones de comunicación, resiliencia y caché |
 | `R-NC-*` | 1–8 | `02-naming.md` | Nomenclatura de código, BD y commits |
+| `R-AF-*` | 1–5 | `03-conformidad.md` | Fitness functions, baseline y gobernanza ejecutable |
 
 ## Reglas de otras áreas que exige esta (cross-refs)
 

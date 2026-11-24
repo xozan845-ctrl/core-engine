@@ -19,7 +19,7 @@ export async function suite11Fuzzing(client, cfg, adminToken, vendedorToken) {
     const malJson = await client.post('/api/v2/auth/login', '{correo: "test"}', { 'Content-Type': 'application/json' });
     resultados.push({ test: 'JSON malformado → 400', status: malJson.status, pass: acepta(malJson.status, [400, 429]) });
 
-    const sqli = await client.post('/api/v2/auth/login', { correo: "admin' OR '1'='1", contrasena: 'AdminCore Engine2026!' });
+    const sqli = await client.post('/api/v2/auth/login', { correo: "admin' OR '1'='1", contrasena: 'Fuego-Laguna-2026!' });
     resultados.push({ test: 'SQLi en correo → 400/401', status: sqli.status, pass: acepta(sqli.status, [400, 401, 429]) });
 
     const proto = await client.post('/api/v2/auth/login', {
@@ -38,13 +38,13 @@ export async function suite11Fuzzing(client, cfg, adminToken, vendedorToken) {
     const xss = await client.post('/api/v2/auth/registro', {
       nombre: '<script>alert(1)</script>',
       correo: `xss.${suf}@test.com`,
-      contrasena: 'Contrasena123!',
+      contrasena: 'Fuego-Laguna-2026!',
       rol: 'comprador',
     });
     resultados.push({ test: 'XSS en nombre → 201/400', status: xss.status, pass: acepta(xss.status, [201, 400]) });
 
     const vacio = await client.post('/api/v2/auth/registro', {
-      nombre: '', correo: `vacio.${suf}@test.com`, contrasena: 'Contrasena123!', rol: 'comprador',
+      nombre: '', correo: `vacio.${suf}@test.com`, contrasena: 'Fuego-Laguna-2026!', rol: 'comprador',
     });
     resultados.push({ test: 'Nombre vacío registro → 400', status: vacio.status, pass: vacio.status === 400 });
 

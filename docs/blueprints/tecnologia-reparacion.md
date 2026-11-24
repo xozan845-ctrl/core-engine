@@ -60,9 +60,14 @@ Content-Type: application/json
   "slug": "techfix",
   "vertical_id": "tecnologia_reparacion",
   "pack_codigo": "pack_tecnologia_reparacion",
-  "pack_version": 1
+  "pack_version": 1,
+  "region_tributaria": "NI"
 }
 ```
+
+La región debe estar declarada por el pack
+(`GET /api/v2/regiones-tributarias?pack_codigo=...&pack_version=...`). Si se
+omite, se usa la predeterminada (ADR-0049).
 
 ## 4. Logística: propia, global o híbrida
 

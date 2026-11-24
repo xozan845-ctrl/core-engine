@@ -54,6 +54,13 @@ pub trait AlmacenObjetos: Send + Sync {
         objeto: &str,
         expira_segundos: u64,
     ) -> Result<String, AlmacenError>;
+    async fn subir(
+        &self,
+        bucket: &str,
+        objeto: &str,
+        bytes: Vec<u8>,
+        content_type: &str,
+    ) -> Result<(), AlmacenError>;
     async fn estadisticas(
         &self,
         bucket: &str,
@@ -200,6 +207,25 @@ impl AlmacenObjetos for AlmacenS3 {
         Ok(request.uri().to_string())
     }
 
+    async fn subir(
+        &self,
+        bucket: &str,
+        objeto: &str,
+        bytes: Vec<u8>,
+        content_type: &str,
+    ) -> Result<(), AlmacenError> {
+        self.cliente
+            .put_object()
+            .bucket(bucket)
+            .key(objeto)
+            .content_type(content_type)
+            .body(ByteStream::from(bytes))
+            .send()
+            .await
+            .map_err(Self::error_operacion)?;
+        Ok(())
+    }
+
     async fn estadisticas(
         &self,
         bucket: &str,
@@ -285,6 +311,18 @@ pub struct AlmacenNoDisponible;
 
 #[async_trait]
 impl AlmacenObjetos for AlmacenNoDisponible {
+    async fn subir(
+        &self,
+        _bucket: &str,
+        _objeto: &str,
+        _bytes: Vec<u8>,
+        _content_type: &str,
+    ) -> Result<(), AlmacenError> {
+        Err(AlmacenError::Operacion(
+            "almacenamiento no configurado".to_string(),
+        ))
+    }
+
     async fn asegurar_bucket(&self, _: &str) -> Result<(), AlmacenError> {
         Err(AlmacenError::Operacion("almacen no configurado".into()))
     }

@@ -33,6 +33,7 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-COV-1** — La cobertura del crate no baja del umbral vigente en `.github/workflows/ci.yml`.
 - [ ] **R-COV-2** — Todo caso de uso, handler o consumidor tocado tiene pruebas en el mismo PR (`mod tests` o `tests/<dominio>_*.rs`).
 - [ ] **R-COV-5** — N/A en este repo (sin frontend; ID **reservado**, nunca se reutiliza).
+- [ ] **R-MS-7** — Ningún archivo de `src/` nuevo supera 800 líneas de producción o 20 funciones públicas (dominio con SQL); si el PR toca uno del baseline, lo divide y retira su entrada de `scripts/config/module-size-baseline.json`.
 - [ ] **G-7** — `npm run lint` + `cargo fmt --check` + `cargo clippy --locked --all-targets -- -D warnings` en verde.
 
 ## 3. Unit ([`01-reglas-unit.md`](../test/01-reglas-unit.md))
@@ -137,3 +138,17 @@ Matriz completa en [`06-estandares-cobertura.md`](../test/06-estandares-cobertur
 - [ ] **R-GE-7** — Si el PR de promoción reporta **conflicto por historial duplicado**: se cierra con la razón y se recrea desde la rama destino con el delta (cherry-pick), verificando **árbol idéntico** (`git diff --quiet <origen>` = vacío).
 
 > Estado actual de los gates: ver [`AUDIT.md`](./AUDIT.md) (snapshot).
+
+## 12. Contrato de servicio (R-MS-9..16 · R-AF-1..5)
+
+- [ ] **R-MS-9** — El PR actualiza `packages/<servicio>/service.json` si cambia puerto, esquema, perfil, capacidades, eventos, dependencias, SLO u owner.
+- [ ] **R-MS-10** — El servicio cumple los módulos mínimos de su perfil (`edge/core/transactional/consumer/olap`).
+- [ ] **R-MS-11** — `/health` (liveness) y `/ready` (readiness, 503 si falta BD/Rabbit) existen y tienen semántica correcta.
+- [ ] **R-MS-12** — `PORT`, `EXPOSE` y `spec.port` coinciden; escucha en `0.0.0.0`; sin estado local.
+- [ ] **R-MS-13** — `owner`, `lifecycle` y `slo` son reales y están alineados con `docs/slo.md`.
+- [ ] **R-MS-14** — Eventos declarados, con un solo dueño, presentes en `src/`, consumidores idempotentes y outbox si publica.
+- [ ] **R-MS-15** — `/metrics` con RED, logs JSON y `x-request-id` en HTTP y eventos.
+- [ ] **R-MS-16** — Cero SQL contra esquemas ajenos; si hay deuda, está en el baseline y no crece.
+- [ ] **R-AF-2** — `npm run baseline:guard` verde; ninguna entrada nueva de deuda.
+- [ ] **R-AF-3** — No se editaron listas de servicios/CI a mano; la matriz se deriva del manifiesto.
+- [ ] **R-AF-4** — `npm run architecture:check` verde; catálogo/matriz/deuda regenerados.

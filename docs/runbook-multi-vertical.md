@@ -50,8 +50,10 @@ Crear un tenant nuevo por pack y validar, en este orden:
 Para cada tenant:
 
 - consultar `GET /api/v2/packs?vertical_id=<vertical>`;
-- crear la empresa con `pack_codigo` explícito;
-- comprobar `identity.empresas.pack_codigo/pack_version`;
+- consultar `GET /api/v2/regiones-tributarias?pack_codigo=<pack>&pack_version=<v>`
+  y elegir una región admitida (piloto: `NI`);
+- crear la empresa con `pack_codigo` y `region_tributaria` explícitos;
+- comprobar `identity.empresas.pack_codigo/pack_version/region_tributaria`;
 - comprobar que las capacidades activas coinciden con el pack;
 - desactivar una capacidad y verificar `CAPACIDAD_NO_ACTIVA`;
 - verificar que un tenant distinto no puede leer ni modificar sus datos.

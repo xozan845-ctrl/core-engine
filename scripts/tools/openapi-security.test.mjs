@@ -23,6 +23,8 @@ const RUTAS_PUBLICAS = new Set([
   'POST /api/v2/auth/registro',
   'POST /api/v2/auth/restablecer-contrasena',
   'POST /api/v2/auth/restablecer-contrasena/confirmar',
+  'POST /api/v2/auth/reenviar-verificacion',
+  'POST /api/v2/auth/verificar-correo',
 ]);
 
 function leerDocumento(nombre) {

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://core-engine.local/schemas/service.json",
+  "title": "Manifiesto de servicio de Core Engine",
+  "description": "Contrato declarativo que todo microservicio de packages/<servicio>/service.json debe cumplir (R-MS-9). La suite services-contract valida este esquema y lo contrasta con el repositorio.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec", "quality"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "apiVersion": { "const": "core-engine.io/v1" },
+    "kind": { "const": "Service" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "boundedContext", "description", "owner", "lifecycle", "tags"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "boundedContext": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "description": { "type": "string", "minLength": 10 },
+        "owner": { "type": "string", "minLength": 1 },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["experimental", "production", "deprecated"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "runtime",
+        "port",
+        "schema",
+        "outboxTable",
+        "capabilities",
+        "publicApi",
+        "internalApi",
+        "environments",
+        "dependencies",
+        "events",
+        "slo",
+        "docs"
+      ],
+      "properties": {
+        "profile": {
+          "type": "string",
+          "enum": ["edge", "core", "transactional", "consumer", "olap"]
+        },
+        "runtime": { "const": "rust" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "schema": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "outboxTable": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z][a-z0-9_]*\\.outbox$"
+        },
+        "composeName": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "uniqueItems": true
+        },
+        "publicApi": { "type": "boolean" },
+        "internalApi": { "type": "boolean" },
+        "environments": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["dev", "stage", "prod"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sync"],
+          "properties": {
+            "sync": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "uniqueItems": true
+            }
+          }
+        },
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["publishes", "consumes"],
+          "properties": {
+            "publishes": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
+              "uniqueItems": true
+            },
+            "consumes": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.]*$" },
+              "uniqueItems": true
+            }
+          }
+        },
+        "slo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "latencyP95Ms"],
+          "properties": {
+            "availability": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+            "latencyP95Ms": { "type": "integer", "exclusiveMinimum": 0 }
+          }
+        },
+        "docs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["readme", "openapi"],
+          "properties": {
+            "readme": { "const": "README.md" },
+            "openapi": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage"],
+      "properties": {
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lines", "functions"],
+          "properties": {
+            "lines": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "functions": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    }
+  }
+}

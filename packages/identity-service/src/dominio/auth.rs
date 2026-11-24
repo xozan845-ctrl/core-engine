@@ -11,7 +11,9 @@ use crate::config::Config;
 use crate::dominio::sesiones::Sesiones;
 use crate::dominio::usuarios::{CrearUsuario, Usuario, Usuarios};
 use crate::errors::ApiError;
+use axum::http::StatusCode;
 use chrono::{Duration, Utc};
+use serde_json::Value;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -21,6 +23,7 @@ pub struct Auth {
     secreto: String,
     access_ttl: u64,
     refresh_ttl: u64,
+    exigir_correo_verificado: bool,
 }
 
 impl Auth {
@@ -31,26 +34,69 @@ impl Auth {
             secreto: config.jwt_secret.clone(),
             access_ttl: config.access_ttl_segundos(),
             refresh_ttl: config.refresh_ttl_segundos(),
+            exigir_correo_verificado: config.exigir_correo_verificado,
         }
     }
 
     pub async fn registrar(&self, datos: CrearUsuario) -> Result<Sesion, ApiError> {
+        let usuario = self.registrar_usuario(datos).await?;
+        self.sesion_de(&usuario, None, None).await
+    }
+
+    /// Registra sin emitir sesión. Se usa cuando la verificación de correo es
+    /// obligatoria: el usuario debe verificar antes de recibir tokens.
+    pub async fn registrar_usuario(&self, datos: CrearUsuario) -> Result<Usuario, ApiError> {
         if !ROLES_REGISTRABLES.contains(&datos.rol.as_str()) {
             return Err(ApiError::dominio(
                 "ROL_NO_PERMITIDO",
                 "El registro publico solo admite empresario o comprador.",
             ));
         }
-        let usuario = self.usuarios.crear(datos).await?;
-        self.sesion_de(&usuario).await
+        self.usuarios.crear(datos).await
     }
 
     pub async fn login(&self, correo: &str, contrasena: &str) -> Result<Sesion, ApiError> {
+        self.login_con_mfa(correo, contrasena, None, None, None)
+            .await
+    }
+
+    pub async fn login_con_mfa(
+        &self,
+        correo: &str,
+        contrasena: &str,
+        codigo_mfa: Option<&str>,
+        user_agent: Option<&str>,
+        ip: Option<&str>,
+    ) -> Result<Sesion, ApiError> {
         let usuario = self
             .usuarios
             .verificar_credenciales(correo, contrasena)
             .await?;
-        self.sesion_de(&usuario).await
+        self.validar_empresa_activa(&usuario).await?;
+        self.validar_correo_verificado(&usuario).await?;
+        let seguridad = self.usuarios.estado_seguridad(&usuario.id).await?;
+        if seguridad
+            .get("mfa_habilitado")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+        {
+            let Some(codigo) = codigo_mfa.filter(|codigo| !codigo.trim().is_empty()) else {
+                return Err(ApiError::nueva(
+                    "MFA_REQUERIDO",
+                    "Esta cuenta requiere un codigo MFA.",
+                    StatusCode::UNAUTHORIZED,
+                )
+                .con_detalles(serde_json::json!({ "mfa_requerido": true })));
+            };
+            if !self.usuarios.verificar_mfa(&usuario.id, codigo).await? {
+                return Err(ApiError::nueva(
+                    "MFA_INVALIDO",
+                    "El codigo MFA no es valido.",
+                    StatusCode::UNAUTHORIZED,
+                ));
+            }
+        }
+        self.sesion_de(&usuario, user_agent, ip).await
     }
 
     pub async fn refrescar(&self, refresh_token: &str) -> Result<Sesion, ApiError> {
@@ -80,6 +126,9 @@ impl Auth {
             ));
         };
         let mut usuario = usuario;
+        self.validar_empresa_activa(&usuario).await?;
+        self.validar_correo_verificado(&usuario).await?;
+        self.sesiones.actualizar_uso(jti).await?;
         if let Some(negocio) = sesion.negocio_id.clone() {
             usuario.negocio_id = Some(negocio);
         }
@@ -126,6 +175,8 @@ impl Auth {
                 "El usuario del token ya no existe.",
             ));
         };
+        self.validar_empresa_activa(&usuario).await?;
+        self.validar_correo_verificado(&usuario).await?;
         let Some(empresa_id) = usuario.tenant_id.as_deref() else {
             return Err(ApiError::dominio(
                 "TENANT_REQUERIDO",
@@ -177,16 +228,78 @@ impl Auth {
         Ok(0)
     }
 
-    /// Crea una sesión para un usuario ya autenticado (aceptar invitación).
-    pub async fn crear_sesion(&self, usuario: &Usuario) -> Result<Sesion, ApiError> {
-        self.sesion_de(usuario).await
+    pub async fn marcar_correo_verificado(&self, usuario_id: &str) -> Result<(), ApiError> {
+        self.usuarios.marcar_correo_verificado(usuario_id).await
     }
 
-    async fn sesion_de(&self, usuario: &Usuario) -> Result<Sesion, ApiError> {
+    pub async fn listar_sesiones(&self, usuario_id: &str) -> Result<Vec<Value>, ApiError> {
+        self.sesiones.listar_activas(usuario_id).await
+    }
+
+    pub async fn revocar_sesion(&self, usuario_id: &str, id: &str) -> Result<bool, ApiError> {
+        self.sesiones.revocar_por_id(usuario_id, id).await
+    }
+
+    /// Crea una sesión para un usuario ya autenticado (aceptar invitación).
+    pub async fn crear_sesion(&self, usuario: &Usuario) -> Result<Sesion, ApiError> {
+        self.validar_empresa_activa(usuario).await?;
+        self.validar_correo_verificado(usuario).await?;
+        self.sesion_de(usuario, None, None).await
+    }
+
+    async fn validar_correo_verificado(&self, usuario: &Usuario) -> Result<(), ApiError> {
+        if self.exigir_correo_verificado && !self.usuarios.correo_verificado(&usuario.id).await? {
+            return Err(ApiError::nueva(
+                "CORREO_NO_VERIFICADO",
+                "Verifica tu correo antes de iniciar sesion.",
+                StatusCode::FORBIDDEN,
+            ));
+        }
+        Ok(())
+    }
+
+    /// Un tenant suspendido o cerrado no puede iniciar ni refrescar sesiones.
+    async fn validar_empresa_activa(&self, usuario: &Usuario) -> Result<(), ApiError> {
+        let Some(tenant_id) = usuario.tenant_id.as_deref() else {
+            return Ok(());
+        };
+        match self.usuarios.estado_empresa(tenant_id).await?.as_deref() {
+            Some("activa") => Ok(()),
+            Some("suspendida") => Err(ApiError::nueva(
+                "EMPRESA_SUSPENDIDA",
+                "La empresa esta suspendida. Contacta al administrador.",
+                StatusCode::FORBIDDEN,
+            )),
+            Some("inactiva") => Err(ApiError::nueva(
+                "EMPRESA_INACTIVA",
+                "La empresa esta cerrada.",
+                StatusCode::FORBIDDEN,
+            )),
+            _ => Err(ApiError::nueva(
+                "EMPRESA_NO_DISPONIBLE",
+                "La empresa del usuario no esta disponible.",
+                StatusCode::FORBIDDEN,
+            )),
+        }
+    }
+
+    async fn sesion_de(
+        &self,
+        usuario: &Usuario,
+        user_agent: Option<&str>,
+        ip: Option<&str>,
+    ) -> Result<Sesion, ApiError> {
         let jti = Uuid::new_v4().to_string();
         let expira_en = Utc::now() + Duration::seconds(self.refresh_ttl as i64);
         self.sesiones
-            .crear(&usuario.id, &jti, expira_en, usuario.negocio_id.as_deref())
+            .crear(
+                &usuario.id,
+                &jti,
+                expira_en,
+                usuario.negocio_id.as_deref(),
+                user_agent,
+                ip,
+            )
             .await?;
         self.emitir(usuario, &jti)
     }
@@ -231,6 +344,7 @@ mod tests {
             id: "u-1".into(),
             nombre: "Ana".into(),
             correo: "ana@test.dev".into(),
+            telefono: None,
             rol: "empresario".into(),
             tenant_id: Some("t-1".into()),
             personal_id: None,

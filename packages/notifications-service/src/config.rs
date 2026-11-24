@@ -22,6 +22,17 @@ pub struct Config {
     pub identity_service_url: String,
     pub internal_request_timeout_ms: u64,
     pub email: EmailConfig,
+    pub canales: Vec<String>,
+    pub whatsapp_token: Option<String>,
+    pub whatsapp_phone_id: Option<String>,
+    pub sms_url: Option<String>,
+    pub sms_key: Option<String>,
+    /// Timeout de entrega de webhooks salientes.
+    pub webhook_timeout_ms: u64,
+    /// Intervalo del worker de reintentos de webhooks.
+    pub webhook_reintento_segundos: u64,
+    /// Exigir HTTPS en las URLs de webhook (producción).
+    pub webhook_https_obligatorio: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,6 +160,39 @@ impl Config {
                 smtp_user: leer("SMTP_USER"),
                 smtp_password: leer("SMTP_PASSWORD"),
             },
+            canales: leer("NOTIFICACIONES_CANALES")
+                .unwrap_or_else(|| "email".to_string())
+                .split(',')
+                .map(|valor| valor.trim().to_lowercase())
+                .filter(|valor| matches!(valor.as_str(), "email" | "whatsapp" | "sms"))
+                .collect(),
+            whatsapp_token: leer("WHATSAPP_TOKEN"),
+            whatsapp_phone_id: leer("WHATSAPP_PHONE_ID"),
+            sms_url: leer("SMS_URL"),
+            sms_key: leer("SMS_KEY"),
+            webhook_timeout_ms: match leer("WEBHOOK_TIMEOUT_MS") {
+                Some(valor) => valor
+                    .parse::<u64>()
+                    .ok()
+                    .filter(|valor| *valor > 0)
+                    .unwrap_or(5000),
+                None => 5000,
+            },
+            webhook_reintento_segundos: match leer("WEBHOOK_REINTENTO_SEGUNDOS") {
+                Some(valor) => valor
+                    .parse::<u64>()
+                    .ok()
+                    .filter(|valor| *valor > 0)
+                    .unwrap_or(60),
+                None => 60,
+            },
+            webhook_https_obligatorio: leer("WEBHOOK_HTTPS_OBLIGATORIO")
+                .map(|valor| valor.eq_ignore_ascii_case("true"))
+                .unwrap_or_else(|| {
+                    leer("NODE_ENV")
+                        .map(|valor| valor.eq_ignore_ascii_case("production"))
+                        .unwrap_or(false)
+                }),
         })
     }
 
@@ -161,6 +205,26 @@ impl Config {
         }
         if self.rabbitmq_url.is_none() {
             return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
+        if self.canales.is_empty() {
+            return Err(ConfigError::Invalida(
+                "NOTIFICACIONES_CANALES",
+                "debe incluir email, whatsapp o sms".to_string(),
+            ));
+        }
+        if self.canales.iter().any(|canal| canal == "whatsapp")
+            && (self.whatsapp_token.is_none() || self.whatsapp_phone_id.is_none())
+        {
+            return Err(ConfigError::Invalida(
+                "WHATSAPP_TOKEN/WHATSAPP_PHONE_ID",
+                "obligatorias si NOTIFICACIONES_CANALES incluye whatsapp".to_string(),
+            ));
+        }
+        if self.canales.iter().any(|canal| canal == "sms") && self.sms_url.is_none() {
+            return Err(ConfigError::Invalida(
+                "SMS_URL",
+                "obligatoria si NOTIFICACIONES_CANALES incluye sms".to_string(),
+            ));
         }
         self.email.validar()
     }
@@ -191,6 +255,30 @@ mod tests {
         assert_eq!(config.database_url, None);
         assert_eq!(config.email.modo, EmailMode::Log);
         assert_eq!(config.email.smtp_port, SMTP_PUERTO_DEFAULT);
+        assert_eq!(config.webhook_timeout_ms, 5000);
+        assert_eq!(config.webhook_reintento_segundos, 60);
+        assert!(!config.webhook_https_obligatorio);
+    }
+
+    #[test]
+    fn debe_configurar_webhooks_y_exigir_https_en_produccion() {
+        let config = Config::from_pairs([
+            ("WEBHOOK_TIMEOUT_MS", "1500"),
+            ("WEBHOOK_REINTENTO_SEGUNDOS", "30"),
+            ("NODE_ENV", "production"),
+        ])
+        .expect("config");
+        assert_eq!(config.webhook_timeout_ms, 1500);
+        assert_eq!(config.webhook_reintento_segundos, 30);
+        assert!(config.webhook_https_obligatorio);
+
+        let invalido = Config::from_pairs([
+            ("WEBHOOK_TIMEOUT_MS", "0"),
+            ("WEBHOOK_REINTENTO_SEGUNDOS", "no"),
+        ])
+        .expect("config");
+        assert_eq!(invalido.webhook_timeout_ms, 5000);
+        assert_eq!(invalido.webhook_reintento_segundos, 60);
     }
 
     #[test]

@@ -1,22 +1,25 @@
 //! Router HTTP y middlewares transversales.
 //!
-//! El servicio no expone API pública de negocio: solo `/health`, `/metrics` y
-//! `/docs` (contrato OpenAPI versionado). Los errores y la salud no llevan
+//! Superficie: `/health`, `/metrics`, `/docs` (contrato OpenAPI versionado) y
+//! la API admin de plantillas/webhooks. Los errores y la salud no llevan
 //! envelope `{data, meta}`.
 
+use crate::auth::UsuarioContexto;
 use crate::campos;
 use crate::config::Config;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
 use crate::metrics::Metrics;
 use crate::state::AppState;
-use axum::extract::{MatchedPath, Request, State};
+use axum::extract::{MatchedPath, Path, Request, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, patch, post, put};
 use axum::{Json, Router};
 use std::time::Instant;
 use uuid::Uuid;
+
+mod webhooks;
 
 /// Documentos OpenAPI versionados (golden del contrato, R-C-7).
 const OPENAPI_PUBLICO: &str =
@@ -48,6 +51,39 @@ pub fn build_router(state: AppState) -> Router {
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
         .route("/docs-internal-json", get(docs_internal_json))
+        .route(
+            "/api/v2/admin/notifications/plantillas",
+            get(listar_plantillas),
+        )
+        .route(
+            "/api/v2/admin/notifications/plantillas/{evento}/{canal}",
+            put(guardar_plantilla),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks",
+            get(webhooks::listar).post(webhooks::crear),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}",
+            patch(webhooks::actualizar).delete(webhooks::eliminar),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}/rotar-secreto",
+            post(webhooks::rotar),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/{id}/entregas",
+            get(webhooks::entregas),
+        )
+        .route(
+            "/api/v2/admin/notifications/webhooks/entregas/{id}/reintentar",
+            post(webhooks::reintentar),
+        )
+        .route(
+            "/internal/notifications/tenant/exportar",
+            post(exportar_tenant),
+        )
+        .route("/internal/notifications/tenant/purgar", post(purgar_tenant))
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)
@@ -59,6 +95,172 @@ pub(crate) fn aplicar_capas(router: Router, state: AppState) -> Router {
     router
         .layer(middleware::from_fn_with_state(state.clone(), metricas))
         .layer(middleware::from_fn_with_state(state, correlacion))
+}
+
+fn exigir_clave(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), StatusCode> {
+    let esperada = state.config.internal_api_key.as_deref().unwrap_or("");
+    let recibida = headers
+        .get("x-internal-key")
+        .and_then(|valor| valor.to_str().ok())
+        .unwrap_or("");
+    if esperada.is_empty() || recibida != esperada {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(())
+}
+
+fn empresa_del_cuerpo(cuerpo: &serde_json::Value) -> Result<String, StatusCode> {
+    cuerpo
+        .get("empresa_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string)
+        .ok_or(StatusCode::BAD_REQUEST)
+}
+
+async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(cuerpo): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    exigir_clave(&state, &headers)?;
+    let empresa_id = empresa_del_cuerpo(&cuerpo)?;
+    let plantillas = state
+        .plantillas()?
+        .exportar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let webhooks = state
+        .webhooks()?
+        .exportar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(serde_json::json!({
+        "servicio": "notifications",
+        "estado": "completado",
+        "datos": { "plantillas": plantillas, "webhooks": webhooks },
+    })))
+}
+
+async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(cuerpo): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    exigir_clave(&state, &headers)?;
+    let empresa_id = empresa_del_cuerpo(&cuerpo)?;
+    let plantillas = state
+        .plantillas()?
+        .purgar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let webhooks = state
+        .webhooks()?
+        .purgar(&empresa_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(serde_json::json!({
+        "servicio": "notifications",
+        "estado": "completado",
+        "detalle": { "plantillas": plantillas, "webhooks": webhooks },
+    })))
+}
+
+fn envelope(data: serde_json::Value, path: &str, method: &str) -> Json<serde_json::Value> {
+    envelope_con(data, path, method, 200)
+}
+
+pub(crate) fn envelope_con(
+    data: serde_json::Value,
+    path: &str,
+    method: &str,
+    status: u16,
+) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "data": data,
+        "meta": {
+            "timestamp": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            "path": path,
+            "method": method,
+            "statusCode": status,
+        }
+    }))
+}
+
+async fn listar_plantillas(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = UsuarioContexto::desde_headers(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin", "empresario"])?;
+    let datos = state
+        .plantillas()?
+        .listar(actor.tenant_id.as_deref())
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(envelope(
+        serde_json::json!({ "plantillas": datos }),
+        "/api/v2/admin/notifications/plantillas",
+        "GET",
+    ))
+}
+
+async fn guardar_plantilla(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path((evento, canal)): Path<(String, String)>,
+    Json(cuerpo): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let actor = UsuarioContexto::desde_headers(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"])?;
+    let texto = cuerpo
+        .get("cuerpo")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|valor| (1..=4000).contains(&valor.len()))
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let asunto = cuerpo
+        .get("asunto")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if asunto.chars().count() > 200 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let activo = cuerpo
+        .get("activo")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true);
+    let empresa_id = cuerpo
+        .get("empresa_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .or_else(|| actor.tenant_id.clone());
+    let plantilla = state
+        .plantillas()?
+        .guardar(
+            empresa_id.as_deref(),
+            &evento,
+            &canal,
+            asunto,
+            texto,
+            activo,
+        )
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    Ok(envelope(
+        serde_json::json!({
+            "empresa_id": plantilla.empresa_id,
+            "evento": plantilla.evento,
+            "canal": plantilla.canal,
+            "asunto": plantilla.asunto,
+            "cuerpo": plantilla.cuerpo,
+            "activo": plantilla.activo,
+        }),
+        &format!("/api/v2/admin/notifications/plantillas/{evento}/{canal}"),
+        "PUT",
+    ))
 }
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {

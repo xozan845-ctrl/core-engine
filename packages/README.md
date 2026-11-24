@@ -20,10 +20,16 @@ son transversales a los rubros; no hay `farmacia-service` ni `dental-service`.
 
 ## 1. Mapa de paquetes
 
+> **Fuente de verdad:** el catálogo se genera desde
+> `packages/<servicio>/service.json` en
+> [`docs/architecture/catalogo-servicios.md`](../docs/architecture/catalogo-servicios.md)
+> (R-MS-9/R-AF-4). Esta tabla es la vista curada para humanos; si difiere del
+> manifiesto, manda el manifiesto y `npm run architecture:check` falla.
+
 | Paquete | Puerto | Esquema(s) | Entornos | Rol |
 |---|---:|---|---|---|
 | [`api-gateway`](./api-gateway/README.md) | **8080** | — | dev/stage/prod | Único punto de entrada, JWT, políticas, proxy, rate limit, readiness |
-| [`identity-service`](./identity-service/README.md) | 3001 | `identity` | dev/stage/prod | Auth, sesiones, usuarios, empresas, negocios, personal, partes, capacidades, packs, extensiones, API keys |
+| [`identity-service`](./identity-service/README.md) | 3001 | `identity` | dev/stage/prod | Auth, sesiones, usuarios, empresas, negocios, personal, partes, capacidades, packs, extensiones, API keys, onboarding |
 | [`item-service`](./item-service/README.md) | 3015 | `item` | dev/stage/prod | Catálogo maestro: productos, servicios, alquileres, variantes, componentes, series, combos, importación |
 | [`inventory-service`](./inventory-service/README.md) | 3013 | `inventory` | dev/stage/prod | Stock, lotes FEFO, ubicaciones, movimientos, reservas y saga de stock |
 | [`pricing-service`](./pricing-service/README.md) | 3014 | `pricing` | dev/stage/prod | Listas de precio, escalas, tarifas por fecha, cotizaciones y promociones |
@@ -83,8 +89,8 @@ El gateway **no** aplica ese gating: solo autentica y enruta.
   (`5672`/`15672`), MinIO (`9000`/`9001`) y Mailpit (`1025`/`8025`).
 - En stage/producción solo se publican `gateway:8080` y `minio:9000` (loopback,
   host firmado de las URLs prefirmadas). La consola de MinIO nunca se publica.
-- El gateway **no** habla con `notifications` ni `analytics`; ambos trabajan por
-  eventos. Hoy tampoco tiene destino para `/api/v2/analytics/**`.
+- El gateway enruta las superficies admin de `notifications` y `analytics`; el
+  resto de su operación es por eventos.
 
 ### Cabeceras de confianza interna
 
@@ -115,18 +121,24 @@ La jerarquía real es:
 
 ```
 empresa (tenant facturable, identity.empresas)
+  ├── region_tributaria (jurisdicción efectiva, ADR-0049)
   └── negocio (unidad operativa, identity.negocios)
         ├── vertical_id + pack versionado
         ├── capacidades efectivas (identity.negocio_capacidades)
         └── datos operativos con empresa_id / negocio_id
 ```
 
-- **Empresa**: titular fiscal y comercial. Agrupa uno o más negocios.
+- **Empresa**: titular fiscal y comercial. Agrupa uno o más negocios y elige
+  la región tributaria (país/región) al aplicar el pack.
 - **Negocio**: unidad donde ocurre la operación (sucursal, marca, línea). Tiene
   su propio vertical/pack/capacidades. El JWT lleva `negocio_id`.
 - **Vertical**: modelo de operación (`retail`, `farmacia`, `belleza`, `dental`,
   `flota`, `mixto`, …).
-- **Pack**: preset versionado de capacidades (`pack_retail` v1, …).
+- **Pack**: preset versionado de capacidades (`pack_retail` v1, …) y de las
+  regiones tributarias que admite (`identity.pack_regiones`).
+- **Región tributaria**: configuración fiscal del tenant (moneda, IVA, IR,
+  documento, locale y zona horaria). No es una capacidad booleana: la elige el
+  dueño al aplicar el pack y finance la usa como jurisdicción efectiva.
 - **Capacidad**: autoridad de negocio (`catalogo_items`, `agenda_recursos`,
   `pagos`, `fidelizacion`, …).
 - **Manifiesto**: `GET /api/v2/empresas/:id/features` informa al frontend qué
@@ -146,7 +158,7 @@ empresa (tenant facturable, identity.empresas)
 | `fulfillment_onsite` | `logistics` | Servicio a domicilio |
 | `logistica_rutas` | `logistics` | Flota propia, rutas y paradas |
 | `cotizaciones` | `orders` | Presupuesto → aceptación → orden |
-| `facturacion` | `finance` | Facturas, comprobantes, régimen fiscal |
+| `facturacion` | `finance` | Facturas, comprobantes y régimen fiscal de la región elegida |
 | `liquidaciones` | `commissions` | Comisiones y cortes |
 | `operacion_campo` | `field` | Personal, rutas, visitas, tracking |
 | `inteligencia_mercado` | `intelligence` | Demanda, tendencias, forecast, score |
@@ -256,7 +268,7 @@ No se envuelven: `/health`, `/metrics`, `/docs*`, `/internal/**`,
 
 | Esquema | Dueño | Tablas principales |
 |---|---|---|
-| `identity` | identity | usuarios, sesiones, api_keys, empresas, negocios, empresa_capacidades, negocio_capacidades, verticales, packs, pack_capacidades, extensiones, partes, contactos, direcciones, relaciones, registros, roles, puestos, asignaciones, invitaciones, auditoría, permisos |
+| `identity` | identity | usuarios, sesiones, api_keys, empresas, negocios, regiones_tributarias, pack_regiones, empresa_region_historial, empresa_capacidades, negocio_capacidades, verticales, packs, pack_capacidades, modelos_operacion, extensiones, partes, contactos, direcciones, relaciones, registros, roles, puestos, asignaciones, invitaciones, auditoría, permisos |
 | `item` | item | items, item_atributo_esquemas, item_imagenes, item_componentes, item_series, historico_precios |
 | `inventory` | inventory | item_stock_ubicacion, lotes_inventario, movimientos_inventario, ajustes_stock, proveedores, ubicaciones, configuración, reservas_ordenes, reservas_lotes |
 | `pricing` | pricing | listas_precio, lista_precio_items, item_tarifas, promociones, historico_precios_base |
@@ -264,10 +276,10 @@ No se envuelven: `/health`, `/metrics`, `/docs*`, `/internal/**`,
 | `orders` | orders | eventos (ES), orden_vista, orden_timeline, carritos, pagos, métodos_pago, tipos/estados/transiciones, fulfillments, entregas_digitales, contratos, contrato_eventos, suscripciones, ejecuciones, mesas, comandas, fidelización (5 tablas), eventos_procesados |
 | `logistics` | logistics | envíos, asignaciones_envio, eventos_procesados |
 | `scheduling` | scheduling | recursos, disponibilidad, bloqueos, citas, recordatorios, eventos_procesados |
-| `finance` | finance | plan_cuentas, asientos, asiento_detalles, comprobantes, series, jurisdicciones, regímenes, sujetos, declaraciones, proyecciones, métricas, tipos_cambio, crédito_cuentas, workspace_registros |
+| `finance` | finance | plan_cuentas, asientos, asiento_detalles, comprobantes, series (empresa/región), jurisdicciones, tasas_impuesto, regímenes, sujetos, declaraciones (tenant/plataforma), proyecciones, métricas, tipos_cambio, crédito_cuentas, workspace_registros |
 | `field` | field | personal, clientes, vehículos, rutas, paradas, pedidos, asistencia, incidencias, tracking, visitas, cumplimiento |
 | `storage` | storage | buckets, objetos |
-| `notifications` | notifications | eventos_procesados |
+| `notifications` | notifications | eventos_procesados, plantillas, webhooks, webhook_entregas |
 | `analytics` | analytics | hechos_venta, comisiones, reportes_programados, reporte_ejecuciones, eventos_procesados |
 | `commissions` | commissions | comisiones, pagos, liquidaciones, liquidaciones_empresas, compensaciones_devoluciones, eventos_procesados |
 | `intelligence` | intelligence | hechos_venta, rendimiento_vendedor, cobertura_zona, métricas_producto, puntos_calor, tendencias, feature_store, invalid_events, vistas materializadas |
@@ -541,13 +553,20 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 
 ### Añadir un microservicio
 
+La guía completa es [`docs/architecture/04-guia-nuevo-servicio.md`](../docs/architecture/04-guia-nuevo-servicio.md).
+Resumen:
+
 1. ADR que justifique el nuevo *bounded context*.
-2. Crate en `packages/<nombre>-service` con la estructura R-MS-1.
-3. Esquema propio, migraciones, RLS y `eventos_procesados`/`outbox` si aplica.
-4. Entrada en `docker-compose.dev.yml`/`.stage.yml`/`.yml`.
-5. Destino y política en `api-gateway` (incluida `readiness.rs`).
-6. Ruta interna en `identity` si necesita capacidades/tenants.
-7. Documentación: README del paquete, catálogo, OpenAPI y reglas.
+2. `packages/<nombre>-service/service.json` con perfil, puerto, esquema,
+   capacidades, eventos y SLO (R-MS-9).
+3. Crate en `packages/<nombre>-service` con la estructura R-MS-1/R-MS-10.
+4. Esquema propio, migraciones, RLS y `eventos_procesados`/`outbox` si aplica.
+5. Entrada en `docker-compose.dev.yml`/`.stage.yml`/`.yml`.
+6. Destino y política en `api-gateway` (incluida `readiness.rs`).
+7. Ruta interna en `identity` si necesita capacidades/tenants.
+8. Documentación: README del paquete, catálogo, OpenAPI y reglas.
+9. `npm run architecture:report` y `npm run rules:check` en verde. La matriz de
+   CI y el catálogo se derivan del manifiesto; no se editan listas a mano.
 
 ### Checklists rápidas
 
@@ -557,8 +576,10 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 - [ ] `empresa_id`/`negocio_id` en toda escritura.
 - [ ] Eventos por outbox, nunca publicación directa en transacción.
 - [ ] Consumidor idempotente por `event_id`.
+- [ ] `/health`, `/ready`, `/metrics`, logs JSON y `x-request-id`.
 - [ ] Errores con código estable y sin stacktrace.
 - [ ] OpenAPI regenerado y README actualizado en el mismo PR.
+- [ ] `service.json` y catálogo generado sin drift.
 
 ---
 
@@ -567,8 +588,9 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 | Documento | Contenido |
 |---|---|
 | [`../README.md`](../README.md) | Visión de producto, multi-vertical y arranque |
+| [`../docs/architecture/`](../docs/architecture/) | Declaración arquitectónica: principios, contrato de servicio, fitness functions, catálogo y guía de servicio nuevo |
 | [`../docs/rules/`](../docs/rules/) | Reglas ejecutables de arquitectura, CI, datos, docs, git, gateway, microservicios, observabilidad y tests |
-| [`../docs/adr/`](../docs/adr/) | 22 decisiones de arquitectura |
+| [`../docs/adr/`](../docs/adr/) | Decisiones de arquitectura (ADR-0001..0050) |
 | [`../docs/api/core-engine.openapi.json`](../docs/api/core-engine.openapi.json) | Contrato público agregado |
 | [`../docs/api/core-engine.internal.openapi.json`](../docs/api/core-engine.internal.openapi.json) | Contrato interno agregado |
 | [`../docs/openapi/<servicio>/`](../docs/openapi/) | Contratos por servicio (público + interno) |

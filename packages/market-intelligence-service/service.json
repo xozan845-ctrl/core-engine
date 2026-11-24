@@ -1,0 +1,61 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "market-intelligence-service",
+    "boundedContext": "intelligence",
+    "description": "Demanda, tendencias, forecast, anomalías, mapas de calor, scores y calidad de datos.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "olap",
+      "analytics"
+    ]
+  },
+  "spec": {
+    "profile": "olap",
+    "runtime": "rust",
+    "port": 3009,
+    "schema": "intelligence",
+    "outboxTable": "intelligence.outbox",
+    "capabilities": [
+      "inteligencia_mercado"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service"
+      ]
+    },
+    "events": {
+      "publishes": [],
+      "consumes": [
+        "comision.acreditada",
+        "stock.updated",
+        "venta.geolocalizada"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/market-intelligence-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 63,
+      "functions": 60
+    }
+  }
+}

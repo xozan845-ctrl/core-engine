@@ -40,6 +40,25 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0029](./0029-rma-devolucion-parcial.md) | Aceptado (implementado) | RMA por línea, restock idempotente y comisión proporcional |
 | [0030](./0030-resenas-wishlist.md) | Aceptado (implementado) | Reseñas moderadas y wishlist por comprador |
 | [0031](./0031-facturacion-electronica-pdf.md) | Aceptado (implementado) | Facturación electrónica/PDF opt-in por negocio con ACL de proveedor |
+| [0032](./0032-expiracion-ordenes-impagas.md) | Aceptado (implementado) | TTL de órdenes impagas, `order.cancelled` y liberación idempotente de stock |
+| [0033](./0033-idempotencia-http.md) | Aceptado (implementado) | `Idempotency-Key` en mutaciones críticas con replay de respuesta y detección de reutilización |
+| [0034](./0034-ciclo-vida-tenant.md) | Aceptado (implementado) | Suspensión/cierre de empresa, bloqueo de login/API keys y revocación de sesiones |
+| [0035](./0035-exportacion-borrado-retencion-tenant.md) | Aceptado (implementado en identity; orquestación cross-service pendiente) | Exportación, solicitud de eliminación, retención y purga de identidad |
+| [0036](./0036-endurecimiento-autenticacion.md) | Aceptado (implementado) | Política de contraseñas, lockout, verificación de correo, MFA TOTP y sesiones |
+| [0037](./0037-proveedores-pago-configurables.md) | Aceptado (implementado; adaptadores concretos pendientes) | Catálogo de proveedores de pago y selección por empresa/negocio |
+| [0038](./0038-iva-por-linea-checkout.md) | Aceptado (implementado; opt-in por tenant) | IVA por línea, precios con/sin impuesto y snapshot fiscal en la orden |
+| [0039](./0039-rma-reembolso-nota-credito.md) | Aceptado (implementado) | RMA con reembolso parcial automático y nota de crédito |
+| [0040](./0040-pdf-comprobantes.md) | Aceptado (implementado) | PDF completo con emisor, cliente, líneas, IVA y almacenamiento |
+| [0041](./0041-mvp-endurecimiento-ciclo-vida.md) | Aceptado (implementado) | MFA cifrado, reset admin, purga cross-service, retención de auditoría y nota de crédito electrónica |
+| [0042](./0042-exportacion-asincrona-purga-total-pdf-storage.md) | Aceptado (implementado) | Exportación asíncrona firmada, purga en todos los servicios y PDF en object storage |
+| [0043](./0043-cierre-p0-retail-flota.md) | Aceptado (implementado) | Analytics con devoluciones, pago manual explícito, notificaciones multicanal, POD, trigram y entrega de reportes |
+| [0044](./0044-backup-restore-verificado.md) | Aceptado (implementado; PITR en backlog) | Backup lógico diario, retención, copia offsite manual y restore drill |
+| [0045](./0045-webhooks-salientes.md) | Aceptado (implementado) | Webhooks salientes por tenant con HMAC, reintentos y API admin |
+| [0046](./0046-suscripcion-plataforma-expansion.md) | Aceptado (implementado con cobro manual) | Plan USD 35/mes para operar más de un negocio |
+| [0047](./0047-onboarding-idempotente.md) | Aceptado (implementado) | Onboarding autenticado, idempotente y con token/estado consolidado |
+| [0048](./0048-pasarelas-tilopay-pagadito.md) | Aceptado (implementado; verificación sandbox pendiente) | Adaptadores Tilopay y Pagadito, webhooks como señal, conciliación programada y pago tardío |
+| [0049](./0049-regiones-tributarias.md) | Aceptado (implementado; piloto Nicaragua) | Región tributaria seleccionable por pack y tenant, manifiesto fiscal y resolución fail-closed |
+| [0050](./0050-contrato-servicio-y-fitness-functions.md) | Aceptado (implementado) | Contrato de servicio declarativo (`service.json`), perfiles, fitness functions y baseline de deuda |
 
 ## Convención
 

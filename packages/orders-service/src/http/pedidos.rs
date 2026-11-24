@@ -164,6 +164,7 @@ async fn aceptar_cotizacion(
             fulfillment: None,
             fulfillment_config: None,
             ubicacion_id: None,
+            impuesto_codigo: None,
         })
         .collect();
     let comando = ComandoCrear {

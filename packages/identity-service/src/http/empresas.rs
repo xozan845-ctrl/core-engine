@@ -8,13 +8,15 @@ use crate::dominio::media::BACKGROUND_POSICIONES;
 use crate::dominio::tema::PLANTILLAS;
 use crate::errors::ApiError;
 use crate::state::AppState;
+use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde_json::{json, Value};
+use std::sync::Arc;
 
-const PERFIL: &[ReglaCampo] = &[
+pub(crate) const PERFIL: &[ReglaCampo] = &[
     campo("ruc", false, &[Regla::Texto, Regla::MaxLongitud(30)]),
     campo(
         "razon_social",
@@ -82,7 +84,7 @@ const PERFIL: &[ReglaCampo] = &[
     campo("tema", false, &[Regla::Objeto]),
 ];
 
-const CREAR: &[ReglaCampo] = &[
+pub(crate) const CREAR: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 160)]),
     campo("slug", false, &[Regla::Texto, Regla::Longitud(2, 80)]),
     campo(
@@ -96,6 +98,11 @@ const CREAR: &[ReglaCampo] = &[
         &[Regla::Texto, Regla::Coincide("segmento")],
     ),
     campo("pack_version", false, &[Regla::Entero, Regla::Min(1.0)]),
+    campo(
+        "region_tributaria",
+        false,
+        &[Regla::Texto, Regla::MaxLongitud(16)],
+    ),
     campo("capacidades_extra", false, &[Regla::Arreglo]),
 ];
 
@@ -109,6 +116,21 @@ const PACK: &[ReglaCampo] = &[
 ];
 
 const SLUG: &[ReglaCampo] = &[campo("slug", true, &[Regla::Texto, Regla::Longitud(2, 80)])];
+
+const ESTADOS_EMPRESA: [&str; 3] = ["activa", "suspendida", "inactiva"];
+const ESTADO: &[ReglaCampo] = &[
+    campo("estado", true, &[Regla::Texto, Regla::En(&ESTADOS_EMPRESA)]),
+    campo("motivo", false, &[Regla::Texto, Regla::MaxLongitud(300)]),
+];
+
+const ELIMINACION: &[ReglaCampo] = &[
+    campo("motivo", false, &[Regla::Texto, Regla::MaxLongitud(500)]),
+    campo(
+        "retencion_dias",
+        false,
+        &[Regla::Entero, Regla::Min(0.0), Regla::Max(3650.0)],
+    ),
+];
 
 const VENDEDOR: &[ReglaCampo] = &[
     campo("nombre", true, &[Regla::Texto, Regla::Longitud(2, 120)]),
@@ -135,6 +157,11 @@ pub async fn crear(
     validar(PERFIL, &dto)?;
     let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
     actor.exigir_roles(&["empresario"], &[])?;
+    state
+        .servicios()?
+        .suscripciones
+        .exigir_empresa_extra(&actor)
+        .await?;
     let empresa = state
         .servicios()?
         .empresas
@@ -163,6 +190,10 @@ pub async fn crear(
                 .get("pack_version")
                 .and_then(Value::as_i64)
                 .and_then(|valor| i32::try_from(valor).ok()),
+            region_tributaria: dto
+                .get("region_tributaria")
+                .and_then(Value::as_str)
+                .map(str::to_string),
             capacidades_extra: capacidades_extra(&dto)?,
         })
         .await?;
@@ -259,6 +290,213 @@ pub async fn actualizar_slug(
     Ok(Json(empresa).into_response())
 }
 
+/// PATCH /api/v2/empresas/:id/estado
+pub async fn cambiar_estado(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(ESTADO, &dto)?;
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let estado = dto
+        .get("estado")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let motivo = dto
+        .get("motivo")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+    let empresa = state
+        .servicios()?
+        .empresas
+        .cambiar_estado(&id, estado, motivo, &actor.user_id)
+        .await?;
+    Ok(Json(empresa).into_response())
+}
+
+/// GET /api/v2/empresas/:id/exportacion
+pub async fn exportar(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let datos = state
+        .servicios()?
+        .empresas
+        .exportar(&id, &actor.user_id)
+        .await?;
+    Ok(Json(datos).into_response())
+}
+
+/// POST /api/v2/empresas/:id/exportacion — inicia el job asíncrono.
+pub async fn iniciar_exportacion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let servicios = state.servicios()?.clone();
+    let job = servicios
+        .empresas
+        .iniciar_exportacion(&id, &actor.user_id)
+        .await?;
+    let job_id = job
+        .get("job_id")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    let empresas = Arc::clone(&servicios.empresas);
+    tokio::spawn(async move {
+        if let Err(error) = empresas.ejecutar_exportacion(&job_id).await {
+            crate::logs::error(
+                "identity.exportacion",
+                crate::campos! { "msg": "fallo la exportacion", "job_id": job_id, "err": error.mensaje },
+            );
+        }
+    });
+    Ok((StatusCode::CREATED, Json(job)).into_response())
+}
+
+/// GET /api/v2/empresas/:id/exportacion/:jobId
+pub async fn estado_exportacion(
+    State(state): State<AppState>,
+    Path((id, job_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let job = state
+        .servicios()?
+        .empresas
+        .estado_exportacion(&id, &job_id)
+        .await?;
+    Ok(Json(job).into_response())
+}
+
+/// GET /api/v2/exportaciones/:jobId/descarga — archivo firmado (sin envelope).
+pub async fn descargar_exportacion(
+    State(state): State<AppState>,
+    Path(job_id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let descarga = state
+        .servicios()?
+        .empresas
+        .descargar_exportacion(&job_id)
+        .await?;
+    let mut respuesta = Response::new(Body::from(descarga.contenido));
+    let cabeceras = respuesta.headers_mut();
+    cabeceras.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/octet-stream"),
+    );
+    cabeceras.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!(
+            "attachment; filename=\"tenant-{}-{}.json\"",
+            descarga.empresa_id, job_id
+        ))
+        .unwrap_or_else(|_| HeaderValue::from_static("attachment")),
+    );
+    cabeceras.insert(
+        "x-core-sha256",
+        HeaderValue::from_str(&descarga.sha256).unwrap_or_else(|_| HeaderValue::from_static("")),
+    );
+    cabeceras.insert(
+        "x-core-signature",
+        HeaderValue::from_str(&descarga.firma).unwrap_or_else(|_| HeaderValue::from_static("")),
+    );
+    cabeceras.insert(
+        "x-core-formato",
+        HeaderValue::from_str(&descarga.formato).unwrap_or_else(|_| HeaderValue::from_static("")),
+    );
+    Ok(respuesta)
+}
+
+/// GET /api/v2/empresas/:id/eliminacion
+pub async fn consultar_eliminacion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let solicitud = state
+        .servicios()?
+        .empresas
+        .consultar_eliminacion(&id)
+        .await?
+        .ok_or_else(|| ApiError::no_encontrado("Solicitud de eliminación", &id))?;
+    Ok(Json(solicitud).into_response())
+}
+
+/// POST /api/v2/empresas/:id/eliminacion
+pub async fn solicitar_eliminacion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    Cuerpo(dto): Cuerpo,
+) -> Result<Response, ApiError> {
+    validar(ELIMINACION, &dto)?;
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let motivo = dto
+        .get("motivo")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+    let retencion_dias = dto
+        .get("retencion_dias")
+        .and_then(Value::as_i64)
+        .unwrap_or(30) as i32;
+    let solicitud = state
+        .servicios()?
+        .empresas
+        .solicitar_eliminacion(&id, motivo, retencion_dias, &actor.user_id)
+        .await?;
+    created(solicitud)
+}
+
+/// DELETE /api/v2/empresas/:id/eliminacion
+pub async fn cancelar_eliminacion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin", "admin"], &[])?;
+    let solicitud = state
+        .servicios()?
+        .empresas
+        .cancelar_eliminacion(&id, &actor.user_id)
+        .await?;
+    Ok(Json(solicitud).into_response())
+}
+
+/// POST /api/v2/empresas/:id/eliminacion/purgar
+pub async fn purgar_eliminacion(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let actor = UsuarioContexto::desde_headers_o_error(&headers)?;
+    actor.exigir_roles(&["super_admin"], &[])?;
+    let solicitud = state
+        .servicios()?
+        .empresas
+        .purgar_eliminacion(&id, &actor.user_id)
+        .await?;
+    Ok(Json(solicitud).into_response())
+}
+
 /// POST /api/v2/empresas/:id/vendedores
 pub async fn crear_vendedor(
     State(state): State<AppState>,
@@ -302,7 +540,7 @@ pub async fn crear_vendedor(
     created(vendedor)
 }
 
-fn capacidades_extra(dto: &Value) -> Result<Vec<String>, ApiError> {
+pub(crate) fn capacidades_extra(dto: &Value) -> Result<Vec<String>, ApiError> {
     match dto.get("capacidades_extra") {
         None | Some(Value::Null) => Ok(Vec::new()),
         Some(Value::Array(items)) => items
@@ -360,7 +598,7 @@ mod tests {
             &json!({
                 "nombre": "Vendedor",
                 "correo": "v@test.dev",
-                "contrasena": "secreto123",
+                "contrasena": "ClaveSegura2026!",
                 "participacion_porcentaje": 40
             })
         )

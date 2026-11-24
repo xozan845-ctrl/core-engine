@@ -12,7 +12,7 @@ use serde_json::Value;
 use sqlx::Row;
 use uuid::Uuid;
 
-const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, comision_cents,
+const COLUMNAS: &str = "id, vendedor_id, comprador_id, parte_id, tienda_id, negocio_id, estado, total_cents, impuesto_cents, comision_cents,
               descuento_cupon_cents, cupon_codigo, moneda,
               items_json, direccion_envio, creado_en, actualizado_en,
               tipo_orden, metodo_pago, fulfillment_config,
@@ -28,6 +28,8 @@ pub struct OrderView {
     pub negocio_id: Option<String>,
     pub estado: String,
     pub total_cents: i64,
+    #[serde(default)]
+    pub impuesto_cents: i64,
     pub comision_cents: i64,
     #[serde(default)]
     pub descuento_cupon_cents: i64,
@@ -40,6 +42,8 @@ pub struct OrderView {
     pub actualizado_en: String,
     pub tipo_orden: String,
     pub metodo_pago: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pago_url: Option<String>,
     pub fulfillment_config: Value,
     pub pagada_en: Option<String>,
     pub enviada_en: Option<String>,
@@ -284,6 +288,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
         negocio_id: crate::db::uuid_opcional(fila, "negocio_id").map_err(error_db)?,
         estado: fila.try_get("estado").map_err(error_db)?,
         total_cents: i64::from(fila.try_get::<i32, _>("total_cents").map_err(error_db)?),
+        impuesto_cents: i64::from(fila.try_get::<i32, _>("impuesto_cents").unwrap_or(0)),
         comision_cents: i64::from(fila.try_get::<i32, _>("comision_cents").map_err(error_db)?),
         descuento_cupon_cents: i64::from(
             fila.try_get::<i32, _>("descuento_cupon_cents").unwrap_or(0),
@@ -305,6 +310,7 @@ pub fn serializar(fila: &sqlx::postgres::PgRow) -> Result<OrderView, ApiError> {
             .map_err(error_db)?,
         tipo_orden: fila.try_get("tipo_orden").map_err(error_db)?,
         metodo_pago: fila.try_get("metodo_pago").map_err(error_db)?,
+        pago_url: None,
         fulfillment_config: fila
             .try_get("fulfillment_config")
             .unwrap_or(Value::Object(Default::default())),
@@ -347,6 +353,7 @@ mod tests {
             negocio_id: None,
             estado: "creada".into(),
             total_cents: 100,
+            impuesto_cents: 0,
             comision_cents: 12,
             descuento_cupon_cents: 0,
             cupon_codigo: None,
@@ -357,6 +364,7 @@ mod tests {
             actualizado_en: "2026-01-01T00:00:00.000Z".into(),
             tipo_orden: "compra".into(),
             metodo_pago: "simulado".into(),
+            pago_url: None,
             fulfillment_config: Value::Object(Default::default()),
             pagada_en: None,
             enviada_en: None,

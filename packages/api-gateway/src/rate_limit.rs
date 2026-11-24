@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+/// Cota dura de claves para que una cabecera manipulada no agote la memoria.
+const MAX_VENTANAS: usize = 10_000;
+
 pub struct RateLimit {
     ventanas: Mutex<HashMap<String, (Instant, u32)>>,
 }
@@ -25,6 +28,15 @@ impl RateLimit {
     pub fn consumir(&self, ip: &str, clave: &str, limite: u32, ttl: Duration) -> ResultadoLimite {
         let mut ventanas = self.ventanas.lock().expect("rate limit");
         let ahora = Instant::now();
+        // Cota de memoria: sin proxy de confianza la clave es fija, pero con
+        // proxy una cabecera manipulada podria crear claves sin fin. Se purgan
+        // las ventanas vencidas antes de admitir una nueva.
+        if ventanas.len() >= MAX_VENTANAS {
+            ventanas.retain(|_, (inicio, _)| ahora.duration_since(*inicio) < ttl);
+            if ventanas.len() >= MAX_VENTANAS {
+                ventanas.clear();
+            }
+        }
         let indice = format!("{clave}:{ip}");
         let entrada = ventanas.entry(indice).or_insert((ahora, 0));
         if ahora.duration_since(entrada.0) >= ttl {
@@ -46,20 +58,51 @@ impl RateLimit {
     }
 }
 
-pub fn ip_de(headers: &HeaderMap) -> String {
+pub fn ip_de(headers: &HeaderMap, confiar_en_forwarded: bool) -> String {
+    // Sin un proxy de confianza declarado, cualquier cabecera es spoofeable:
+    // se usa un cubo único para el tráfico directo (dev) en vez de confiar en
+    // X-Forwarded-For/X-Real-IP.
+    if !confiar_en_forwarded {
+        return "directo".to_string();
+    }
     headers
-        .get("x-forwarded-for")
+        .get("x-real-ip")
         .and_then(|valor| valor.to_str().ok())
-        .and_then(|valor| valor.split(',').next())
-        .map(|valor| valor.trim().to_string())
+        .map(str::trim)
         .filter(|valor| !valor.is_empty())
         .or_else(|| {
             headers
-                .get("x-real-ip")
+                .get("x-forwarded-for")
                 .and_then(|valor| valor.to_str().ok())
+                .and_then(|valor| valor.split(',').next())
+                .map(str::trim)
+                .filter(|valor| !valor.is_empty())
+        })
+        .map(str::to_string)
+        .unwrap_or_else(|| "desconocida".to_string())
+}
+
+/// IP del cliente para auditoría de sesión. Solo confía en `X-Forwarded-For`
+/// cuando el despliegue declara un proxy de confianza (`TRUST_FORWARDED_FOR`).
+pub fn ip_cliente(headers: &HeaderMap, confiar_en_forwarded: bool) -> Option<String> {
+    if !confiar_en_forwarded {
+        return None;
+    }
+    headers
+        .get("x-real-ip")
+        .and_then(|valor| valor.to_str().ok())
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            headers
+                .get("x-forwarded-for")
+                .and_then(|valor| valor.to_str().ok())
+                .and_then(|valor| valor.split(',').next())
+                .map(str::trim)
+                .filter(|valor| !valor.is_empty())
                 .map(str::to_string)
         })
-        .unwrap_or_else(|| "desconocida".to_string())
 }
 
 pub fn es_media_publica(metodo: &str, ruta: &str) -> bool {
@@ -73,6 +116,11 @@ pub fn es_media_publica(metodo: &str, ruta: &str) -> bool {
 
 pub fn es_login(metodo: &str, ruta: &str) -> bool {
     metodo == "POST" && matches!(ruta, "/api/v2/auth/login" | "/api/v2/auth/token")
+}
+
+/// El onboarding crea una empresa; se limita más que el tráfico global.
+pub fn es_onboarding(metodo: &str, ruta: &str) -> bool {
+    metodo == "POST" && ruta == "/api/v2/onboarding"
 }
 
 #[cfg(test)]
@@ -102,6 +150,19 @@ mod tests {
     }
 
     #[test]
+    fn debe_ignorar_forwarded_sin_proxy_confiable() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-forwarded-for", "1.2.3.4, 10.0.0.1".parse().unwrap());
+        assert_eq!(ip_cliente(&headers, false), None);
+        assert_eq!(ip_de(&headers, false), "directo");
+        assert_eq!(ip_cliente(&headers, true).as_deref(), Some("1.2.3.4"));
+        assert_eq!(ip_de(&headers, true), "1.2.3.4");
+        headers.insert("x-real-ip", "9.9.9.9".parse().unwrap());
+        assert_eq!(ip_cliente(&headers, true).as_deref(), Some("9.9.9.9"));
+        assert_eq!(ip_de(&headers, true), "9.9.9.9");
+    }
+
+    #[test]
     fn debe_clasificar_rutas() {
         assert!(es_media_publica("GET", "/api/v2/storage/public/objetos/x"));
         assert!(!es_media_publica(
@@ -114,5 +175,7 @@ mod tests {
         ));
         assert!(es_login("POST", "/api/v2/auth/login"));
         assert!(!es_login("POST", "/api/v2/auth/logout"));
+        assert!(es_onboarding("POST", "/api/v2/onboarding"));
+        assert!(!es_onboarding("GET", "/api/v2/onboarding"));
     }
 }

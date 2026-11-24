@@ -51,7 +51,13 @@ capacidades, tenants, temas o partes).
 | `JWT_REFRESH_TTL` | No | `7d` | Idem |
 | `ADMIN_EMAIL` | **Sí en producción** | admin de desarrollo | Seed idempotente |
 | `ADMIN_PASSWORD` | **Sí en producción** | admin de desarrollo | Seed idempotente |
-| `FRONTEND_URL` | No | `http://localhost:5173` | Enlaces de invitación/reset |
+| `AUTH_EXIGIR_CORREO_VERIFICADO` | No | `true` en producción, `false` en dev | Exige correo verificado; el registro no entrega tokens |
+| `MFA_ENCRYPTION_KEY` | Prod | — | Base64 de 32 bytes para AES-256-GCM del secreto TOTP |
+| `AUDITORIA_RETENCION_DIAS` | No | `365` | Días de retención de auditoría (`0` = conservar) |
+| `TENANT_PURGE_SERVICES` | No | `storage=<url>` | Servicios para purga y exportación tenant |
+| `EXPORT_SIGNING_KEY` | No | `JWT_SECRET` | Clave HMAC-SHA256 para firmar exportaciones |
+| `AUDITORIA_RETENCION_MODO` | No | `anonimizar` | `anonimizar` conserva el rastro; `eliminar` borra |
+| `FRONTEND_URL` | No | `http://localhost:5173` | Enlaces de invitación/reset/verificación |
 | `STORAGE_SERVICE_URL` | No | `http://storage-service:3010` | Validar medios |
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Validar tiendas |
 | `INTERNAL_API_KEY` | Recomendada | — | Protege `/internal/**` y llamadas salientes |
@@ -62,6 +68,9 @@ capacidades, tenants, temas o partes).
 | `SMTP_HOST` | Sí con `smtp` | — | Servidor SMTP |
 | `SMTP_PORT` | No | `587` | Puerto |
 | `SMTP_USER` / `SMTP_PASSWORD` | Juntos | — | Autenticación SMTP |
+| `PLATAFORMA_PLAN_EMPRESARIO` | No | `empresario_plus` | Plan que habilita más de un negocio (ADR-0046) |
+| `PLATAFORMA_EMPRESAS_GRATIS` | No | `1` | Empresas incluidas sin cobro |
+| `PLATAFORMA_NEGOCIOS_GRATIS` | No | `1` | Negocios incluidos sin cobro |
 
 `EMAIL_MODE` distinto de `log`/`smtp` impide arrancar. Con `smtp`,
 `SMTP_HOST`, `EMAIL_FROM` y el par usuario/contraseña se validan al inicio.
@@ -88,7 +97,8 @@ src/
     ├── capacidades.rs          capacidades por empresa
     ├── configuracion_operativa.rs  modelos/items/fulfillment efectivos
     ├── configuracion_sitio.rs  branding de plataforma
-    ├── empresas.rs             alta, perfil, slug, pack, vendedores
+    ├── empresas.rs             alta, perfil, slug, pack, vendedores,
+    │                            estado, exportación y eliminación del tenant
     ├── extensiones.rs          JSON Schema versionado por empresa
     ├── features.rs             mapa capacidad → features del manifiesto
     ├── media.rs                fondos imagen/video + posiciones
@@ -97,6 +107,7 @@ src/
     ├── partes.rs               personas/organizaciones y relaciones
     ├── password_reset.rs       token de un uso, 30 min, hash SHA-256
     ├── personal.rs             roles, puestos, asignaciones, invitaciones
+    ├── regiones.rs             regiones tributarias por pack y tenant
     ├── registros.rs            historia clínica, recetas, expedientes
     ├── sesiones.rs             refresh persistido y revocable
     ├── slug.rs                 normalización, reservados, UUID
@@ -120,6 +131,27 @@ internos son objetos concretos (`Storage`, `Stores`).
 - Contraseñas con **bcrypt coste 10**; nunca se devuelve el hash.
 - Login compara con `bcrypt::verify`; error genérico para no filtrar si el
   correo existe.
+- Política de contraseñas: 12–128 caracteres, mayúscula, minúscula, número,
+  símbolo, sin correo/nombre y sin contraseñas comunes.
+- Lockout por cuenta: 5 intentos fallidos bloquean 15 minutos (`423
+  CUENTA_BLOQUEADA`); el éxito resetea el contador.
+- Login, refresh, cambio de negocio y aceptación de invitación exigen que la
+  empresa del usuario esté `activa`; si está `suspendida` o `inactiva`
+  responden `403`.
+- Verificación de correo: `POST /auth/verificar-correo` y
+  `POST /auth/reenviar-verificacion`. Con `AUTH_EXIGIR_CORREO_VERIFICADO=true`
+  (default en producción) login/refresh exigen `correo_verificado_en`.
+- MFA opcional TOTP: `POST /auth/mfa/iniciar`, `/confirmar` y `/desactivar`.
+  El login acepta `codigo_mfa` (TOTP o código de recuperación). Los códigos de
+  recuperación se muestran una vez y se guardan hasheados.
+- Sesiones/dispositivos: `GET /auth/sesiones` y
+  `DELETE /auth/sesiones/{id}`; se guarda `user_agent`, `ip` (desde
+  `X-Client-IP` del gateway) y último uso.
+- El secreto TOTP se guarda cifrado con AES-256-GCM (`v1:...`) usando
+  `MFA_ENCRYPTION_KEY`; los secretos legacy se migran al confirmar.
+- Teléfono de contacto para notificaciones: `PATCH /api/v2/usuarios/{id}/telefono`.
+- Reset administrativo: `POST /api/v2/usuarios/{id}/mfa/reset`
+  (`super_admin`/`admin`) limpia el MFA y revoca sesiones.
 - `POST /auth/refresh` valida firma, `tipo = refresh`, `jti` y que la sesión
   siga activa en `identity.sesiones`. Rota el refresh y devuelve un par nuevo.
 - `POST /auth/logout` marca `revocada_en`; el refresh deja de servir.
@@ -176,13 +208,41 @@ internos son objetos concretos (`Storage`, `Stores`).
 ### Empresa
 
 - `POST /api/v2/empresas` crea la empresa y el negocio **`principal`** en la
-  misma operación, con `vertical_id` y `pack_codigo`/`pack_version`.
+  misma operación, con `vertical_id`, `pack_codigo`/`pack_version` y
+  `region_tributaria` (si se omite, la predeterminada del pack).
 - Acepta `capacidades_extra` para add-ons (p. ej. `fidelizacion`).
+- `GET /regiones-tributarias?pack_codigo=&pack_version=` lista las regiones que
+  el pack admite (selector del onboarding).
+- `GET/PUT /empresas/{id}/region-tributaria` consulta o cambia la región con
+  validación contra el pack, historial y auditoría. El manifiesto de features
+  expone `region_tributaria` y sus features `fiscal.*`.
+- `GET/PUT /packs/{codigo}/{version}/regiones` lista y reemplaza las regiones
+  declaradas por un pack; el PUT es solo `super_admin`/`admin` y exige una
+  predeterminada.
 - `GET /empresas/{id}` resuelve por UUID **o slug**; solo miembros o admins.
 - `PATCH /empresas/{id}/perfil` actualiza datos comerciales/fiscales y logo.
 - `PATCH /empresas/{id}/slug` crea un slug nuevo, guarda historial en
   `identity.empresa_slugs` y los anteriores responden `301`.
 - `PATCH /empresas/{id}/pack` cambia/actualiza el pack versionado.
+- `PATCH /empresas/{id}/estado` (solo `super_admin`/`admin`) cambia el tenant
+  entre `activa`, `suspendida` e `inactiva`. Suspender/cerrar revoca las
+  sesiones de todos sus usuarios; el login, refresh y las API keys se rechazan
+  mientras no esté `activa`. La reactivación queda para un administrador.
+- `POST /empresas/{id}/exportacion` crea un job asíncrono que recolecta identity
+  y hace fan-out a `TENANT_PURGE_SERVICES`; el archivo
+  `core-engine.tenant-export.v2` se firma con HMAC-SHA256.
+- `GET /empresas/{id}/exportacion/{job}` consulta el estado y
+  `GET /exportaciones/{job}/descarga` baja el archivo firmado.
+- `GET /empresas/{id}/exportacion` mantiene la exportación síncrona de identity
+  (empresa, asignaciones, usuarios sin hash, negocios, partes, contactos,
+  direcciones, relaciones, capacidades, extensiones, slugs y auditoría). El
+  campo `alcance.pendiente` lista los servicios cuyos datos aún no se incluyen.
+- `POST /empresas/{id}/eliminacion` cierra el tenant y crea una solicitud con
+  retención (`retencion_dias`, default 30). `GET` consulta el estado y
+  `DELETE` cancela la solicitud antes de que venza.
+- `POST /empresas/{id}/eliminacion/purgar` (solo `super_admin`) funciona cuando
+  venció la retención: anonimiza la identidad del tenant, conserva filas ancla
+  para no romper referencias y marca la solicitud como `purgada`.
 - `POST /empresas/{id}/vendedores` crea un vendedor con participación
   predeterminada (regla RN-04).
 
@@ -199,6 +259,39 @@ internos son objetos concretos (`Storage`, `Stores`).
   `POST /empresas/{id}/personal/{usuarioId}/transferir`.
 - Cada negocio tiene sus capacidades (`identity.negocio_capacidades`), que se
   consultan/activan por separado de las de la empresa.
+
+### Suscripción de plataforma (expansión)
+
+- El primer negocio y la primera empresa son gratuitos por defecto; los cupos
+  se cambian con `PLATAFORMA_EMPRESAS_GRATIS`/`PLATAFORMA_NEGOCIOS_GRATIS`
+  (poner ambos en `0` para cobrar desde el primer empresario).
+- Para operar más de `PLATAFORMA_EMPRESAS_GRATIS` empresas o
+  `PLATAFORMA_NEGOCIOS_GRATIS` negocios se exige el plan `empresario_plus`
+  (USD 35/mes). Sin plan, la operación devuelve `402 SUSCRIPCION_REQUERIDA`.
+- La suscripción es por empresario y el cobro es manual en el MVP:
+  `POST /api/v2/plataforma/suscripciones` crea la solicitud `pendiente` y un
+  admin la confirma con
+  `POST /api/v2/admin/plataforma/suscripciones/{id}/confirmar`.
+- Consulta: `GET /api/v2/plataforma/suscripciones/me` y
+  `GET /api/v2/plataforma/planes`. Los tenants existentes reciben 30 días de
+  gracia (`origen='legacy'`).
+- Decisión y límites: [ADR-0046](../../docs/adr/0046-suscripcion-plataforma-expansion.md).
+
+### Onboarding idempotente
+
+- `POST /api/v2/onboarding` con `Idempotency-Key` obligatoria crea empresa +
+  negocio principal + pack + capacidades + roles en una sola llamada.
+- Exige un `empresario` autenticado; no crea usuarios ni admins.
+- Devuelve `empresa`, `negocio_id`, `slug`, `capacidades`, `tema` y un
+  `access_token` con el tenant nuevo (evita re-loguear).
+- Reintento con la misma clave y cuerpo: replay con
+  `Idempotency-Replayed: true`; otra clave/cuerpo: `422
+  IDEMPOTENCIA_CLAVE_REUTILIZADA`; sin clave: `400`.
+- `GET /api/v2/onboarding/{id}` consulta el estado (`en_proceso`, `completado`,
+  `fallido`). Tras 2 minutos, un job atascado puede reclamarse y adopta la
+  empresa existente por slug.
+- `storage` es lazy (bucket al primer uso); dominios personalizados y datos demo
+  no están soportados. Decisión: [ADR-0047](../../docs/adr/0047-onboarding-idempotente.md).
 
 ### Capacidades y manifiesto
 
@@ -302,9 +395,9 @@ Un esquema inválido devuelve `ESQUEMA_EXTENSION_INVALIDO`; datos inválidos,
 
 | Área | Rutas |
 |---|---|
-| Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,vincular-personal,token}`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
+| Auth | `POST /auth/{registro,login,refresh,logout,crear-usuario,cambiar-contrasena,restablecer-contrasena,restablecer-contrasena/confirmar,verificar-correo,reenviar-verificacion,vincular-personal,token}`, `POST /auth/mfa/{iniciar,confirmar,desactivar}`, `GET/DELETE /auth/sesiones[/{id}]`, `GET /auth/me`, `GET /auth/negocios`, `POST /auth/negocio-activo` |
 | Usuarios | `GET /usuarios`, `GET /usuarios/{id}`, `PATCH /usuarios/{id}/avatar` |
-| Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug}`, `POST /empresas/{id}/vendedores` |
+| Empresas | `POST /empresas`, `GET /empresas/{id}`, `PATCH /empresas/{id}/{pack,perfil,slug,estado}`, `GET /empresas/{id}/exportacion`, `GET/POST/DELETE /empresas/{id}/eliminacion`, `POST /empresas/{id}/eliminacion/purgar`, `POST /empresas/{id}/vendedores` |
 | Capacidades | `GET/PATCH /empresas/{empresaId}/capacidades[/{capacidad}]`, idem por negocio, `GET /empresas/{empresaId}/features`, `GET /empresas/{empresaId}/negocios/{negocioId}/features` |
 | Packs | `GET/POST /packs`, `GET/POST /packs/verticales`, `GET/POST /packs/modelos-operacion`, `GET /packs/{codigo}/{version}` |
 | Negocios | `GET/POST /empresas/{empresaId}/negocios`, `POST .../negocios/{id}/plantillas`, `PATCH .../negocios/{id}/estado`, `GET /negocios/plantillas`, `POST /empresas/{id}/personal/{usuarioId}/transferir` |
@@ -420,7 +513,8 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
   PostgreSQL real (`TEST_DATABASE_URL`).
 - Cobertura de referencia del gate Rust: 79/75 (medida 81,65/76,98).
 - Casos cubiertos: seed idempotente, slugs con historial, capacidades por
-  negocio, invitaciones, extensiones, registros y API keys.
+  negocio, invitaciones, extensiones, registros, API keys y selección/cambio de
+  región tributaria con historial (ADR-0049).
 
 ---
 
@@ -428,6 +522,7 @@ cargo llvm-cov --ignore-filename-regex 'src/main\.rs' --summary-only
 
 - [ADR-0017 · identity-service en Rust](../../docs/adr/0017-identity-service-en-rust.md)
 - [ADR-0021 · negocios por empresa](../../docs/adr/0021-negocios-por-empresa.md)
+- [ADR-0049 · regiones tributarias](../../docs/adr/0049-regiones-tributarias.md)
 - [ADR-0005 · autenticación de gateway sin gate de borde](../../docs/adr/0005-autenticacion-gateway-sin-gate-de-borde.md)
 - [Runbook multi-vertical](../../docs/runbook-multi-vertical.md)
 - [Runbook de autenticación del gateway](../../docs/runbook-gateway-auth.md)

@@ -1,0 +1,67 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "commissions-service",
+    "boundedContext": "commissions",
+    "description": "Comisiones, liquidaciones quincenales, estado de cuenta y reportes.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "commissions"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3006,
+    "schema": "commissions",
+    "outboxTable": "commissions.outbox",
+    "capabilities": [
+      "comisiones",
+      "liquidaciones"
+    ],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage"
+    ],
+    "dependencies": {
+      "sync": [
+        "identity-service",
+        "inventory-service",
+        "orders-service"
+      ]
+    },
+    "events": {
+      "publishes": [
+        "comision.acreditada",
+        "venta.directa.acreditada"
+      ],
+      "consumes": [
+        "payment.procesado",
+        "order.completado",
+        "devolucion.recibida",
+        "devolucion.solicitada"
+      ]
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/commissions-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 72,
+      "functions": 68
+    }
+  }
+}

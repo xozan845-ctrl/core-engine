@@ -2,6 +2,7 @@
 
 use crate::auth::{Capacidades, CapacidadesNoDisponible, UsuarioContexto};
 use crate::config::Config;
+use crate::db::Db;
 use crate::envios::{EnviosNoDisponible, EnviosPort};
 use crate::errors::ApiError;
 use crate::metrics::Metrics;
@@ -14,6 +15,7 @@ pub struct AppState {
     pub metrics: Arc<Metrics>,
     pub envios: Arc<dyn EnviosPort>,
     pub capacidades: Arc<dyn Capacidades>,
+    pub db: Option<Arc<Db>>,
     pub inicio: Instant,
 }
 
@@ -25,6 +27,7 @@ impl AppState {
             metrics: Arc::new(metrics),
             envios: Arc::new(EnviosNoDisponible),
             capacidades: Arc::new(CapacidadesNoDisponible),
+            db: None,
             inicio: Instant::now(),
         }
     }
@@ -40,8 +43,18 @@ impl AppState {
             metrics,
             envios,
             capacidades,
+            db: None,
             inicio: Instant::now(),
         }
+    }
+
+    pub fn con_db(mut self, db: Arc<Db>) -> Self {
+        self.db = Some(db);
+        self
+    }
+
+    pub fn db(&self) -> Result<&Arc<Db>, ApiError> {
+        self.db.as_ref().ok_or_else(ApiError::interno)
     }
 
     /// Equivalente a `CapabilityGuard`: admin global pasa; el resto exige

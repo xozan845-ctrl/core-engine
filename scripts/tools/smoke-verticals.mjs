@@ -90,7 +90,7 @@ async function main() {
   ok();
 
   const suf = sufijo();
-  const contrasena = 'Contrasena123!';
+  const contrasena = 'Fuego-Laguna-2026!';
 
   // ── Belleza ────────────────────────────────────────────────────────────
   paso('Belleza: alta de empresario y tenant desde pack_belleza');

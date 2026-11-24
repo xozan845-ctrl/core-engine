@@ -259,8 +259,8 @@ async fn debe_reservar_lotes_en_orden_fefo_y_registrar_asignaciones() {
     sqlx::query(
         "INSERT INTO inventory.lotes_inventario
            (empresa_id, item_id, codigo_lote, vence_en, cantidad_inicial, cantidad_disponible)
-         VALUES ($1::uuid, $2::uuid, 'L-TARDE', '2026-12-31', 10, 10),
-                ($1::uuid, $2::uuid, 'L-PRONTO', '2026-11-20', 4, 4)",
+         VALUES ($1::uuid, $2::uuid, 'L-TARDE', '2027-12-31', 10, 10),
+                ($1::uuid, $2::uuid, 'L-PRONTO', '2027-11-20', 4, 4)",
     )
     .bind(EMPRESA)
     .bind(ITEM)
@@ -359,6 +359,80 @@ async fn debe_expandir_componentes_bom_al_reservar() {
     .await
     .expect("stock componente");
     assert_eq!(stock_componente, 6);
+}
+
+#[tokio::test]
+async fn debe_liberar_el_stock_una_sola_vez_entre_cancelacion_y_devolucion() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, ITEM, "SKU-CANCELA", 10, 1000).await;
+    let order_id = Uuid::new_v4();
+    ctx.consumidor
+        .manejar(evento(
+            "order.created",
+            Uuid::new_v4(),
+            json!({
+                "order_id": order_id,
+                "items": [{"empresa_id": EMPRESA, "sku": "SKU-CANCELA", "cantidad": 3}]
+            }),
+        ))
+        .await
+        .expect("reserva");
+    assert_eq!(stock(&ctx.db).await, 7);
+
+    ctx.consumidor
+        .manejar(evento(
+            "order.cancelled",
+            Uuid::new_v4(),
+            json!({
+                "order_id": order_id,
+                "items": [{"empresa_id": EMPRESA, "sku": "SKU-CANCELA", "cantidad": 3}]
+            }),
+        ))
+        .await
+        .expect("cancelacion");
+    assert_eq!(stock(&ctx.db).await, 10);
+
+    // Un segundo evento (p. ej. `devolucion.solicitada` de una orden pagada)
+    // no debe volver a sumar stock.
+    ctx.consumidor
+        .manejar(evento(
+            "devolucion.solicitada",
+            Uuid::new_v4(),
+            json!({
+                "order_id": order_id,
+                "items": [{"empresa_id": EMPRESA, "sku": "SKU-CANCELA", "cantidad": 3}]
+            }),
+        ))
+        .await
+        .expect("devolucion posterior");
+    assert_eq!(stock(&ctx.db).await, 10);
+
+    let reintegrados: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM inventory.outbox WHERE tipo = 'stock.reintegrado'",
+    )
+    .fetch_one(ctx.db.pool())
+    .await
+    .expect("reintegrados");
+    assert_eq!(reintegrados, 1);
+}
+
+#[tokio::test]
+async fn debe_ignorar_la_cancelacion_sin_reserva_vigente() {
+    let ctx = preparar().await;
+    crear_item(&ctx.db, ITEM, "SKU-SIN-RESERVA", 10, 1000).await;
+    ctx.consumidor
+        .manejar(evento(
+            "order.cancelled",
+            Uuid::new_v4(),
+            json!({
+                "order_id": Uuid::new_v4(),
+                "items": [{"empresa_id": EMPRESA, "sku": "SKU-SIN-RESERVA", "cantidad": 4}]
+            }),
+        ))
+        .await
+        .expect("cancelacion sin reserva");
+    assert_eq!(stock(&ctx.db).await, 10);
+    assert!(outbox_tipos(&ctx.db).await.is_empty());
 }
 
 #[tokio::test]

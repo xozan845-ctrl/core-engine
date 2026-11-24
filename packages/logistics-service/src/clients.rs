@@ -19,6 +19,8 @@ pub struct OrdenItemExterna {
     pub producto_nombre: String,
     #[serde(default)]
     pub precio_unitario_cents: i64,
+    #[serde(default)]
+    pub fulfillment: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

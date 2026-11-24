@@ -267,3 +267,33 @@ fn datos_cupon(cuerpo: &Value) -> Result<(String, String, i64), ApiError> {
         })?;
     Ok((empresa, codigo, monto))
 }
+
+/// POST /internal/pricing/tenant/exportar
+pub async fn exportar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let datos = crate::lifecycle::exportar(state.db()?.pool(), &dto)
+        .await
+        .map_err(error_interno)?;
+    ok(json!({ "servicio": "pricing", "estado": "completado", "datos": datos }))
+}
+
+/// POST /internal/pricing/tenant/purgar
+pub async fn purgar_tenant(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<crate::lifecycle::TenantRequest>,
+) -> Result<Response, ApiError> {
+    exigir_clave(&state, &headers)?;
+    let detalle = crate::lifecycle::purgar(state.db()?.pool(), &dto)
+        .await
+        .map_err(error_interno)?;
+    ok(json!({ "servicio": "pricing", "estado": "completado", "detalle": detalle }))
+}
+
+fn error_interno(_: sqlx::Error) -> ApiError {
+    ApiError::interno()
+}

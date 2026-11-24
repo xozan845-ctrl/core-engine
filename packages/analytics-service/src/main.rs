@@ -62,7 +62,11 @@ async fn main() {
         .declarar_colas(vec![
             ColaConfig {
                 nombre: COLA_ORDERS.to_string(),
-                routing_keys: vec!["order.completado".to_string()],
+                routing_keys: vec![
+                    "order.completado".to_string(),
+                    "devolucion.recibida".to_string(),
+                    "devolucion.solicitada".to_string(),
+                ],
             },
             ColaConfig {
                 nombre: COLA_COMISIONES.to_string(),

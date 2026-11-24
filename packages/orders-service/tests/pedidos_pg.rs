@@ -6,9 +6,9 @@ use async_trait::async_trait;
 use orders_service::carrito::Carrito;
 use orders_service::checkout::{Checkout, ComandoCrear, LineaEntrada};
 use orders_service::clients::{
-    Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionOperativa, Cotizacion,
-    CreditoEstado, CuponExterno, CuponValidado, ItemStock, OfertaExterna, PrecioLinea,
-    PreciosExternos, PromocionLinea, StockUbicacion,
+    Capacidad, ClientesPort, ConfiguracionExterna, ConfiguracionFiscal, ConfiguracionOperativa,
+    Cotizacion, CreditoEstado, CuponExterno, CuponValidado, ItemStock, OfertaExterna, PrecioLinea,
+    PreciosExternos, PromocionLinea, StockUbicacion, TasaImpuestoExterna,
 };
 use orders_service::config::Config;
 use orders_service::consumer::{PedidosConsumer, STOCK_FALLIDO, STOCK_RESERVADO};
@@ -16,6 +16,7 @@ use orders_service::contratos::{Contratos, CrearContratoInput, FinalizarContrato
 use orders_service::db::Db;
 use orders_service::devoluciones::{CrearDevolucionInput, Devoluciones, ItemDevolucionInput};
 use orders_service::entregas::EntregasDigitales;
+use orders_service::expiracion::ExpiracionOrdenes;
 use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
 use orders_service::outbox::Outbox;
@@ -50,6 +51,8 @@ struct ClientesFake {
     directo: bool,
     promocion: Option<PromocionLinea>,
     cupon: Option<CuponValidado>,
+    fiscal: Option<ConfiguracionFiscal>,
+    nota_credito: Option<String>,
 }
 
 #[async_trait]
@@ -61,6 +64,18 @@ impl ClientesPort for ClientesFake {
         _capacidades: &[String],
     ) -> Option<Vec<Capacidad>> {
         Some(self.capacidades.clone())
+    }
+
+    async fn configuracion_fiscal(
+        &self,
+        _empresa_id: &str,
+        _negocio_id: Option<&str>,
+    ) -> Option<ConfiguracionFiscal> {
+        self.fiscal.clone()
+    }
+
+    async fn nota_credito(&self, _payload: &Value) -> Option<String> {
+        self.nota_credito.clone()
     }
 
     async fn tipo_cambio(&self, _base: &str, _quote: &str) -> Option<f64> {
@@ -261,6 +276,7 @@ async fn provisionar(url: &str) {
           negocio_id uuid,
           estado text NOT NULL,
           total_cents integer NOT NULL DEFAULT 0,
+          impuesto_cents integer NOT NULL DEFAULT 0,
           comision_cents integer NOT NULL DEFAULT 0,
           descuento_cupon_cents integer NOT NULL DEFAULT 0,
           cupon_codigo text,
@@ -305,7 +321,7 @@ async fn provisionar(url: &str) {
           IF NEW.tipo = 'OrderCreatedEvent' THEN
             INSERT INTO orders.orden_vista
               (id, vendedor_id, comprador_id, parte_id, tienda_id, estado,
-               total_cents, comision_cents, descuento_cupon_cents, cupon_codigo,
+               total_cents, impuesto_cents, comision_cents, descuento_cupon_cents, cupon_codigo,
                moneda, items_json, creado_en,
                actualizado_en, tipo_orden, fulfillment_config, metodo_pago)
             VALUES (
@@ -316,6 +332,7 @@ async fn provisionar(url: &str) {
               (NEW.payload->'items'->0->>'tienda_id')::uuid,
               'creada',
               (NEW.payload->>'total_cents')::int,
+              COALESCE((NEW.payload->>'impuesto_cents')::int, 0),
               COALESCE((NEW.payload->>'comision_cents')::int, 0),
               COALESCE((NEW.payload->>'descuento_cupon_cents')::int, 0),
               NULLIF(NEW.payload->>'cupon_codigo', ''),
@@ -363,6 +380,20 @@ async fn provisionar(url: &str) {
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           publicado_en timestamptz
         );
+        CREATE TABLE orders.idempotencia_http (
+          actor_id text NOT NULL,
+          clave text NOT NULL,
+          metodo text NOT NULL,
+          ruta text NOT NULL,
+          request_hash text NOT NULL,
+          estado text NOT NULL DEFAULT 'en_proceso',
+          status integer,
+          content_type text,
+          respuesta bytea,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          completado_en timestamptz,
+          PRIMARY KEY (actor_id, clave)
+        );
         CREATE TABLE orders.metodos_pago (
           codigo text PRIMARY KEY,
           nombre text NOT NULL,
@@ -387,6 +418,7 @@ async fn provisionar(url: &str) {
           monto_cents integer NOT NULL,
           moneda text NOT NULL DEFAULT 'NIO',
           referencia text NOT NULL DEFAULT '',
+          referencia_proveedor text NOT NULL DEFAULT '',
           proveedor text NOT NULL DEFAULT 'simulado',
           monto_reembolsado_cents integer NOT NULL DEFAULT 0,
           motivo_rechazo text NOT NULL DEFAULT '',
@@ -406,6 +438,33 @@ async fn provisionar(url: &str) {
           payload jsonb NOT NULL DEFAULT '{}'::jsonb,
           creado_en timestamptz NOT NULL DEFAULT NOW()
         );
+        CREATE TABLE orders.proveedores_pago (
+          codigo text PRIMARY KEY,
+          nombre text NOT NULL,
+          tipo text NOT NULL,
+          activo boolean NOT NULL DEFAULT true,
+          config jsonb NOT NULL DEFAULT '{}'::jsonb,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config) VALUES
+          ('simulado', 'Simulado', 'simulado', true, '{}'::jsonb),
+          ('http', 'HTTP', 'http', false, '{}'::jsonb),
+          ('manual', 'Manual', 'manual', true, '{}'::jsonb);
+        CREATE TABLE orders.configuracion_pagos (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          empresa_id uuid NOT NULL,
+          negocio_id uuid,
+          proveedor_codigo text NOT NULL,
+          activo boolean NOT NULL DEFAULT true,
+          config jsonb NOT NULL DEFAULT '{}'::jsonb,
+          creado_en timestamptz NOT NULL DEFAULT NOW(),
+          actualizado_en timestamptz NOT NULL DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX ux_configuracion_pagos_empresa
+          ON orders.configuracion_pagos (empresa_id) WHERE negocio_id IS NULL;
+        CREATE UNIQUE INDEX ux_configuracion_pagos_negocio
+          ON orders.configuracion_pagos (empresa_id, negocio_id) WHERE negocio_id IS NOT NULL;
         CREATE TABLE orders.devoluciones (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           order_id uuid NOT NULL,
@@ -413,8 +472,16 @@ async fn provisionar(url: &str) {
           negocio_id uuid,
           motivo text NOT NULL DEFAULT '',
           estado text NOT NULL DEFAULT 'solicitada',
+          base_cents integer NOT NULL DEFAULT 0,
+          impuesto_cents integer NOT NULL DEFAULT 0,
           total_cents integer NOT NULL DEFAULT 0,
           moneda text NOT NULL DEFAULT 'NIO',
+          reembolso_estado text NOT NULL DEFAULT 'pendiente',
+          reembolsado_cents integer NOT NULL DEFAULT 0,
+          reembolso_error text NOT NULL DEFAULT '',
+          nota_credito_id uuid,
+          nota_credito_estado text NOT NULL DEFAULT 'pendiente',
+          nota_credito_error text NOT NULL DEFAULT '',
           creado_por uuid NOT NULL,
           creado_en timestamptz NOT NULL DEFAULT NOW(),
           actualizado_en timestamptz NOT NULL DEFAULT NOW()
@@ -427,6 +494,9 @@ async fn provisionar(url: &str) {
           cantidad integer NOT NULL,
           precio_unitario_cents integer NOT NULL,
           descuento_cents integer NOT NULL DEFAULT 0,
+          base_cents integer NOT NULL DEFAULT 0,
+          impuesto_cents integer NOT NULL DEFAULT 0,
+          tasa_impuesto_bps integer NOT NULL DEFAULT 0,
           total_cents integer NOT NULL,
           restock boolean NOT NULL DEFAULT true,
           ubicacion_id uuid
@@ -590,6 +660,7 @@ fn compra(cantidad: i64) -> ComandoCrear {
             fulfillment: Some("none".to_string()),
             fulfillment_config: None,
             ubicacion_id: None,
+            impuesto_codigo: None,
         }]),
         ..Default::default()
     }
@@ -600,7 +671,7 @@ fn infra(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>)
 }
 
 fn infra_directo(db: Arc<Db>, stock: i64) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, true, None, None)
+    infra_con_directo(db, stock, None, true, None, None, None)
 }
 
 fn infra_promocion(
@@ -608,7 +679,7 @@ fn infra_promocion(
     stock: i64,
     promocion: PromocionLinea,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, false, Some(promocion), None)
+    infra_con_directo(db, stock, None, false, Some(promocion), None, None)
 }
 
 fn infra_cupon(
@@ -616,7 +687,7 @@ fn infra_cupon(
     stock: i64,
     cupon: CuponValidado,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, None, false, None, Some(cupon))
+    infra_con_directo(db, stock, None, false, None, Some(cupon), None)
 }
 
 fn infra_con(
@@ -624,7 +695,15 @@ fn infra_con(
     stock: i64,
     tasa: Option<f64>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
-    infra_con_directo(db, stock, tasa, false, None, None)
+    infra_con_directo(db, stock, tasa, false, None, None, None)
+}
+
+fn infra_fiscal(
+    db: Arc<Db>,
+    stock: i64,
+    fiscal: ConfiguracionFiscal,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_directo(db, stock, None, false, None, None, Some(fiscal))
 }
 
 fn infra_con_directo(
@@ -634,6 +713,7 @@ fn infra_con_directo(
     directo: bool,
     promocion: Option<PromocionLinea>,
     cupon: Option<CuponValidado>,
+    fiscal: Option<ConfiguracionFiscal>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
@@ -641,6 +721,8 @@ fn infra_con_directo(
         directo,
         promocion,
         cupon,
+        fiscal,
+        nota_credito: Some("99999999-9999-4999-8999-999999999999".to_string()),
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -713,6 +795,432 @@ async fn debe_crear_orden_con_evento_y_outbox() {
         .await
         .expect("eventos");
     assert_eq!(eventos, 1);
+}
+
+#[tokio::test]
+async fn debe_calcular_iva_por_linea_con_precios_incluidos() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_fiscal(
+        Arc::clone(&db),
+        10,
+        ConfiguracionFiscal {
+            tasa_iva: 0.15,
+            impuesto_activo: true,
+            precios_con_impuesto: true,
+            moneda: "NIO".into(),
+            moneda_iso: "NIO".into(),
+            tasas: Vec::new(),
+            tasa_default_codigo: "GENERAL".into(),
+            retencion_activa: false,
+            tasa_retencion: 0.0,
+            retencion_codigo: "IR".into(),
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden con iva incluido");
+    assert_eq!(orden.total_cents, 20_000);
+    assert_eq!(orden.impuesto_cents, 2_609);
+    assert_eq!(orden.items[0].impuesto_cents, 2_609);
+    assert_eq!(orden.items[0].tasa_impuesto_bps, 1_500);
+    assert_eq!(orden.items[0].total_linea_cents, 20_000);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.impuesto_cents, 2_609);
+    assert_eq!(vista.total_cents, 20_000);
+}
+
+#[tokio::test]
+async fn debe_calcular_iva_por_linea_con_precios_sin_impuesto() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra_fiscal(
+        Arc::clone(&db),
+        10,
+        ConfiguracionFiscal {
+            tasa_iva: 0.15,
+            impuesto_activo: true,
+            precios_con_impuesto: false,
+            moneda: "NIO".into(),
+            moneda_iso: "NIO".into(),
+            tasas: Vec::new(),
+            tasa_default_codigo: "GENERAL".into(),
+            retencion_activa: false,
+            tasa_retencion: 0.0,
+            retencion_codigo: "IR".into(),
+        },
+    );
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden con iva sumado");
+    assert_eq!(orden.total_cents, 23_000);
+    assert_eq!(orden.impuesto_cents, 3_000);
+    assert_eq!(orden.items[0].impuesto_cents, 3_000);
+    assert_eq!(orden.items[0].total_linea_cents, 23_000);
+}
+
+#[tokio::test]
+async fn debe_aplicar_exencion_y_fallar_con_tasa_desconocida_por_linea() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let fiscal = ConfiguracionFiscal {
+        tasa_iva: 0.15,
+        impuesto_activo: true,
+        precios_con_impuesto: false,
+        moneda: "NIO".into(),
+        moneda_iso: "NIO".into(),
+        tasas: vec![
+            TasaImpuestoExterna {
+                codigo: "GENERAL".into(),
+                nombre: "General".into(),
+                tasa: 0.15,
+                exenta: false,
+            },
+            TasaImpuestoExterna {
+                codigo: "EXENTA".into(),
+                nombre: "Exento".into(),
+                tasa: 0.0,
+                exenta: true,
+            },
+        ],
+        tasa_default_codigo: "GENERAL".into(),
+        retencion_activa: false,
+        tasa_retencion: 0.0,
+        retencion_codigo: "IR".into(),
+    };
+    let (checkout, _, _) = infra_fiscal(Arc::clone(&db), 10, fiscal);
+    let exenta = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 2,
+                    fulfillment: Some("none".to_string()),
+                    fulfillment_config: None,
+                    ubicacion_id: None,
+                    impuesto_codigo: Some("EXENTA".into()),
+                }]),
+                ..compra(2)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect("orden exenta");
+    assert_eq!(exenta.impuesto_cents, 0);
+    assert_eq!(exenta.items[0].tasa_impuesto_bps, 0);
+    assert_eq!(exenta.items[0].impuesto_codigo.as_deref(), Some("EXENTA"));
+    assert_eq!(exenta.items[0].total_linea_cents, 20_000);
+
+    let error = checkout
+        .ejecutar(
+            &ComandoCrear {
+                items: Some(vec![LineaEntrada {
+                    oferta_id: OFERTA.to_string(),
+                    cantidad: 1,
+                    fulfillment: Some("none".to_string()),
+                    fulfillment_config: None,
+                    ubicacion_id: None,
+                    impuesto_codigo: Some("NO_EXISTE".into()),
+                }]),
+                ..compra(1)
+            },
+            COMPRADOR,
+        )
+        .await
+        .expect_err("tasa desconocida");
+    assert_eq!(error.codigo, "IMPUESTO_NO_DISPONIBLE");
+}
+
+#[tokio::test]
+async fn debe_expirar_ordenes_impagas_y_emitir_liberacion_de_stock() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let mut comando = compra(2);
+    comando.metodo_pago = Some("efectivo".into());
+    let orden = checkout
+        .ejecutar(&comando, COMPRADOR)
+        .await
+        .expect("orden impaga");
+    assert_eq!(orden.estado, "creada");
+
+    // Simula que la orden lleva más tiempo que el TTL en la proyección.
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    let expiracion = ExpiracionOrdenes::nueva(Arc::clone(&db), Arc::clone(&checkout), 30);
+    assert_eq!(expiracion.expirar().await.expect("expirar"), 1);
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "cancelada");
+
+    let tipos: Vec<String> = sqlx::query_scalar(
+        "SELECT tipo FROM orders.outbox
+          WHERE payload->'data'->>'order_id' = $1
+          ORDER BY creado_en",
+    )
+    .bind(&orden.id)
+    .fetch_all(db.pool())
+    .await
+    .expect("outbox");
+    assert!(tipos.contains(&"order.cancelled".to_string()));
+    // Una orden impaga no debe generar un asiento de devolución.
+    assert!(!tipos.contains(&"devolucion.solicitada".to_string()));
+    let estado_pago: String =
+        sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(&orden.id)
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(estado_pago, "rechazado");
+
+    // El segundo barrido no vuelve a cancelar ni a emitir eventos.
+    assert_eq!(expiracion.expirar().await.expect("segundo barrido"), 0);
+    let liberaciones: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM orders.outbox
+          WHERE tipo = 'order.cancelled'
+            AND payload->'data'->>'order_id' = $1",
+    )
+    .bind(&orden.id)
+    .fetch_one(db.pool())
+    .await
+    .expect("liberaciones");
+    assert_eq!(liberaciones, 1);
+}
+
+#[tokio::test]
+async fn no_debe_expirar_una_orden_con_pago_confirmado() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden pagada");
+    assert_eq!(orden.estado, "creada");
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    let expiracion = ExpiracionOrdenes::nueva(Arc::clone(&db), Arc::clone(&checkout), 30);
+    assert_eq!(expiracion.expirar().await.expect("expirar"), 0);
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "creada");
+}
+
+#[tokio::test]
+async fn una_expiracion_con_candidato_obsoleto_no_cancela_orden_pagada() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden pendiente");
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    // Congela la vista del poller: la fila sí era candidata antes del pago.
+    let candidato: Option<Uuid> = sqlx::query_scalar(
+        "SELECT v.id FROM orders.orden_vista v
+          WHERE v.id = $1::uuid AND v.estado = 'creada'
+            AND v.creado_en < NOW() - INTERVAL '30 minutes'
+            AND NOT EXISTS (
+                  SELECT 1 FROM orders.pagos p WHERE p.order_id = v.id
+                    AND p.estado IN ('confirmado', 'reembolsado_parcial', 'reembolsado')
+            )",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_optional(db.pool())
+    .await
+    .expect("candidato");
+    assert!(candidato.is_some());
+
+    checkout
+        .transicionar(
+            &orden.id,
+            "pagada",
+            Some("pago_confirmado"),
+            Some("sistema"),
+            Some((
+                orders_service::checkout::PAYMENT_PROCESADO,
+                json!({"order_id": orden.id, "monto_cents": orden.total_cents}),
+            )),
+        )
+        .await
+        .expect("el pago gana la carrera");
+
+    // Simula que el poller conserva el ID ya seleccionado. La transición vuelve
+    // a leer bajo el lock y no ejecuta la cancelación obsoleta.
+    let error = checkout
+        .transicionar(
+            &orden.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect_err("la expiración obsoleta debe rechazarse");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("orden");
+    assert_eq!(vista.estado, "pagada");
+}
+
+#[tokio::test]
+async fn una_expiracion_que_selecciono_antes_no_cancela_si_el_pago_gana_la_carrera() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "efectivo"), COMPRADOR)
+        .await
+        .expect("orden pendiente");
+    sqlx::query(
+        "UPDATE orders.orden_vista
+            SET creado_en = NOW() - INTERVAL '2 hours'
+          WHERE id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .execute(db.pool())
+    .await
+    .expect("antiguedad");
+
+    // Simula el candidato que el poller leyó antes de que terminara el pago.
+    let candidato: Option<Uuid> = sqlx::query_scalar(
+        "SELECT v.id FROM orders.orden_vista v
+          WHERE v.id = $1::uuid AND v.estado = 'creada'
+            AND v.creado_en < NOW() - INTERVAL '30 minutes'
+            AND NOT EXISTS (
+                  SELECT 1 FROM orders.pagos p WHERE p.order_id = v.id
+                    AND p.estado IN ('confirmado', 'reembolsado_parcial', 'reembolsado')
+            )",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_optional(db.pool())
+    .await
+    .expect("seleccionar candidato");
+    assert!(candidato.is_some(), "la orden era candidata antes del pago");
+
+    checkout
+        .transicionar(
+            &orden.id,
+            "pagada",
+            Some("pago_confirmado"),
+            Some("sistema"),
+            Some((
+                orders_service::checkout::PAYMENT_PROCESADO,
+                json!({"order_id": orden.id, "monto_cents": orden.total_cents}),
+            )),
+        )
+        .await
+        .expect("el pago gana la carrera");
+
+    // El poller conserva un ID leído antes del pago; el cambio de estado vuelve
+    // a validar la historia bajo el lock y rechaza la expiración obsoleta.
+    let error = checkout
+        .transicionar(
+            &orden.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect_err("no cancelar orden ya pagada");
+    assert_eq!(error.codigo, "TRANSICION_INVALIDA");
+
+    let vista = OrderViewRepository
+        .encontrar(&db, &orden.id)
+        .await
+        .expect("vista")
+        .expect("existe");
+    assert_eq!(vista.estado, "pagada");
+    let expiracion = ExpiracionOrdenes::nueva(Arc::clone(&db), Arc::clone(&checkout), 30);
+    assert_eq!(expiracion.expirar().await.expect("siguiente barrido"), 0);
+}
+
+#[tokio::test]
+async fn debe_emitir_devolucion_al_cancelar_una_orden_pagada() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra(2), COMPRADOR)
+        .await
+        .expect("orden");
+    checkout
+        .transicionar(
+            &orden.id,
+            "pagada",
+            Some("pago_confirmado"),
+            Some(COMPRADOR),
+            None,
+        )
+        .await
+        .expect("pagar");
+    checkout
+        .transicionar(
+            &orden.id,
+            "cancelada",
+            Some("cancelacion_manual"),
+            Some(COMPRADOR),
+            None,
+        )
+        .await
+        .expect("cancelar");
+
+    let tipos: Vec<String> = sqlx::query_scalar(
+        "SELECT tipo FROM orders.outbox
+          WHERE payload->'data'->>'order_id' = $1
+          ORDER BY creado_en",
+    )
+    .bind(&orden.id)
+    .fetch_all(db.pool())
+    .await
+    .expect("outbox");
+    assert!(tipos.contains(&"order.cancelled".to_string()));
+    assert!(tipos.contains(&"devolucion.solicitada".to_string()));
 }
 
 #[tokio::test]
@@ -818,6 +1326,244 @@ async fn debe_reembolsar_conciliar_y_contracargar_un_pago() {
             .await
             .expect("eventos");
     assert_eq!(eventos, 3);
+}
+
+#[tokio::test]
+async fn debe_dejar_pendiente_un_cargo_de_pasarela_real() {
+    use axum::extract::Json as AxumJson;
+    use axum::routing::post;
+    use axum::Router;
+
+    async fn cargos(AxumJson(cuerpo): AxumJson<Value>) -> AxumJson<Value> {
+        let id = cuerpo["orden_id"].as_str().unwrap_or("sin-orden");
+        AxumJson(json!({ "referencia": format!("ext-{id}") }))
+    }
+
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let app = Router::new().route("/cargos", post(cargos));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("puerto mock");
+    let base = format!("http://{}", listener.local_addr().expect("direccion mock"));
+    let servidor = tokio::spawn(async move {
+        axum::serve(listener, app).await.expect("servidor mock");
+    });
+
+    sqlx::query(
+        "INSERT INTO orders.metodos_pago
+           (codigo, nombre, requiere_confirmacion, activo, config)
+         VALUES ('tarjeta', 'Tarjeta', false, true, '{\"cargo_externo\":true}'::jsonb)",
+    )
+    .execute(db.pool())
+    .await
+    .expect("metodo tarjeta");
+    sqlx::query(
+        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
+         VALUES ('http_mock', 'HTTP Mock', 'http', true, jsonb_build_object('url', $1))",
+    )
+    .bind(&base)
+    .execute(db.pool())
+    .await
+    .expect("proveedor http");
+    sqlx::query(
+        "INSERT INTO orders.configuracion_pagos
+           (empresa_id, proveedor_codigo, activo, config)
+         VALUES ($1::uuid, 'http_mock', true, '{}'::jsonb)",
+    )
+    .bind(EMPRESA)
+    .execute(db.pool())
+    .await
+    .expect("configuracion pagos");
+
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert!(orden.pago_url.is_none());
+
+    let (estado, proveedor, referencia): (String, String, String) = sqlx::query_as(
+        "SELECT estado, proveedor, referencia FROM orders.pagos
+          WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("pago");
+    assert_eq!(estado, "pendiente");
+    assert_eq!(proveedor, "http_mock");
+    assert!(!referencia.is_empty());
+
+    // Sin pasarela configurada no se puede cobrar con tarjeta usando el simulado.
+    sqlx::query("DELETE FROM orders.configuracion_pagos WHERE empresa_id = $1::uuid")
+        .bind(EMPRESA)
+        .execute(db.pool())
+        .await
+        .expect("quitar configuracion");
+    let error = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect_err("no debe cobrar sin pasarela");
+    assert_eq!(error.codigo, "PAGO_SIMULADO_NO_PERMITIDO");
+
+    servidor.abort();
+}
+
+#[tokio::test]
+async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
+    use axum::extract::Json as AxumJson;
+    use axum::routing::post;
+    use axum::Router;
+    use orders_service::conciliacion::ConciliacionPagos;
+    use orders_service::pagos_flujo::FlujoPagos;
+
+    async fn login() -> AxumJson<Value> {
+        AxumJson(json!({ "access_token": "tok", "expires_in": 3600 }))
+    }
+    async fn link() -> AxumJson<Value> {
+        AxumJson(json!({ "type": "200", "url": "https://pago.example/1" }))
+    }
+    async fn consult() -> AxumJson<Value> {
+        AxumJson(json!({ "type": "200", "response": [{ "code": "1" }] }))
+    }
+
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let app = Router::new()
+        .route("/api/v1/login", post(login))
+        .route("/api/v1/createLinkPayment", post(link))
+        .route("/api/v1/consult", post(consult));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("puerto mock");
+    let base = format!("http://{}", listener.local_addr().expect("direccion mock"));
+    let servidor = tokio::spawn(async move {
+        axum::serve(listener, app).await.expect("servidor mock");
+    });
+
+    std::env::set_var("TILOPAY_TEST_RECON_USER", "usuario");
+    std::env::set_var("TILOPAY_TEST_RECON_PASSWORD", "secreto");
+    std::env::set_var("TILOPAY_TEST_RECON_KEY", "llave");
+    let configuracion = json!({
+        "base_url": base,
+        "apiuser_env": "TILOPAY_TEST_RECON_USER",
+        "password_env": "TILOPAY_TEST_RECON_PASSWORD",
+        "key_env": "TILOPAY_TEST_RECON_KEY",
+    });
+    sqlx::query(
+        "INSERT INTO orders.metodos_pago
+           (codigo, nombre, requiere_confirmacion, activo, config)
+         VALUES ('tarjeta', 'Tarjeta', false, true, '{\"cargo_externo\":true}'::jsonb)",
+    )
+    .execute(db.pool())
+    .await
+    .expect("metodo tarjeta");
+    sqlx::query(
+        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
+         VALUES ('tilopay', 'Tilopay', 'tilopay', true, $1::jsonb)",
+    )
+    .bind(configuracion.to_string())
+    .execute(db.pool())
+    .await
+    .expect("proveedor tilopay");
+    sqlx::query(
+        "INSERT INTO orders.configuracion_pagos
+           (empresa_id, proveedor_codigo, activo, config)
+         VALUES ($1::uuid, 'tilopay', true, '{}'::jsonb)",
+    )
+    .bind(EMPRESA)
+    .execute(db.pool())
+    .await
+    .expect("configuracion pagos");
+
+    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let orden = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden");
+    assert_eq!(orden.estado, "creada");
+    assert!(orden.pago_url.is_some());
+
+    let conciliacion = ConciliacionPagos::nueva(
+        Arc::new(Pagos::nueva(Arc::clone(&db))),
+        Arc::new(FlujoPagos::nuevo(Arc::clone(&checkout))),
+        0,
+        200,
+    );
+    let resumen = conciliacion.ejecutar().await.expect("conciliacion");
+    assert_eq!(resumen.confirmados, 1);
+
+    let estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago");
+    assert_eq!(estado, "confirmado");
+    let orden_estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden vista");
+    assert_eq!(orden_estado, "pagada");
+
+    // Carrera de expiración: la orden se cancela antes de que llegue el pago.
+    let orden_tardia = checkout
+        .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
+        .await
+        .expect("orden tardia");
+    checkout
+        .transicionar(
+            &orden_tardia.id,
+            "cancelada",
+            Some("expirada_por_ttl"),
+            Some("sistema"),
+            None,
+        )
+        .await
+        .expect("cancelar orden");
+    let resumen_tardio = conciliacion.ejecutar().await.expect("conciliacion tardia");
+    assert_eq!(
+        (
+            resumen_tardio.revisados,
+            resumen_tardio.confirmados,
+            resumen_tardio.rechazados,
+            resumen_tardio.errores
+        ),
+        (1, 1, 0, 0),
+        "resumen tardio"
+    );
+
+    let estado_tardio: String =
+        sqlx::query_scalar("SELECT estado FROM orders.pagos WHERE order_id = $1::uuid")
+            .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("pago tardio");
+    assert_eq!(estado_tardio, "confirmado");
+    let orden_tardia_estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+            .fetch_one(db.pool())
+            .await
+            .expect("orden tardia vista");
+    assert_eq!(orden_tardia_estado, "cancelada");
+    let incidentes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)
+           FROM orders.pagos_eventos e
+           JOIN orders.pagos p ON p.id = e.pago_id
+          WHERE p.order_id = $1::uuid AND e.tipo = 'pago.tardio'",
+    )
+    .bind(Uuid::parse_str(&orden_tardia.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("incidencias");
+    assert_eq!(incidentes, 1);
+
+    servidor.abort();
 }
 
 #[tokio::test]
@@ -1219,6 +1965,7 @@ async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
         Arc::clone(&db),
         Arc::clone(&checkout.vistas),
         Arc::clone(&checkout.clientes),
+        Arc::clone(&checkout.pagos),
         Outbox::nueva("orders.outbox"),
     );
     let admin = orders_service::auth::UsuarioContexto {
@@ -1255,6 +2002,24 @@ async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
         .await
         .expect("recibir");
     assert_eq!(recibida.estado, "recibida");
+    assert_eq!(recibida.reembolso_estado, "reembolsado");
+    assert_eq!(recibida.reembolsado_cents, 10_000);
+    assert_eq!(recibida.nota_credito_estado, "emitida");
+    assert_eq!(
+        recibida.nota_credito_id.as_deref(),
+        Some("99999999-9999-4999-8999-999999999999")
+    );
+
+    let pago: (String, i32) = sqlx::query_as(
+        "SELECT estado, monto_reembolsado_cents FROM orders.pagos
+          WHERE order_id = $1::uuid ORDER BY creado_en DESC LIMIT 1",
+    )
+    .bind(&orden.id)
+    .fetch_one(db.pool())
+    .await
+    .expect("pago");
+    assert_eq!(pago.0, "reembolsado_parcial");
+    assert_eq!(pago.1, 10_000);
 
     let eventos: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM orders.outbox WHERE tipo = 'devolucion.recibida'")
@@ -1262,6 +2027,36 @@ async fn debe_crear_aprobar_y_recibir_una_devolucion_parcial() {
             .await
             .expect("eventos");
     assert_eq!(eventos, 1);
+    let reembolsos: (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*)::bigint,
+                COALESCE(MAX((payload->'data'->>'monto_cents')::int), 0)::bigint
+           FROM orders.outbox WHERE tipo = 'devolucion.reembolsada'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("eventos reembolso");
+    assert_eq!(reembolsos, (1, 10_000));
+
+    // Reintentos idempotentes: cubren las rutas administrativas de recuperación.
+    let reembolso_retry = devoluciones
+        .reembolsar_devolucion(&creada.id, &admin)
+        .await
+        .expect("reintento reembolso");
+    assert_eq!(reembolso_retry.reembolso_estado, "reembolsado");
+    let nota_retry = devoluciones
+        .emitir_nota_credito(&creada.id, &admin)
+        .await
+        .expect("reintento nota");
+    assert_eq!(nota_retry.nota_credito_estado, "emitida");
+}
+
+#[tokio::test]
+async fn debe_limpiar_la_idempotencia_vencida() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let idempotencia = orders_service::idempotencia::Idempotencia::nueva(Arc::clone(&db));
+    let eliminadas = idempotencia.limpiar().await.expect("limpiar");
+    assert_eq!(eliminadas, 0);
 }
 
 #[tokio::test]
@@ -1277,6 +2072,7 @@ async fn debe_impedir_devolver_mas_cantidad_que_la_comprada() {
         Arc::clone(&db),
         Arc::clone(&checkout.vistas),
         Arc::clone(&checkout.clientes),
+        Arc::clone(&checkout.pagos),
         Outbox::nueva("orders.outbox"),
     );
     let admin = orders_service::auth::UsuarioContexto {
@@ -1315,6 +2111,7 @@ async fn debe_rechazar_y_negar_permisos_en_una_devolucion() {
         Arc::clone(&db),
         Arc::clone(&checkout.vistas),
         Arc::clone(&checkout.clientes),
+        Arc::clone(&checkout.pagos),
         Outbox::nueva("orders.outbox"),
     );
     let admin = orders_service::auth::UsuarioContexto {
@@ -1456,6 +2253,21 @@ async fn debe_gestionar_devoluciones_parciales_por_http() {
     .expect("estado");
     assert_eq!(recibida, "recibida");
 
+    for accion in ["reembolsar", "nota-credito"] {
+        let mut request = Request::post(format!(
+            "/api/v2/admin/devoluciones/{devolucion_id}/{accion}"
+        ));
+        for (clave, valor) in headers_admin() {
+            request = request.header(clave, valor);
+        }
+        let response = router
+            .clone()
+            .oneshot(request.body(Body::empty()).expect("request"))
+            .await
+            .expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
     let mut request = Request::post(format!(
         "/api/v2/admin/devoluciones/{devolucion_id}/rechazar"
     ));
@@ -1510,6 +2322,8 @@ async fn router_completo(db: Arc<Db>, stock: i64) -> axum::Router {
         directo: false,
         promocion: None,
         cupon: None,
+        fiscal: None,
+        nota_credito: Some("99999999-9999-4999-8999-999999999999".to_string()),
         capacidades: vec![
             Capacidad {
                 empresa_id: EMPRESA.to_string(),
@@ -1648,6 +2462,176 @@ async fn debe_crear_y_consultar_orden_por_http() {
     assert_eq!(response.status(), StatusCode::OK);
     let valor = json_de(response).await;
     assert_eq!(valor["data"]["id"], order_id);
+}
+
+#[tokio::test]
+async fn debe_repetir_la_respuesta_con_la_misma_clave_de_idempotencia() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let cuerpo = json!({
+        "tipo_orden": "compra",
+        "items": [{"oferta_id": OFERTA, "cantidad": 2}]
+    })
+    .to_string();
+
+    let peticion = || {
+        let mut request = Request::post("/api/v2/orders")
+            .header("content-type", "application/json")
+            .header("idempotency-key", "orden-idempotente-1");
+        for (clave, valor) in headers_comprador() {
+            request = request.header(clave, valor);
+        }
+        request.body(Body::from(cuerpo.clone())).expect("request")
+    };
+
+    let primera = router.clone().oneshot(peticion()).await.expect("primera");
+    assert_eq!(primera.status(), StatusCode::CREATED);
+    assert!(primera.headers().get("idempotency-replayed").is_none());
+    let valor_uno = json_de(primera).await;
+    let order_id = valor_uno["data"]["id"].as_str().expect("id").to_string();
+
+    let segunda = router.clone().oneshot(peticion()).await.expect("segunda");
+    assert_eq!(segunda.status(), StatusCode::CREATED);
+    assert_eq!(
+        segunda
+            .headers()
+            .get("idempotency-replayed")
+            .and_then(|valor| valor.to_str().ok()),
+        Some("true")
+    );
+    let valor_dos = json_de(segunda).await;
+    assert_eq!(valor_dos["data"]["id"], order_id);
+
+    let ordenes: i64 = sqlx::query_scalar("SELECT COUNT(*)::bigint FROM orders.orden_vista")
+        .fetch_one(db.pool())
+        .await
+        .expect("ordenes");
+    assert_eq!(ordenes, 1);
+
+    let mut distinta = Request::post("/api/v2/orders")
+        .header("content-type", "application/json")
+        .header("idempotency-key", "orden-idempotente-1");
+    for (clave, valor) in headers_comprador() {
+        distinta = distinta.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            distinta
+                .body(Body::from(
+                    json!({
+                        "tipo_orden": "compra",
+                        "items": [{"oferta_id": OFERTA, "cantidad": 3}]
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("tercera");
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let error = json_de(response).await;
+    assert_eq!(error["codigo"], "IDEMPOTENCIA_CLAVE_REUTILIZADA");
+
+    // Un error de validación no se cachea: la clave puede reutilizarse tras
+    // corregir el cuerpo.
+    let mut invalida = Request::post("/api/v2/orders")
+        .header("content-type", "application/json")
+        .header("idempotency-key", "orden-error-1");
+    for (clave, valor) in headers_comprador() {
+        invalida = invalida.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            invalida
+                .body(Body::from(
+                    json!({
+                        "tipo_orden": "invalido",
+                        "items": [{"oferta_id": OFERTA, "cantidad": 2}]
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("invalida");
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+    let mut corregida = Request::post("/api/v2/orders")
+        .header("content-type", "application/json")
+        .header("idempotency-key", "orden-error-1");
+    for (clave, valor) in headers_comprador() {
+        corregida = corregida.header(clave, valor);
+    }
+    let response = router
+        .oneshot(
+            corregida
+                .body(Body::from(
+                    json!({
+                        "tipo_orden": "compra",
+                        "items": [{"oferta_id": OFERTA, "cantidad": 2}]
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("corregida");
+    assert_eq!(response.status(), StatusCode::CREATED);
+}
+
+#[tokio::test]
+async fn debe_aplicar_idempotencia_a_la_confirmacion_de_pago() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+    let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+
+    let peticion = || {
+        let mut request = Request::post(format!("/api/v2/admin/pagos/{pago_id}/confirmar"))
+            .header("idempotency-key", "pago-idempotente-1");
+        for (clave, valor) in headers_admin() {
+            request = request.header(clave, valor);
+        }
+        request.body(Body::empty()).expect("request")
+    };
+
+    let primera = router.clone().oneshot(peticion()).await.expect("primera");
+    assert_eq!(primera.status(), StatusCode::OK);
+    let segunda = router.oneshot(peticion()).await.expect("segunda");
+    assert_eq!(segunda.status(), StatusCode::OK);
+    assert_eq!(
+        segunda
+            .headers()
+            .get("idempotency-replayed")
+            .and_then(|valor| valor.to_str().ok()),
+        Some("true")
+    );
+
+    let estado: String =
+        sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
+            .bind(&order_id)
+            .fetch_one(db.pool())
+            .await
+            .expect("estado");
+    assert_eq!(estado, "pagada");
+    let procesados: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM orders.eventos
+          WHERE aggregate_id = $1::uuid AND tipo = 'OrderStatusUpdatedEvent'",
+    )
+    .bind(&order_id)
+    .fetch_one(db.pool())
+    .await
+    .expect("eventos");
+    assert_eq!(procesados, 1);
 }
 
 #[tokio::test]
@@ -1947,6 +2931,133 @@ async fn crear_orden_manual(router: axum::Router) -> (String, String) {
 }
 
 #[tokio::test]
+async fn debe_configurar_el_proveedor_de_pago_por_empresa() {
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let pagos = Arc::new(Pagos::nueva(Arc::clone(&db)));
+
+    let proveedores = pagos.listar_proveedores().await.expect("proveedores");
+    assert!(proveedores.iter().any(|p| p.codigo == "simulado"));
+    assert!(proveedores.iter().any(|p| p.codigo == "manual"));
+
+    let config = pagos
+        .guardar_configuracion(EMPRESA, None, &json!({ "proveedor_codigo": "manual" }))
+        .await
+        .expect("config manual");
+    assert_eq!(config.proveedor_codigo, "manual");
+    assert_eq!(config.empresa_id, EMPRESA);
+
+    let metodo = pagos
+        .metodo_activo("simulado")
+        .await
+        .expect("metodo")
+        .expect("simulado");
+    let error = pagos
+        .registrar(
+            &Uuid::new_v4().to_string(),
+            Some(EMPRESA),
+            None,
+            &metodo,
+            1_000,
+            "NIO",
+        )
+        .await
+        .expect_err("manual no crea cargos");
+    assert_eq!(error.codigo, "PROVEEDOR_MANUAL");
+
+    pagos
+        .guardar_configuracion(EMPRESA, None, &json!({ "proveedor_codigo": "simulado" }))
+        .await
+        .expect("config simulado");
+    pagos
+        .registrar(
+            &Uuid::new_v4().to_string(),
+            Some(EMPRESA),
+            None,
+            &metodo,
+            1_000,
+            "NIO",
+        )
+        .await
+        .expect("simulado registra");
+}
+
+#[tokio::test]
+async fn debe_gestionar_proveedores_y_configuracion_de_pago_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request =
+        Request::post("/api/v2/admin/proveedores-pago").header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({
+                        "codigo": "http_demo",
+                        "nombre": "HTTP Demo",
+                        "tipo": "http",
+                        "activo": false
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let mut request = Request::put(format!("/api/v2/empresas/{EMPRESA}/configuracion-pagos"))
+        .header("content-type", "application/json");
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({ "proveedor_codigo": "simulado" }).to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let mut request = Request::get(format!("/api/v2/empresas/{EMPRESA}/configuracion-pagos"));
+    for (clave, valor) in headers_admin() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let valor = json_de(response).await;
+    assert_eq!(valor["data"]["proveedor_codigo"], "simulado");
+
+    let mut request = Request::get(format!("/api/v2/empresas/{EMPRESA}/configuracion-pagos"));
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .oneshot(request.body(Body::empty()).expect("request"))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
 async fn debe_confirmar_y_rechazar_pagos_manuales() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
@@ -2102,43 +3213,49 @@ async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
 }
 
 #[tokio::test]
-async fn debe_procesar_un_webhook_de_pago_con_secreto() {
+async fn debe_procesar_un_webhook_de_pago_con_firma_hmac() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
     use tower::ServiceExt;
+
+    fn firma(secreto: &str, timestamp: &str, cuerpo: &[u8]) -> String {
+        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes()).expect("hmac");
+        mac.update(timestamp.as_bytes());
+        mac.update(b".");
+        mac.update(cuerpo);
+        hex::encode(mac.finalize().into_bytes())
+    }
+
     let _guard = DB_LOCK.lock().await;
     let Some(db) = con_bd().await else { return };
     let router = router_completo(Arc::clone(&db), 10).await;
     let (order_id, pago_id) = crear_orden_manual(router.clone()).await;
+    let timestamp = chrono::Utc::now().timestamp().to_string();
+    let cuerpo = format!(r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#);
 
     let request = Request::post("/internal/pagos/webhook")
         .header("content-type", "application/json")
-        .header("x-webhook-secret", "incorrecto");
+        .header("x-internal-key", "clave-interna")
+        .header("x-webhook-timestamp", &timestamp)
+        .header("x-webhook-signature", "incorrecta");
     let response = router
         .clone()
-        .oneshot(
-            request
-                .body(Body::from(format!(
-                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
-                )))
-                .expect("request"),
-        )
+        .oneshot(request.body(Body::from(cuerpo.clone())).expect("request"))
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
+    let firma = firma("webhook-secreto", &timestamp, cuerpo.as_bytes());
     let request = Request::post("/internal/pagos/webhook")
         .header("content-type", "application/json")
-        .header("x-webhook-secret", "webhook-secreto");
+        .header("x-internal-key", "clave-interna")
+        .header("x-webhook-timestamp", &timestamp)
+        .header("x-webhook-signature", firma);
     let response = router
         .clone()
-        .oneshot(
-            request
-                .body(Body::from(format!(
-                    r#"{{"pago_id":"{pago_id}","estado":"confirmado"}}"#
-                )))
-                .expect("request"),
-        )
+        .oneshot(request.body(Body::from(cuerpo)).expect("request"))
         .await
         .expect("response");
     assert_eq!(response.status(), StatusCode::OK);
@@ -2408,6 +3525,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     fulfillment: Some("retiro_tienda".to_string()),
                     fulfillment_config: None,
                     ubicacion_id: None,
+                    impuesto_codigo: None,
                 }]),
                 ..compra(1)
             },
@@ -2426,6 +3544,7 @@ async fn debe_validar_el_fulfillment_contra_el_registro() {
                     fulfillment: Some("no_existe".to_string()),
                     fulfillment_config: None,
                     ubicacion_id: None,
+                    impuesto_codigo: None,
                 }]),
                 ..compra(1)
             },
@@ -3033,4 +4152,115 @@ async fn debe_permitir_al_comprador_canjear_sus_puntos() {
         .as_array()
         .expect("recompensas")
         .is_empty());
+}
+
+#[tokio::test]
+async fn debe_purgar_los_datos_del_tenant_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":1}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id").to_string();
+
+    let response = router
+        .oneshot(
+            Request::post("/internal/orders/tenant/purgar")
+                .header("content-type", "application/json")
+                .header("x-internal-key", "clave-interna")
+                .body(Body::from(
+                    json!({
+                        "empresa_id": EMPRESA,
+                        "negocio_ids": [],
+                        "usuario_ids": [COMPRADOR, VENDEDOR],
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let (direccion, comprador): (serde_json::Value, String) = sqlx::query_as(
+        "SELECT direccion_envio, comprador_id::text FROM orders.orden_vista WHERE id = $1::uuid",
+    )
+    .bind(&order_id)
+    .fetch_one(db.pool())
+    .await
+    .expect("orden");
+    assert_eq!(direccion, json!({}));
+    assert_eq!(comprador, "00000000-0000-0000-0000-000000000000");
+}
+
+#[tokio::test]
+async fn debe_exportar_los_datos_del_tenant_por_http() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+    let _guard = DB_LOCK.lock().await;
+    let Some(db) = con_bd().await else { return };
+    let router = router_completo(Arc::clone(&db), 10).await;
+
+    let mut request = Request::post("/api/v2/orders").header("content-type", "application/json");
+    for (clave, valor) in headers_comprador() {
+        request = request.header(clave, valor);
+    }
+    let response = router
+        .clone()
+        .oneshot(
+            request
+                .body(Body::from(
+                    json!({"tipo_orden":"compra","items":[{"oferta_id":OFERTA,"cantidad":1}]})
+                        .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let orden = json_de(response).await;
+    let order_id = orden["data"]["id"].as_str().expect("order_id").to_string();
+
+    let response = router
+        .oneshot(
+            Request::post("/internal/orders/tenant/exportar")
+                .header("content-type", "application/json")
+                .header("x-internal-key", "clave-interna")
+                .body(Body::from(
+                    json!({
+                        "empresa_id": EMPRESA,
+                        "negocio_ids": [],
+                        "usuario_ids": [COMPRADOR, VENDEDOR],
+                    })
+                    .to_string(),
+                ))
+                .expect("request"),
+        )
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let exportado = json_de(response).await;
+    let ordenes = exportado["datos"]["ordenes"].as_array().expect("ordenes");
+    assert!(ordenes.iter().any(|valor| valor["id"] == order_id));
 }

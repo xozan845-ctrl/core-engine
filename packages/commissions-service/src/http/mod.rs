@@ -4,6 +4,7 @@
 //! correlación (más externa) → métricas → envelope → handler.
 
 pub mod envelope;
+pub mod interno;
 pub mod rutas;
 
 use crate::auth::UsuarioContexto;
@@ -76,6 +77,14 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/empresarios/me/reportes/negocios",
             get(rutas::reportes_negocios),
+        )
+        .route(
+            "/internal/commissions/tenant/exportar",
+            post(interno::exportar_tenant),
+        )
+        .route(
+            "/internal/commissions/tenant/purgar",
+            post(interno::purgar_tenant),
         )
         .fallback(no_encontrado)
         .with_state(state.clone());

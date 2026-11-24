@@ -6,7 +6,7 @@
 
 use crate::auth::Capacidades;
 use crate::clients::{OrdenExterna, Orders};
-use crate::db::{timestamp, uuid_opcional, uuid_texto, Db};
+use crate::db::{timestamp, timestamp_opcional, uuid_opcional, uuid_texto, Db};
 use crate::errors::ApiError;
 use crate::logs;
 use crate::money::centavos_a_texto;
@@ -41,6 +41,11 @@ pub struct Envio {
     pub proveedor_tipo: Option<String>,
     pub proveedor_tenant_id: Option<String>,
     pub parte_id: Option<String>,
+    pub pod_receptor: Option<String>,
+    pub pod_notas: Option<String>,
+    pub pod_foto_objeto_id: Option<String>,
+    pub pod_firma_objeto_id: Option<String>,
+    pub pod_capturado_en: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -73,6 +78,9 @@ pub struct Envios {
     outbox: Outbox,
 }
 
+mod preparacion;
+mod seguimiento;
+
 impl Envios {
     pub fn nueva(
         db: Arc<Db>,
@@ -93,412 +101,8 @@ impl Envios {
     pub fn outbox(&self) -> &Outbox {
         &self.outbox
     }
-
-    /// Prepara la guía de despacho cuando el pago fue procesado
-    /// (`payment.procesado`). Idempotente por `(order_id, empresa_id)`.
-    pub async fn preparar_envio(
-        &self,
-        order_id: &str,
-        empresa_id: &str,
-        negocio_id: Option<&str>,
-        monto_cents: i64,
-        parte_id: Option<&str>,
-    ) -> Result<Envio, ApiError> {
-        let order_uuid = parsear_uuid(order_id)?;
-        let empresa_uuid = parsear_uuid(empresa_id)?;
-        let negocio_uuid = negocio_id.map(parsear_uuid).transpose()?;
-
-        let existente = sqlx::query(
-            "SELECT * FROM logistics.envios
-              WHERE order_id = $1 AND empresa_id = $2
-                AND negocio_id IS NOT DISTINCT FROM $3",
-        )
-        .bind(order_uuid)
-        .bind(empresa_uuid)
-        .bind(negocio_uuid)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?;
-
-        if let Some(fila) = existente {
-            let envio = fila_envio(&fila)?;
-            if let (Some(tipo), Some(tenant)) = (
-                envio.proveedor_tipo.as_deref(),
-                envio.proveedor_tenant_id.as_deref(),
-            ) {
-                self.registrar_asignacion(&envio.id, None, tipo, tenant, "automatica", None)
-                    .await?;
-            }
-            return Ok(envio);
-        }
-
-        let guia = generar_guia();
-        let proveedor = self.proveedor_de_empresa(empresa_id, negocio_id).await?;
-        let parte_uuid = match parte_id {
-            Some(valor) => Some(parsear_uuid(valor)?),
-            None => None,
-        };
-
-        let fila = sqlx::query(
-            "INSERT INTO logistics.envios
-                (id, guia, order_id, empresa_id, negocio_id, parte_id, proveedor_tipo,
-                 proveedor_tenant_id, monto_cents, estado)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'en_preparacion') RETURNING *",
-        )
-        .bind(Uuid::new_v4())
-        .bind(&guia)
-        .bind(order_uuid)
-        .bind(empresa_uuid)
-        .bind(negocio_uuid)
-        .bind(parte_uuid)
-        .bind(proveedor.tipo.as_deref())
-        .bind(
-            proveedor
-                .tenant_id
-                .as_deref()
-                .map(parsear_uuid)
-                .transpose()?,
-        )
-        .bind(monto_cents)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?
-        .ok_or_else(|| ApiError::dominio("ENVIO_FALLIDO", "No se pudo preparar el envio."))?;
-
-        let envio = fila_envio(&fila)?;
-        if let (Some(tipo), Some(tenant)) = (
-            envio.proveedor_tipo.as_deref(),
-            envio.proveedor_tenant_id.as_deref(),
-        ) {
-            self.registrar_asignacion(&envio.id, None, tipo, tenant, "automatica", None)
-                .await?;
-        }
-        logs::info(
-            "envios",
-            crate::campos! {
-                "msg": "Guia de despacho generada",
-                "order_id": order_id,
-                "guia": envio.guia,
-            },
-        );
-        Ok(envio)
-    }
-
-    /// Consulta la orden a orders y agrupa las líneas por empresa.
-    pub async fn preparar_envios_de_orden(&self, order_id: &str) -> Result<Vec<Envio>, ApiError> {
-        let orden = self.consultar_orden(order_id).await?;
-        let Some(orden) = orden else {
-            return Err(ApiError::dominio(
-                "ORDEN_SIN_LINEAS",
-                "La orden no tiene líneas para despachar.",
-            ));
-        };
-        if orden.items.is_empty() {
-            return Err(ApiError::dominio(
-                "ORDEN_SIN_LINEAS",
-                "La orden no tiene líneas para despachar.",
-            ));
-        }
-
-        let mut montos: Vec<((String, Option<String>), i64)> = Vec::new();
-        for item in &orden.items {
-            if item.empresa_id.trim().is_empty() {
-                return Err(ApiError::dominio(
-                    "EMPRESA_REQUERIDA",
-                    "Una línea no tiene empresa asignada.",
-                ));
-            }
-            let subtotal = item.precio_unitario_cents.saturating_mul(item.cantidad);
-            let clave = (item.empresa_id.clone(), item.negocio_id.clone());
-            match montos.iter_mut().find(|(id, _)| id == &clave) {
-                Some((_, total)) => *total += subtotal,
-                None => montos.push((clave, subtotal)),
-            }
-        }
-
-        let mut envios = Vec::with_capacity(montos.len());
-        for ((empresa, negocio), monto) in montos {
-            envios.push(
-                self.preparar_envio(
-                    order_id,
-                    &empresa,
-                    negocio.as_deref(),
-                    monto,
-                    orden.parte_id.as_deref(),
-                )
-                .await?,
-            );
-        }
-        Ok(envios)
-    }
-
-    /// Deriva la flota de las capacidades activas de la empresa/negocio.
-    async fn proveedor_de_empresa(
-        &self,
-        empresa_id: &str,
-        negocio_id: Option<&str>,
-    ) -> Result<Proveedor, ApiError> {
-        let filas = self
-            .capacidades
-            .activas_en(
-                empresa_id,
-                negocio_id,
-                &["logistica_rutas", "fulfillment_delivery"],
-            )
-            .await
-            .map_err(|_| ApiError::servicio_no_disponible("identity-service"))?;
-        let activa = |codigo: &str| {
-            filas.iter().any(|fila| {
-                fila.empresa_id == empresa_id && fila.activo && fila.capacidad_codigo == codigo
-            })
-        };
-        let propia = activa("logistica_rutas");
-        let delivery = activa("fulfillment_delivery");
-        if propia && delivery {
-            Ok(Proveedor {
-                tipo: None,
-                tenant_id: None,
-            })
-        } else if propia {
-            Ok(Proveedor {
-                tipo: Some("empresa".to_string()),
-                tenant_id: Some(empresa_id.to_string()),
-            })
-        } else {
-            Ok(Proveedor {
-                tipo: Some("plataforma".to_string()),
-                tenant_id: Some(self.tenant_plataforma.clone()),
-            })
-        }
-    }
-
-    pub async fn asignar_proveedor(
-        &self,
-        envio_id: &str,
-        empresa_id: &str,
-        tipo: &str,
-        actor_usuario_id: Option<&str>,
-    ) -> Result<Envio, ApiError> {
-        let envio_uuid = parsear_uuid(envio_id)?;
-        let empresa_uuid = parsear_uuid(empresa_id)?;
-
-        let envio = sqlx::query("SELECT * FROM logistics.envios WHERE id = $1 AND empresa_id = $2")
-            .bind(envio_uuid)
-            .bind(empresa_uuid)
-            .fetch_optional(self.db.pool())
-            .await
-            .map_err(error_db)?
-            .ok_or_else(|| {
-                ApiError::dominio(
-                    "ENVIO_NO_ENCONTRADO",
-                    "El envío no pertenece a la empresa activa.",
-                )
-            })?;
-        let envio = fila_envio(&envio)?;
-        if envio.proveedor_tipo.is_some() {
-            return Err(ApiError::dominio(
-                "ASIGNACION_FIJA",
-                "Solo un envío híbrido permite elegir proveedor.",
-            ));
-        }
-
-        let tenant = if tipo == "plataforma" {
-            self.tenant_plataforma.clone()
-        } else {
-            empresa_id.to_string()
-        };
-        let fila = sqlx::query(
-            "UPDATE logistics.envios SET proveedor_tipo = $1, proveedor_tenant_id = $2
-             WHERE id = $3 AND empresa_id = $4 RETURNING *",
-        )
-        .bind(tipo)
-        .bind(parsear_uuid(&tenant)?)
-        .bind(envio_uuid)
-        .bind(empresa_uuid)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?
-        .ok_or_else(|| ApiError::dominio("ENVIO_NO_ENCONTRADO", "No se pudo asignar el envío."))?;
-
-        let actualizado = fila_envio(&fila)?;
-        self.registrar_asignacion(
-            envio_id,
-            envio.proveedor_tipo.as_deref(),
-            tipo,
-            &tenant,
-            "empresario",
-            actor_usuario_id,
-        )
-        .await?;
-        Ok(actualizado)
-    }
-
-    async fn registrar_asignacion(
-        &self,
-        envio_id: &str,
-        anterior: Option<&str>,
-        nuevo: &str,
-        proveedor_tenant_id: &str,
-        origen: &str,
-        actor_usuario_id: Option<&str>,
-    ) -> Result<(), ApiError> {
-        let sql = format!(
-            "INSERT INTO logistics.asignaciones_envio
-                (envio_id, proveedor_tipo_anterior, proveedor_tipo_nuevo,
-                 proveedor_tenant_id, origen, actor_usuario_id)
-             VALUES ($1,$2,$3,$4,$5,$6)
-             {}",
-            if origen == "automatica" {
-                "ON CONFLICT DO NOTHING"
-            } else {
-                ""
-            }
-        );
-        let actor = match actor_usuario_id {
-            Some(valor) => Some(parsear_uuid(valor)?),
-            None => None,
-        };
-        sqlx::query(&sql)
-            .bind(parsear_uuid(envio_id)?)
-            .bind(anterior)
-            .bind(nuevo)
-            .bind(parsear_uuid(proveedor_tenant_id)?)
-            .bind(origen)
-            .bind(actor)
-            .execute(self.db.pool())
-            .await
-            .map_err(error_db)?;
-        Ok(())
-    }
-
-    pub async fn de_empresa(&self, empresa_id: &str) -> Result<Vec<Envio>, ApiError> {
-        let filas = sqlx::query(
-            "SELECT * FROM logistics.envios WHERE empresa_id = $1
-             ORDER BY creado_en DESC LIMIT 200",
-        )
-        .bind(parsear_uuid(empresa_id)?)
-        .fetch_all(self.db.pool())
-        .await
-        .map_err(error_db)?;
-        filas.iter().map(fila_envio).collect()
-    }
-
-    /// Avanza un envío de la flota y, si todos los envíos de la orden alcanzan
-    /// el estado, propaga la transición a orders.
-    pub async fn avanzar_estado_envio(
-        &self,
-        envio_id: &str,
-        proveedor_tenant_id: &str,
-        estado: &str,
-        motivo: Option<&str>,
-        actor_usuario_id: Option<&str>,
-    ) -> Result<Envio, ApiError> {
-        let fila = sqlx::query(
-            "UPDATE logistics.envios SET estado = $1
-             WHERE id = $2 AND proveedor_tenant_id = $3
-             RETURNING *",
-        )
-        .bind(estado)
-        .bind(parsear_uuid(envio_id)?)
-        .bind(parsear_uuid(proveedor_tenant_id)?)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?
-        .ok_or_else(|| {
-            ApiError::dominio(
-                "ENVIO_NO_ENCONTRADO",
-                "El envío no pertenece a la flota activa.",
-            )
-        })?;
-        let envio = fila_envio(&fila)?;
-
-        let aceptados = estados_aceptados(estado);
-        let pendientes = sqlx::query(
-            "SELECT COUNT(*)::int AS total FROM logistics.envios
-             WHERE order_id = $1 AND NOT (estado = ANY($2::text[]))",
-        )
-        .bind(parsear_uuid(&envio.order_id)?)
-        .bind(&aceptados)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?;
-        let total = pendientes
-            .as_ref()
-            .and_then(|fila| fila.try_get::<i32, _>("total").ok())
-            .unwrap_or(1);
-        if total == 0 {
-            self.avanzar_estado_orden(&envio.order_id, estado, motivo, None, actor_usuario_id)
-                .await?;
-        }
-        Ok(envio)
-    }
-
-    pub async fn de_orden(&self, order_id: &str) -> Result<Option<Envio>, ApiError> {
-        let fila = sqlx::query(
-            "SELECT * FROM logistics.envios WHERE order_id = $1
-             ORDER BY creado_en LIMIT 1",
-        )
-        .bind(parsear_uuid(order_id)?)
-        .fetch_optional(self.db.pool())
-        .await
-        .map_err(error_db)?;
-        fila.as_ref().map(fila_envio).transpose()
-    }
-
-    pub async fn listar(&self) -> Result<Vec<EnvioConMonto>, ApiError> {
-        let filas = sqlx::query("SELECT * FROM logistics.envios ORDER BY creado_en DESC LIMIT 200")
-            .fetch_all(self.db.pool())
-            .await
-            .map_err(error_db)?;
-        filas
-            .iter()
-            .map(|fila| fila_envio(fila).map(EnvioConMonto::from))
-            .collect()
-    }
-
-    /// `PATCH /orders/:id/estado`: avanza el ciclo de vida en orders (Tabla 13).
-    pub async fn avanzar_estado_orden(
-        &self,
-        order_id: &str,
-        estado_nuevo: &str,
-        motivo: Option<&str>,
-        empresa_id: Option<&str>,
-        actor_usuario_id: Option<&str>,
-    ) -> Result<OrdenExterna, ApiError> {
-        if let Some(empresa_id) = empresa_id {
-            let orden = self
-                .consultar_orden(order_id)
-                .await?
-                .ok_or_else(|| ApiError::no_encontrado("Orden", order_id))?;
-            if !orden.items.iter().any(|item| item.empresa_id == empresa_id) {
-                return Err(ApiError::acceso_denegado(
-                    "La orden no pertenece a la empresa activa.",
-                ));
-            }
-        }
-
-        let orden = self
-            .orders
-            .avanzar(order_id, estado_nuevo, motivo, actor_usuario_id)
-            .await?;
-        logs::info(
-            "envios",
-            crate::campos! {
-                "msg": "Estado de orden avanzado",
-                "order_id": order_id,
-                "estado": estado_nuevo,
-            },
-        );
-        Ok(orden)
-    }
-
-    /// Consulta una orden; `None` si orders no responde o responde error.
-    pub async fn consultar_orden(&self, order_id: &str) -> Result<Option<OrdenExterna>, ApiError> {
-        Ok(self.orders.consultar(order_id).await.unwrap_or(None))
-    }
 }
 
-/// Estados que cuentan como avance suficiente cuando el envío pasa a `enviada`.
 pub fn estados_aceptados(estado: &str) -> Vec<String> {
     if estado == "enviada" {
         vec!["enviada".to_string(), "entregada".to_string()]
@@ -539,6 +143,16 @@ pub trait EnviosPort: Send + Sync {
         actor_usuario_id: Option<&str>,
     ) -> Result<Envio, ApiError>;
 
+    async fn registrar_pod(
+        &self,
+        envio_id: &str,
+        proveedor_tenant_id: &str,
+        receptor: &str,
+        foto_objeto_id: Option<&str>,
+        firma_objeto_id: Option<&str>,
+        notas: Option<&str>,
+    ) -> Result<Envio, ApiError>;
+
     async fn de_orden(&self, order_id: &str) -> Result<Option<Envio>, ApiError>;
 
     async fn listar(&self) -> Result<Vec<EnvioConMonto>, ApiError>;
@@ -556,6 +170,7 @@ pub trait EnviosPort: Send + Sync {
 }
 
 #[async_trait]
+
 impl EnviosPort for Envios {
     async fn preparar_envio(
         &self,
@@ -609,6 +224,27 @@ impl EnviosPort for Envios {
             estado,
             motivo,
             actor_usuario_id,
+        )
+        .await
+    }
+
+    async fn registrar_pod(
+        &self,
+        envio_id: &str,
+        proveedor_tenant_id: &str,
+        receptor: &str,
+        foto_objeto_id: Option<&str>,
+        firma_objeto_id: Option<&str>,
+        notas: Option<&str>,
+    ) -> Result<Envio, ApiError> {
+        Envios::registrar_pod(
+            self,
+            envio_id,
+            proveedor_tenant_id,
+            receptor,
+            foto_objeto_id,
+            firma_objeto_id,
+            notas,
         )
         .await
     }
@@ -690,6 +326,18 @@ impl EnviosPort for EnviosNoDisponible {
         Err(ApiError::servicio_no_disponible("postgres"))
     }
 
+    async fn registrar_pod(
+        &self,
+        _: &str,
+        _: &str,
+        _: &str,
+        _: Option<&str>,
+        _: Option<&str>,
+        _: Option<&str>,
+    ) -> Result<Envio, ApiError> {
+        Err(ApiError::servicio_no_disponible("postgres"))
+    }
+
     async fn de_orden(&self, _: &str) -> Result<Option<Envio>, ApiError> {
         Err(ApiError::servicio_no_disponible("postgres"))
     }
@@ -734,6 +382,15 @@ fn fila_envio(fila: &sqlx::postgres::PgRow) -> Result<Envio, ApiError> {
             .map_err(error_db)?,
         proveedor_tenant_id: uuid_opcional(fila, "proveedor_tenant_id").map_err(error_db)?,
         parte_id: uuid_opcional(fila, "parte_id").map_err(error_db)?,
+        pod_receptor: fila
+            .try_get::<Option<String>, _>("pod_receptor")
+            .map_err(error_db)?,
+        pod_notas: fila
+            .try_get::<Option<String>, _>("pod_notas")
+            .map_err(error_db)?,
+        pod_foto_objeto_id: uuid_opcional(fila, "pod_foto_objeto_id").map_err(error_db)?,
+        pod_firma_objeto_id: uuid_opcional(fila, "pod_firma_objeto_id").map_err(error_db)?,
+        pod_capturado_en: timestamp_opcional(fila, "pod_capturado_en").map_err(error_db)?,
     })
 }
 
@@ -853,6 +510,11 @@ mod tests {
             proveedor_tipo: Some("empresa".into()),
             proveedor_tenant_id: Some("emp-1".into()),
             parte_id: None,
+            pod_receptor: None,
+            pod_notas: None,
+            pod_foto_objeto_id: None,
+            pod_firma_objeto_id: None,
+            pod_capturado_en: None,
         };
         let valor = envio_json(&envio);
         assert_eq!(valor["guia"], "BGH-ABC-123456");

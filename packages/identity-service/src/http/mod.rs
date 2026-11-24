@@ -14,9 +14,12 @@ pub mod envelope;
 pub mod extensiones;
 pub mod internal;
 pub mod negocios;
+pub mod onboarding;
 pub mod packs;
 pub mod partes;
 pub mod personal;
+pub mod plataforma;
+pub mod regiones;
 pub mod registros;
 pub mod usuarios;
 pub mod validacion;
@@ -83,6 +86,19 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/auth/restablecer-contrasena/confirmar",
             post(auth::confirmar_restablecimiento),
         )
+        .route(
+            "/api/v2/auth/verificar-correo",
+            post(auth::verificar_correo),
+        )
+        .route(
+            "/api/v2/auth/reenviar-verificacion",
+            post(auth::reenviar_verificacion),
+        )
+        .route("/api/v2/auth/mfa/iniciar", post(auth::mfa_iniciar))
+        .route("/api/v2/auth/mfa/confirmar", post(auth::mfa_confirmar))
+        .route("/api/v2/auth/mfa/desactivar", post(auth::mfa_desactivar))
+        .route("/api/v2/auth/sesiones", get(auth::sesiones))
+        .route("/api/v2/auth/sesiones/{id}", delete(auth::revocar_sesion))
         .route("/api/v2/auth/me", get(auth::me))
         .route(
             "/api/v2/api-keys",
@@ -96,6 +112,11 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/api/v2/usuarios", get(usuarios::listar))
         .route("/api/v2/usuarios/{id}", get(usuarios::obtener))
+        .route("/api/v2/usuarios/{id}/mfa/reset", post(usuarios::reset_mfa))
+        .route(
+            "/api/v2/usuarios/{id}/telefono",
+            patch(usuarios::actualizar_telefono),
+        )
         .route(
             "/api/v2/usuarios/{id}/avatar",
             patch(usuarios::actualizar_avatar),
@@ -105,6 +126,32 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/empresas/{id}/perfil",
             patch(empresas::actualizar_perfil),
+        )
+        .route(
+            "/api/v2/empresas/{id}/estado",
+            patch(empresas::cambiar_estado),
+        )
+        .route(
+            "/api/v2/empresas/{id}/exportacion",
+            get(empresas::exportar).post(empresas::iniciar_exportacion),
+        )
+        .route(
+            "/api/v2/empresas/{id}/exportacion/{job_id}",
+            get(empresas::estado_exportacion),
+        )
+        .route(
+            "/api/v2/exportaciones/{job_id}/descarga",
+            get(empresas::descargar_exportacion),
+        )
+        .route(
+            "/api/v2/empresas/{id}/eliminacion",
+            get(empresas::consultar_eliminacion)
+                .post(empresas::solicitar_eliminacion)
+                .delete(empresas::cancelar_eliminacion),
+        )
+        .route(
+            "/api/v2/empresas/{id}/eliminacion/purgar",
+            post(empresas::purgar_eliminacion),
         )
         .route(
             "/api/v2/empresas/{id}/pack",
@@ -239,6 +286,10 @@ pub fn build_router(state: AppState) -> Router {
             get(auditoria::listar),
         )
         .route(
+            "/api/v2/admin/auditoria/retencion",
+            post(auditoria::purgar_retencion),
+        )
+        .route(
             "/api/v2/empresas/{empresa_id}/roles",
             get(personal::listar_roles).post(personal::crear_rol),
         )
@@ -270,6 +321,11 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/incorporaciones/{token}/aceptar",
             post(personal::aceptar_invitacion),
         )
+        .route("/api/v2/regiones-tributarias", get(regiones::listar))
+        .route(
+            "/api/v2/empresas/{empresa_id}/region-tributaria",
+            get(regiones::obtener).put(regiones::actualizar),
+        )
         .route(
             "/api/v2/empresas/{empresa_id}/capacidades",
             get(capacidades::listar),
@@ -294,6 +350,29 @@ pub fn build_router(state: AppState) -> Router {
             "/api/v2/empresas/{empresa_id}/negocios/{negocio_id}/capacidades/{capacidad}",
             patch(capacidades::actualizar_negocio),
         )
+        .route("/api/v2/onboarding", post(onboarding::crear))
+        .route("/api/v2/onboarding/{id}", get(onboarding::estado))
+        .route("/api/v2/plataforma/planes", get(plataforma::planes))
+        .route(
+            "/api/v2/plataforma/suscripciones/me",
+            get(plataforma::mi_suscripcion),
+        )
+        .route(
+            "/api/v2/plataforma/suscripciones",
+            post(plataforma::solicitar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones",
+            get(plataforma::listar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones/{id}/confirmar",
+            post(plataforma::confirmar),
+        )
+        .route(
+            "/api/v2/admin/plataforma/suscripciones/{id}/cancelar",
+            post(plataforma::cancelar),
+        )
         .route("/api/v2/packs", get(packs::listar).post(packs::crear))
         .route(
             "/api/v2/packs/modelos-operacion",
@@ -302,6 +381,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/v2/packs/verticales",
             get(packs::listar_verticales).post(packs::crear_vertical),
+        )
+        .route(
+            "/api/v2/packs/{codigo}/{version}/regiones",
+            get(packs::regiones_listar).put(packs::regiones_guardar),
         )
         .route("/api/v2/packs/{codigo}/{version}", get(packs::obtener))
         .fallback(no_encontrado)

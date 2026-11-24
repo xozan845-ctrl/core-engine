@@ -127,6 +127,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/internal/cupones/validar", post(internal::cupon_validar))
         .route("/internal/cupones/canjear", post(internal::cupon_canjear))
         .route("/internal/cupones/liberar", post(internal::cupon_liberar))
+        .route(
+            "/internal/pricing/tenant/exportar",
+            post(internal::exportar_tenant),
+        )
+        .route(
+            "/internal/pricing/tenant/purgar",
+            post(internal::purgar_tenant),
+        )
         .fallback(no_encontrado)
         .with_state(state.clone());
     aplicar_capas(router, state)

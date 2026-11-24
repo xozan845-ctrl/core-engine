@@ -3,7 +3,8 @@
 - **Fecha:** 2026-11-18
 - **Estado:** Aceptado (implementado)
 - **Relacionado:** [ADR-0014](./0014-finance-service-en-rust.md),
-  [ADR-0025](./0025-promociones-en-checkout.md)
+  [ADR-0025](./0025-promociones-en-checkout.md),
+  [ADR-0049](./0049-regiones-tributarias.md)
 
 ## Contexto
 
@@ -40,8 +41,11 @@
   de orden acepta `items` (opcional).
 - **Datos:** migración aditiva `97_fiscal_tenant.sql`; backfill de empresas
   existentes a `NI` si existe.
-- **Pendiente:** declaraciones por tenant (requiere tenant en el libro mayor),
-  facturación electrónica DGI y PDF.
+- **Límite actualizado (2026-11-23):** la declaración de plataforma sigue
+  usando el libro mayor porque no tiene `empresa_id`; la declaración por tenant
+  ya existe y se calcula desde comprobantes. La facturación electrónica tiene
+  adaptador DGI de referencia; la certificación/credenciales del proveedor
+  autorizado son operativas de cada país.
 
 ## Criterios de aceptación
 
@@ -51,3 +55,22 @@
 - Con `items`, el IVA del comprobante es la suma del IVA por línea.
 - Sin `items`, el comportamiento legacy se conserva.
 - Tests de integración cubren configuración fiscal, moneda y comprobantes.
+
+## Actualización (2026-11-23)
+
+[ADR-0049](./0049-regiones-tributarias.md) completa la selección que este ADR
+dejó como configuración posterior al alta:
+
+- La jurisdicción ahora se elige **al aplicar el pack**, en `POST /empresas` y
+  `POST /onboarding`, y se guarda en `identity.empresas.region_tributaria`.
+- `finance.configuracion_fiscal` sigue existiendo como **override** explícito
+  por empresa y por negocio. El orden es negocio → empresa → región del tenant
+  → primera activa (compatibilidad legacy).
+- El catálogo `finance.jurisdicciones` incorpora `moneda_iso`, `locale`,
+  `zona_horaria`, `documento_fiscal` y `perfil`; `moneda` conserva el símbolo
+  histórico que usan los comprobantes.
+- Cambiar la región de la empresa realinea el override de empresa y respeta los
+  overrides por negocio; no reescribe documentos ya emitidos.
+- La declaración por tenant ya se genera desde sus comprobantes y gastos
+  (`declaraciones.empresa_id`); la declaración de plataforma sigue sobre el
+  libro mayor porque este no tiene `empresa_id`.

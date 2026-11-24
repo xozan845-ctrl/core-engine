@@ -13,7 +13,18 @@
     "/api/v2/orders": {
       "post": {
         "operationId": "PedidosController_crear",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -120,6 +131,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "responses": {
@@ -169,6 +190,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "responses": {
@@ -218,6 +249,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "requestBody": {
@@ -658,6 +699,277 @@
         ]
       }
     },
+    "/api/v2/admin/proveedores-pago": {
+        "get": {
+          "operationId": "PagosController_listarProveedores",
+          "parameters": [],
+          "responses": {
+            "200": {
+              "description": "Proveedores de pago",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/OrdersProveedorPagoResponseDto"
+                        }
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Listar proveedores de pago configurables",
+          "tags": [
+            "Pagos"
+          ]
+        },
+        "post": {
+          "operationId": "PagosController_crearProveedor",
+          "parameters": [],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersCrearProveedorPagoRequestDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Proveedor creado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/OrdersProveedorPagoResponseDto"
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Crear un proveedor de pago",
+          "tags": [
+            "Pagos"
+          ]
+        }
+      },
+    "/api/v2/admin/proveedores-pago/{codigo}": {
+        "patch": {
+          "operationId": "PagosController_actualizarProveedor",
+          "parameters": [
+            {
+              "name": "codigo",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersActualizarProveedorPagoRequestDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Proveedor actualizado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/OrdersProveedorPagoResponseDto"
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Actualizar un proveedor de pago",
+          "tags": [
+            "Pagos"
+          ]
+        }
+      },
+    "/api/v2/empresas/{id}/configuracion-pagos": {
+        "get": {
+          "operationId": "PagosController_consultarConfiguracion",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "negocio_id",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Configuración de pagos",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/OrdersConfiguracionPagosResponseDto"
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Consultar la configuración de pagos del tenant",
+          "tags": [
+            "Pagos"
+          ]
+        },
+        "put": {
+          "operationId": "PagosController_guardarConfiguracion",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "negocio_id",
+              "required": false,
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersGuardarConfiguracionPagosRequestDto"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Configuración guardada",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/OrdersConfiguracionPagosResponseDto"
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Seleccionar el proveedor de pago del tenant",
+          "tags": [
+            "Pagos"
+          ]
+        }
+      },
     "/api/v2/admin/metodos-pago": {
       "post": {
         "operationId": "PagosController_crearMetodo",
@@ -1269,6 +1581,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "responses": {
@@ -1318,6 +1640,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "requestBody": {
@@ -1377,6 +1709,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "requestBody": {
@@ -1448,6 +1790,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "requestBody": {
@@ -1519,6 +1871,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "responses": {
@@ -4061,6 +4423,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Clave opaca para reintentos seguros. La misma clave con el mismo payload devuelve la respuesta original; con otro payload responde 422."
           }
         ],
         "requestBody": {
@@ -4613,7 +4985,107 @@
           "Devoluciones"
         ]
       }
-    }
+    },
+    "/api/v2/admin/devoluciones/{id}/reembolsar": {
+        "post": {
+          "operationId": "DevolucionesController_reembolsar",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Reembolso de la devolución",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Reintentar el reembolso parcial de una devolución",
+          "tags": [
+            "Devoluciones"
+          ]
+        }
+      },
+      "/api/v2/admin/devoluciones/{id}/nota-credito": {
+        "post": {
+          "operationId": "DevolucionesController_notaCredito",
+          "parameters": [
+            {
+              "name": "id",
+              "required": true,
+              "in": "path",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Nota de crédito emitida",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data",
+                      "meta"
+                    ],
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "meta": {
+                        "$ref": "#/components/schemas/MetaRespuesta"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "security": [
+            {
+              "bearer": []
+            }
+          ],
+          "summary": "Emitir o reintentar la nota de crédito de una devolución",
+          "tags": [
+            "Devoluciones"
+          ]
+        }
+      }
   },
   "components": {
     "securitySchemes": {
@@ -4890,6 +5362,141 @@
           "hasta"
         ]
       },
+      "OrdersProveedorPagoResponseDto": {
+          "type": "object",
+          "properties": {
+            "codigo": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "simulado",
+                "http",
+                "manual"
+              ]
+            },
+            "activo": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "codigo",
+            "nombre",
+            "tipo",
+            "activo",
+            "config"
+          ]
+        },
+      "OrdersCrearProveedorPagoRequestDto": {
+          "type": "object",
+          "properties": {
+            "codigo": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "simulado",
+                "http",
+                "manual"
+              ]
+            },
+            "activo": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "codigo",
+            "nombre",
+            "tipo"
+          ]
+        },
+      "OrdersActualizarProveedorPagoRequestDto": {
+          "type": "object",
+          "properties": {
+            "nombre": {
+              "type": "string"
+            },
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "simulado",
+                "http",
+                "manual"
+              ]
+            },
+            "activo": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+      "OrdersConfiguracionPagosResponseDto": {
+          "type": "object",
+          "properties": {
+            "empresa_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "negocio_id": {
+              "type": "string",
+              "format": "uuid",
+              "nullable": true
+            },
+            "proveedor_codigo": {
+              "type": "string"
+            },
+            "activo": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "empresa_id",
+            "proveedor_codigo",
+            "activo",
+            "config"
+          ]
+        },
+      "OrdersGuardarConfiguracionPagosRequestDto": {
+          "type": "object",
+          "properties": {
+            "proveedor_codigo": {
+              "type": "string"
+            },
+            "activo": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "proveedor_codigo"
+          ]
+        },
       "OrdersMetodoPagoResponseDto": {
         "type": "object",
         "properties": {
@@ -5966,6 +6573,18 @@
             "description": "Descuento aplicado por promoción en centavos",
             "example": 0
           },
+          "impuesto_cents": {
+            "type": "integer",
+            "description": "IVA de la línea en centavos"
+          },
+          "tasa_impuesto_bps": {
+            "type": "integer",
+            "description": "Tasa de IVA en puntos base (1500 = 15 %)"
+          },
+          "total_linea_cents": {
+            "type": "integer",
+            "description": "Total final de la línea con cupón e IVA"
+          },
           "promocion_id": {
             "type": "string",
             "description": "Promoción aplicada a la línea",
@@ -6235,6 +6854,10 @@
           "descuento_cupon_cents": {
             "type": "integer",
             "description": "Descuento de cupón en centavos"
+          },
+          "impuesto_cents": {
+            "type": "integer",
+            "description": "IVA total de la orden en centavos"
           }
         },
         "required": [

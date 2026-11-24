@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 aws-sdk-s3 = { version = "1", default-features = false, features = ["rustls", "rt-tokio"] }
 axum = "0.8"
+base64 = "0.22"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"

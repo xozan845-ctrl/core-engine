@@ -1,0 +1,56 @@
+{
+  "$schema": "../../scripts/config/service-schema.json",
+  "apiVersion": "core-engine.io/v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "storage-service",
+    "boundedContext": "storage",
+    "description": "Buckets por tenant, URLs prefirmadas, cuotas y media pública sobre S3/MinIO.",
+    "owner": "core-platform",
+    "lifecycle": "production",
+    "tags": [
+      "rust",
+      "transactional",
+      "object-storage"
+    ]
+  },
+  "spec": {
+    "profile": "transactional",
+    "runtime": "rust",
+    "port": 3010,
+    "schema": "storage",
+    "outboxTable": "storage.outbox",
+    "capabilities": [],
+    "publicApi": true,
+    "internalApi": true,
+    "environments": [
+      "dev",
+      "stage",
+      "prod"
+    ],
+    "dependencies": {
+      "sync": []
+    },
+    "events": {
+      "publishes": [
+        "storage.objeto.subido",
+        "storage.objeto.eliminado"
+      ],
+      "consumes": []
+    },
+    "slo": {
+      "availability": 99.5,
+      "latencyP95Ms": 1500
+    },
+    "docs": {
+      "readme": "README.md",
+      "openapi": "docs/openapi/storage-service"
+    }
+  },
+  "quality": {
+    "coverage": {
+      "lines": 53,
+      "functions": 52
+    }
+  }
+}
