@@ -8,7 +8,7 @@
 
 - **Última auditoría de testing:** 2026-11-11 — **17ª de Core Engine** (cierre del envelope `{data,meta}` y de los ADR de notificaciones).
 - **Estado global:** 🟢 **CUMPLE** en los gates automáticos de PR. G-1, G-3, G-4, G-5, G-6, G-7 y G-8 configurados y verdes; G-2 N/A. Deudas restantes: property/fuzz de fechas y fallos de broker, cobertura de `market-intelligence` y `commissions`, 45 warnings `no-explicit-any` y 12 moderates + 1 low de tooling.
-- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad y un baseline de 6 archivos; identity ya dividió `empresas.rs`, `personal.rs`, `partes.rs` y `packs.rs`, y orders dividió toda su deuda: `pagos.rs`, `devoluciones.rs`, `clients.rs`, `fidelizacion.rs` y `checkout.rs`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
+- **Actualización 2026-11-24:** se añadió el check de **R-MS-7** (suite `microservices-tamano-modulos`) con presupuestos de responsabilidad y un baseline de 5 archivos; identity ya dividió `empresas.rs`, `personal.rs`, `partes.rs` y `packs.rs`, y orders dividió toda su deuda: `pagos.rs`, `devoluciones.rs`, `clients.rs`, `fidelizacion.rs` y `checkout.rs`. El motor queda en **23 suites / 86 tests / 52 de 241 IDs** cubiertos. La re-auditoría completa del snapshot sigue pendiente.
 
 ## Resumen por capa
 
@@ -139,7 +139,7 @@
 5. **13 vulnerabilidades de tooling** (1 low, 12 moderate): no hay fix seguro sin bajar ESLint 10→9; el gate solo exige `high`.
 6. **QA harness fuera de ESLint**: `qa-harness/` no está linteado.
 7. **Cobertura de capacidades**: se amplió a finance/commissions/envíos, pero no todas las rutas de todos los servicios declaran una capacidad de negocio.
-8. **Deuda R-MS-7**: 6 archivos superan los presupuestos de responsabilidad (800 líneas de producción o 20 funciones públicas). Están registrados en `scripts/config/module-size-baseline.json`; el baseline no puede crecer y cada división debe retirar su entrada. identity (`empresas`, `personal`, `partes`, `packs`) y identity y orders ya no tienen deuda; inventory dividió `inventario/mod` y `reservas`; finance cerró su deuda (dividió `comercio/helpers` y `finanzas/proyecciones` y `http/comercio` y `http/finanzas` y `facturacion` y `tributacion`). el mayor pendiente es `finance-service/src/tributacion.rs` (1.591 líneas).
+8. **Deuda R-MS-7**: 5 archivos superan los presupuestos de responsabilidad (800 líneas de producción o 20 funciones públicas). Están registrados en `scripts/config/module-size-baseline.json`; el baseline no puede crecer y cada división debe retirar su entrada. identity (`empresas`, `personal`, `partes`, `packs`) y identity y orders ya no tienen deuda; inventory y item dividieron `inventario/mod`, `reservas` e `items/mod`; finance cerró su deuda (dividió `comercio/helpers` y `finanzas/proyecciones` y `http/comercio` y `http/finanzas` y `facturacion` y `tributacion`). el mayor pendiente es `finance-service/src/tributacion.rs` (1.591 líneas).
 
 ## Evidencia de la auditoría (2026-11-11)
 
