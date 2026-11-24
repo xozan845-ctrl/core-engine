@@ -32,10 +32,6 @@
       "lines": 881,
       "publicFns": 10
     },
-    "packages/identity-service/src/dominio/partes.rs": {
-      "lines": 1156,
-      "publicFns": 18
-    },
     "packages/inventory-service/src/inventario/mod.rs": {
       "lines": 861,
       "publicFns": 11
