@@ -4,10 +4,6 @@
     "publicFns": 20
   },
   "debt": {
-    "packages/finance-service/src/comercio/helpers.rs": {
-      "lines": 324,
-      "publicFns": 21
-    },
     "packages/finance-service/src/facturacion.rs": {
       "lines": 1580,
       "publicFns": 20
