@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { defineSuite } from '../../engine/suite.mjs';
 import { repoRoot } from '../../engine/lib/paths.mjs';
-import { readText } from '../../engine/lib/fs.mjs';
+import { readText, walkFiles } from '../../engine/lib/fs.mjs';
 
 /**
  * Subida de archivos (R-DS-4 / ADR-28).
@@ -13,9 +13,12 @@ import { readText } from '../../engine/lib/fs.mjs';
 const CONFIG = readText(
   join(repoRoot, 'packages/storage-service/src/config.rs'),
 );
-const SERVICIO = readText(
-  join(repoRoot, 'packages/storage-service/src/storage/objetos.rs'),
-);
+const SERVICIO = walkFiles(
+  join(repoRoot, 'packages/storage-service/src/storage/objetos'),
+  (name) => name.endsWith('.rs'),
+)
+  .map((file) => readText(file))
+  .join('\n');
 
 export default defineSuite({
   id: 'security-uploads',
