@@ -20,6 +20,7 @@ const BASELINE_FILES = {
   specs: 'scripts/config/spec-baseline.json',
   rls: 'scripts/config/rls-baseline.json',
   migrations: 'scripts/config/db-migrations.json',
+  moduleSize: 'scripts/config/module-size-baseline.json',
 };
 
 function parseArgs(argv) {
@@ -100,6 +101,42 @@ function compareDebtSet(name, current, previous) {
     .map((entry) => `${name}: nueva deuda/excepción no permitida: ${entry}`);
 }
 
+function compareModuleSize(current = {}, previous = {}) {
+  const problems = [];
+  const previousLimits = previous.limits ?? {};
+  const currentLimits = current.limits ?? {};
+  for (const [name, value] of Object.entries(previousLimits)) {
+    if (typeof currentLimits[name] !== 'number') {
+      problems.push(`moduleSize.limits.${name}: falta el presupuesto`);
+    } else if (currentLimits[name] > value) {
+      problems.push(
+        `moduleSize.limits.${name}: se relajó de ${value} a ${currentLimits[name]} (R-MS-7)`,
+      );
+    }
+  }
+
+  const previousDebt = previous.debt ?? {};
+  const currentDebt = current.debt ?? {};
+  for (const [file, metrics] of Object.entries(previousDebt)) {
+    if (!(file in currentDebt)) continue; // archivo dividido o retirado: la deuda baja
+    for (const [name, value] of Object.entries(metrics)) {
+      if (typeof currentDebt[file][name] !== 'number') {
+        problems.push(`moduleSize.${file}.${name}: falta la métrica`);
+      } else if (currentDebt[file][name] > value) {
+        problems.push(
+          `moduleSize: ${file}.${name} creció de ${value} a ${currentDebt[file][name]} (R-MS-7)`,
+        );
+      }
+    }
+  }
+  for (const file of Object.keys(currentDebt)) {
+    if (!(file in previousDebt)) {
+      problems.push(`moduleSize: nueva deuda/excepción no permitida: ${file}`);
+    }
+  }
+  return problems;
+}
+
 function compareMigrations(current, previous) {
   const problems = [];
   for (const [file, hash] of Object.entries(previous)) {
@@ -119,6 +156,7 @@ export function compareBaselines(current, previous) {
     ...compareDebtSet('specs', current.specs, previous.specs),
     ...compareDebtSet('rls', current.rls, previous.rls),
     ...compareMigrations(current.migrations, previous.migrations),
+    ...compareModuleSize(current.moduleSize, previous.moduleSize),
   ];
   return problems;
 }
