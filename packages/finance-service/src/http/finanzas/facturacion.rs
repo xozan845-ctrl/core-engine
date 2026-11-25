@@ -261,6 +261,29 @@ fn empresa_fiscal(
     Ok(usuario.tenant()?.to_string())
 }
 
+/// Estado de certificación que se publica al frontend/operación. No se infiere
+/// que un proveedor esté certificado solo por estar configurado.
+fn certificacion_fiscal(
+    state: &AppState,
+    config: &crate::tributacion::ConfiguracionFacturacion,
+) -> (&'static str, bool) {
+    if !config.facturacion_electronica {
+        return ("no_aplica", false);
+    }
+    if config.proveedor_electronico == "simulado" {
+        return if state.config.facturacion_permitir_sin_certificado {
+            ("piloto_sin_comprobante", false)
+        } else {
+            ("no_certificada", false)
+        };
+    }
+    if state.config.facturacion_proveedor_certificado {
+        ("certificada", true)
+    } else {
+        ("no_certificada", false)
+    }
+}
+
 /// `GET /api/v2/finanzas/configuracion-fiscal?empresa_id=&negocio_id=`.
 pub async fn configuracion_fiscal_obtener(
     State(state): State<AppState>,
@@ -284,6 +307,7 @@ pub async fn configuracion_fiscal_obtener(
         .tributacion
         .configuracion_facturacion(&empresa, negocio.as_deref())
         .await?;
+    let (certificacion_estado, emite_comprobante_fiscal) = certificacion_fiscal(&state, &config);
     Ok(Json(json!({
         "empresa_id": empresa,
         "negocio_id": negocio,
@@ -292,6 +316,8 @@ pub async fn configuracion_fiscal_obtener(
         "formato_pdf": config.formato_pdf,
         "proveedor_electronico": config.proveedor_electronico,
         "ambiente_electronico": config.ambiente_electronico,
+        "certificacion_estado": certificacion_estado,
+        "emite_comprobante_fiscal": emite_comprobante_fiscal,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
         "moneda_iso": config.jurisdiccion.moneda_iso,
@@ -347,6 +373,7 @@ pub async fn configuracion_fiscal_guardar(
             dto.precios_con_impuesto.unwrap_or(true),
         )
         .await?;
+    let (certificacion_estado, emite_comprobante_fiscal) = certificacion_fiscal(&state, &config);
     Ok(Json(json!({
         "empresa_id": empresa,
         "negocio_id": negocio,
@@ -355,6 +382,8 @@ pub async fn configuracion_fiscal_guardar(
         "formato_pdf": config.formato_pdf,
         "proveedor_electronico": config.proveedor_electronico,
         "ambiente_electronico": config.ambiente_electronico,
+        "certificacion_estado": certificacion_estado,
+        "emite_comprobante_fiscal": emite_comprobante_fiscal,
         "tasa_iva": config.jurisdiccion.tasa_iva,
         "moneda": config.jurisdiccion.moneda,
         "moneda_iso": config.jurisdiccion.moneda_iso,

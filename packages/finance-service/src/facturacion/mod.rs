@@ -189,7 +189,9 @@ impl ProveedorFacturacionElectronica for FacturacionSimulada {
     ) -> Result<ReferenciaElectronica, ApiError> {
         Ok(ReferenciaElectronica {
             referencia: format!("sim-{}", uuid::Uuid::new_v4()),
-            estado: "aceptada".to_string(),
+            // Un simulador no es un comprobante fiscal válido. Marcarlo como
+            // "aceptada" haría creer que la DGI lo autorizó.
+            estado: "no_fiscal".to_string(),
         })
     }
 }
@@ -428,6 +430,10 @@ pub struct Facturacion {
     http: Option<Arc<FacturacionHttp>>,
     dgi: Option<Arc<FacturacionDgi>>,
     pdf_almacen: Option<Arc<crate::pdf_almacen::PdfAlmacen>>,
+    /// El proveedor configurado fue certificado por el país/proveedor.
+    proveedor_certificado: bool,
+    /// Aceptación explícita de operar el piloto sin comprobante fiscal.
+    permitir_sin_certificado: bool,
 }
 
 impl Facturacion {
@@ -447,7 +453,21 @@ impl Facturacion {
             http: None,
             dgi: None,
             pdf_almacen: None,
+            proveedor_certificado: false,
+            // Por defecto el constructor de bajo nivel permite simular para
+            // tests; `main` lo sobrescribe con la configuración real.
+            permitir_sin_certificado: true,
         }
+    }
+
+    pub fn con_certificacion(
+        mut self,
+        proveedor_certificado: bool,
+        permitir_sin_certificado: bool,
+    ) -> Self {
+        self.proveedor_certificado = proveedor_certificado;
+        self.permitir_sin_certificado = permitir_sin_certificado;
+        self
     }
 
     pub fn con_pdf_almacen(mut self, almacen: crate::pdf_almacen::PdfAlmacen) -> Self {
