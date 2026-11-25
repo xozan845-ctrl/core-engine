@@ -113,6 +113,37 @@ impl Config {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DispersionCredenciales {
+    pub url: Option<String>,
+    pub token: String,
+}
+
+/// Lee las credenciales de dispersión del entorno. Se aísla aquí para que el
+/// adaptador HTTP no acceda directamente a `std::env` (R-MS-5).
+pub fn credenciales_dispersion(proveedor: &str) -> DispersionCredenciales {
+    let prefijo = proveedor.trim().to_ascii_uppercase();
+    let leer = |sufijo: &str| {
+        std::env::var(format!("{prefijo}_{sufijo}"))
+            .ok()
+            .map(|valor| valor.trim().to_string())
+            .filter(|valor| !valor.is_empty())
+    };
+    let base = leer("DISPERSION_URL");
+    let path = leer("DISPERSION_PATH").unwrap_or_else(|| "/payouts".to_string());
+    let url = base.map(|base| {
+        if path.starts_with("http://") || path.starts_with("https://") {
+            path
+        } else {
+            format!("{}{}", base.trim_end_matches('/'), path)
+        }
+    });
+    let token = leer("DISPERSION_TOKEN")
+        .or_else(|| leer("KEY"))
+        .unwrap_or_default();
+    DispersionCredenciales { url, token }
+}
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ConfigError {
     #[error("{0} es obligatoria para arrancar el servicio.")]

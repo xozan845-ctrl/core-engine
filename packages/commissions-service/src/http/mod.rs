@@ -79,6 +79,38 @@ pub fn build_router(state: AppState) -> Router {
             get(rutas::reportes_negocios),
         )
         .route(
+            "/api/v2/admin/dispersion/configuracion",
+            get(rutas::dispersion_configuracion).put(rutas::guardar_dispersion_configuracion),
+        )
+        .route(
+            "/api/v2/admin/dispersion/cuentas",
+            get(rutas::dispersion_cuentas).post(rutas::crear_dispersion_cuenta),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts",
+            get(rutas::dispersion_payouts),
+        )
+        .route(
+            "/api/v2/admin/dispersion/cerrar-dia",
+            post(rutas::cerrar_dia_dispersion),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts/{id}/enviar",
+            post(rutas::enviar_payout),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts/{id}/confirmar",
+            post(rutas::confirmar_payout).patch(rutas::confirmar_payout),
+        )
+        .route(
+            "/api/v2/empresarios/me/dispersion",
+            get(rutas::payouts_empresa),
+        )
+        .route(
+            "/api/v2/vendedores/me/dispersion",
+            get(rutas::payouts_vendedor),
+        )
+        .route(
             "/internal/commissions/tenant/exportar",
             post(interno::exportar_tenant),
         )

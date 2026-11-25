@@ -2,11 +2,39 @@ use super::prelude::*;
 use async_trait::async_trait;
 use serde_json::json;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct CargoExterno {
     pub referencia: String,
     /// URL de pago alojada cuando la pasarela la devuelve (Tilopay/Pagadito).
     pub url: Option<String>,
+    /// Datos de liquidación que devuelve la pasarela al crear el cargo.
+    /// La mayoría de pasarelas los entrega en la consulta/webhook, no aquí.
+    pub liquidacion: Option<LiquidacionPasarela>,
+}
+
+/// Comisión, impuestos, retenciones y neto que reporta la pasarela.
+///
+/// Todos los montos se guardan en centavos de la moneda de liquidación. Si la
+/// pasarela los devuelve en unidades mayores (p. ej. `3.50`), el adaptador los
+/// convierte según `config.liquidacion_unidad`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LiquidacionPasarela {
+    pub proveedor: String,
+    pub comision_cents: i64,
+    pub impuesto_cents: i64,
+    pub retencion_cents: i64,
+    pub monto_liquidado_cents: i64,
+    pub moneda: String,
+    #[serde(default)]
+    pub detalle: Value,
+}
+
+/// Resultado de consultar la pasarela: estado y, si está disponible, el
+/// desglose de liquidación para el ledger.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConsultaExterna {
+    pub estado: EstadoExterno,
+    pub liquidacion: Option<LiquidacionPasarela>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,6 +71,146 @@ pub trait ProveedorPagos: Send + Sync {
     ) -> Result<EstadoExterno, ApiError> {
         Ok(EstadoExterno::Pendiente)
     }
+
+    /// Igual que `consultar`, pero devuelve también el desglose de liquidación
+    /// cuando la pasarela lo informa. Los adaptadores concretos lo sobrescriben
+    /// para aprovechar la misma respuesta HTTP.
+    async fn consultar_detallado(
+        &self,
+        referencia: &str,
+        datos: Option<&Value>,
+    ) -> Result<ConsultaExterna, ApiError> {
+        Ok(ConsultaExterna {
+            estado: self.consultar(referencia, datos).await?,
+            liquidacion: None,
+        })
+    }
+}
+
+/// Extrae el desglose de liquidación de una respuesta de pasarela. Devuelve
+/// `None` si el cuerpo no trae ninguno de los campos reconocidos, para no
+/// sobrescribir datos previos con ceros.
+pub(crate) fn liquidacion_de(
+    proveedor: &str,
+    valor: &Value,
+    unidad: &str,
+) -> Option<LiquidacionPasarela> {
+    let fuente = valor
+        .get("liquidacion")
+        .or_else(|| valor.get("settlement"))
+        .or_else(|| valor.get("detalle_liquidacion"))
+        .unwrap_or(valor);
+    if !fuente.is_object() {
+        return None;
+    }
+    let comision = monto(
+        fuente,
+        &[
+            "comision_cents",
+            "commission_cents",
+            "comision_pasarela_cents",
+            "comision",
+            "commission",
+            "fee",
+            "gateway_fee",
+            "processing_fee",
+        ],
+        unidad,
+    );
+    let impuesto = monto(
+        fuente,
+        &[
+            "impuesto_cents",
+            "iva_cents",
+            "tax_cents",
+            "impuesto",
+            "iva",
+            "tax",
+        ],
+        unidad,
+    );
+    let retencion = monto(
+        fuente,
+        &[
+            "retencion_cents",
+            "withholding_cents",
+            "retencion",
+            "withholding",
+        ],
+        unidad,
+    );
+    let neto = monto(
+        fuente,
+        &[
+            "monto_liquidado_cents",
+            "neto_cents",
+            "net_cents",
+            "monto_liquidado",
+            "neto",
+            "net_amount",
+            "amount_net",
+        ],
+        unidad,
+    );
+    let moneda = texto(
+        fuente,
+        &[
+            "moneda_liquidacion",
+            "settlement_currency",
+            "currency",
+            "moneda",
+        ],
+    )
+    .map(|valor| valor.to_uppercase());
+    if comision.is_none()
+        && impuesto.is_none()
+        && retencion.is_none()
+        && neto.is_none()
+        && moneda.is_none()
+    {
+        return None;
+    }
+    Some(LiquidacionPasarela {
+        proveedor: proveedor.to_string(),
+        comision_cents: comision.unwrap_or(0).max(0),
+        impuesto_cents: impuesto.unwrap_or(0).max(0),
+        retencion_cents: retencion.unwrap_or(0).max(0),
+        monto_liquidado_cents: neto.unwrap_or(0).max(0),
+        moneda: moneda.unwrap_or_default(),
+        detalle: fuente.clone(),
+    })
+}
+
+fn monto(valor: &Value, claves: &[&str], unidad: &str) -> Option<i64> {
+    for clave in claves {
+        let Some(valor) = valor.get(*clave) else {
+            continue;
+        };
+        let numero = match valor {
+            Value::Number(numero) => numero.as_f64()?,
+            Value::String(texto) => texto.trim().parse::<f64>().ok()?,
+            _ => continue,
+        };
+        let centavos = if clave.contains("cents") || unidad.eq_ignore_ascii_case("cents") {
+            numero.round() as i64
+        } else {
+            (numero * 100.0).round() as i64
+        };
+        return Some(centavos);
+    }
+    None
+}
+
+fn texto(valor: &Value, claves: &[&str]) -> Option<String> {
+    for clave in claves {
+        if let Some(texto) = valor.get(*clave).and_then(Value::as_str) {
+            let texto = texto.trim();
+            if !texto.is_empty() {
+                return Some(texto.to_string());
+            }
+        }
+    }
+    None
 }
 
 pub struct ProveedorSimulado;
@@ -62,6 +230,7 @@ impl ProveedorPagos for ProveedorSimulado {
         Ok(CargoExterno {
             referencia: format!("sim-{}", Uuid::new_v4()),
             url: None,
+            ..CargoExterno::default()
         })
     }
 
@@ -188,6 +357,7 @@ impl ProveedorPagos for ProveedorHttp {
         Ok(CargoExterno {
             referencia,
             url: None,
+            ..CargoExterno::default()
         })
     }
 

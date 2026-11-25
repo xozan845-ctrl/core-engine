@@ -6,6 +6,7 @@ use commissions_service::clients::{Kpis, KpisHttp, Ordenes, OrdenesHttp};
 use commissions_service::comisiones::{Comisiones, ComisionesPort};
 use commissions_service::config::Config;
 use commissions_service::db::Db;
+use commissions_service::dispersion::Dispersion;
 use commissions_service::http::build_router;
 use commissions_service::liquidaciones::{Liquidaciones, LiquidacionesPort};
 use commissions_service::logs::{ejecutar_con_contexto, ContextoCorrelacion};
@@ -97,6 +98,10 @@ async fn main() {
     let comisiones: Arc<dyn ComisionesPort> = comisiones_concretas.clone();
     let liquidaciones_concretas = Arc::new(Liquidaciones::nueva(Arc::clone(&db)));
     let liquidaciones: Arc<dyn LiquidacionesPort> = liquidaciones_concretas.clone();
+    let dispersion = Arc::new(Dispersion::nueva(
+        Arc::clone(&db),
+        Arc::clone(&liquidaciones),
+    ));
     let ventas: Arc<dyn VentasPort> =
         Arc::new(Ventas::nueva(Arc::clone(&db), Arc::clone(&comisiones)));
     let reportes: Arc<dyn ReportesPort> =
@@ -136,7 +141,7 @@ async fn main() {
         Arc::clone(&rabbit),
         Arc::clone(&metrics),
     );
-    let tarea_worker = iniciar_worker(Arc::clone(&liquidaciones));
+    let tarea_worker = iniciar_worker(Arc::clone(&dispersion));
 
     let estado = AppState::con_dependencias(
         config,
@@ -147,7 +152,8 @@ async fn main() {
         reportes,
         capacidades,
     )
-    .con_db(Arc::clone(&db));
+    .con_db(Arc::clone(&db))
+    .con_dispersion(dispersion);
     let app = build_router(estado);
 
     let listener = match tokio::net::TcpListener::bind(("0.0.0.0", puerto)).await {

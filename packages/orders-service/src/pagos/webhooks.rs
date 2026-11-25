@@ -37,6 +37,19 @@ impl Pagos {
         &self,
         pago: &Pago,
     ) -> Result<Arc<dyn ProveedorPagos>, ApiError> {
+        // Tarjeta siempre se opera contra la cuenta de la plataforma, incluso
+        // para consultas/reembolsos de pagos históricos. Un simulador no puede
+        // revertir dinero real: si la plataforma perdió la pasarela, falla.
+        if pago.metodo_codigo == "tarjeta" {
+            let nombre = self.proveedor_default.nombre();
+            if matches!(nombre.as_str(), "simulado" | "manual") {
+                return Err(ApiError::dominio(
+                    "PASARELA_PLATAFORMA_NO_CONFIGURADA",
+                    "El pago con tarjeta requiere PAGO_PROVEEDOR=tilopay|pagadito.",
+                ));
+            }
+            return Ok(Arc::clone(&self.proveedor_default));
+        }
         let Some(empresa_id) = pago.empresa_id.as_deref() else {
             return Ok(Arc::clone(&self.proveedor_default));
         };
@@ -60,7 +73,7 @@ impl Pagos {
         proveedor: &str,
         referencia: &str,
         datos: Option<&Value>,
-    ) -> Result<(Pago, EstadoExterno), ApiError> {
+    ) -> Result<(Pago, ConsultaExterna), ApiError> {
         let mut tx = self
             .db
             .transaccion_servicio()
@@ -68,7 +81,9 @@ impl Pagos {
             .map_err(crate::event_store::error_db)?;
         let fila = sqlx::query(
             "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                    retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                    detalle_pasarela, monto_reembolsado_cents,
                     motivo_rechazo, confirmado_por, conciliado_en, confirmado_en, creado_en
                FROM orders.pagos
               WHERE referencia = $1 AND proveedor = $2
@@ -83,21 +98,31 @@ impl Pagos {
         let Some(fila) = fila else {
             return Err(ApiError::no_encontrado("Pago", referencia));
         };
-        let pago = fila_pago(&fila)?;
-        let pago = self
+        let mut pago = fila_pago(&fila)?;
+        pago = self
             .guardar_referencia_proveedor(pago, proveedor, datos)
             .await?;
         if matches!(
             pago.estado.as_str(),
             "confirmado" | "reembolsado" | "reembolsado_parcial"
         ) {
-            return Ok((pago, EstadoExterno::Aprobado));
+            return Ok((
+                pago,
+                ConsultaExterna {
+                    estado: EstadoExterno::Aprobado,
+                    liquidacion: None,
+                },
+            ));
         }
         let proveedor = self.proveedor_de_pago(&pago).await?;
-        let estado = proveedor
-            .consultar(referencia_operativa(&pago), datos)
+        let mut consulta = proveedor
+            .consultar_detallado(referencia_operativa(&pago), datos)
             .await?;
-        Ok((pago, estado))
+        if let Some(liquidacion) = &consulta.liquidacion {
+            self.aplicar_liquidacion(&mut pago, liquidacion).await?;
+        }
+        consulta.liquidacion = None;
+        Ok((pago, consulta))
     }
 
     /// Persiste el identificador de la transacción que informa la pasarela.

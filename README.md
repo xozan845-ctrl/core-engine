@@ -413,7 +413,7 @@ eventos y la deuda arquitectónica se generan desde ahí con
                            │  red interna Docker `core-engine` (microservicios sin puerto al host)
   identity  item     inventory  pricing  stores  orders  logistics  scheduling  commissions  finance  field  intelligence  storage  notifications  analytics
     :3001    :3015    :3013     :3014   :3003   :3004     :3005      :3011       :3006      :3007   :3008     :3009      :3010      :3012      :3016
-  (commissions solo stage; el resto se despliega en los tres entornos)
+  (todos se despliegan en dev, stage y producción)
        RabbitMQ · topic core-engine.events (+ DLQ, AD-04) + Postgres 16 + MinIO (un bucket por tenant, ADR-24)
 ```
 
@@ -519,7 +519,7 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 | orders-service | 3004 | No | `orders` | `packages/orders-service` (Rust) |
 | logistics-service | 3005 | No | `logistics` | `packages/logistics-service` |
 | scheduling-service | 3011 | No | `scheduling` | `packages/scheduling-service` |
-| commissions-service | 3006 | No *(solo stage; fuera de prod)* | `commissions` | `packages/commissions-service` (Rust) |
+| commissions-service | 3006 | No | `commissions` | `packages/commissions-service` (Rust) |
 | finance-service | 3007 | No | `finance` | `packages/finance-service` |
 | field-service | 3008 | No | `field` | `packages/field-service` |
 | market-intelligence-service | 3009 | No | `intelligence` | `packages/market-intelligence-service` |
@@ -541,11 +541,11 @@ seeds del plan contable NIC e indices). En **Supabase** (staging/prod) aplique a
 > microservicio de dominio es accesible desde fuera**: se alcanzan por nombre de servicio
 > (`http://<servicio>:<puerto>`) dentro de la red `core-engine`, detrás del gateway.
 >
-> **Alcance por entorno:** `commissions-service` se despliega en **stage** para validar el
-> portal de empresa (`docker-compose.stage.yml`, ADR-37), pero **sigue fuera de producción**
-> (`docker-compose.yml`). `analytics-service` y `market-intelligence-service` se despliegan
-> en dev, stage y producción. Ninguno de los dos participa del readiness agregado del
-> gateway (que cubre 11 servicios en producción y 12 en stage); su salud se verifica por
+> **Alcance por entorno:** `commissions-service` se despliega en **dev, stage y producción**
+> desde ADR-0053 (cobro centralizado y dispersión diaria). `analytics-service` y
+> `market-intelligence-service` se despliegan en dev, stage y producción. El readiness
+> agregado del gateway cubre 12 servicios en ambos entornos; la salud de analytics e
+> intelligence se verifica por
 > `GET /health` directo en la red interna y por sus métricas.
 
 ## Entornos y entrega (desarrollo → stage → producción)
@@ -594,7 +594,7 @@ Toda ruta pública empieza por `/api/v2/` y toda ruta interna por `/internal/`
 | inteligencia | `/inteligencia/**` (mapa de calor, rendimiento, cobertura, demanda, tendencias, forecast, anomalías y score) |
 | analítica | `/analytics/**` (negocios, cohortes, empresa, plataforma y reportes programados) |
 | storage | `/storage/**` (buckets, subidas, objetos y media pública) |
-| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 11 servicios en producción, 12 en stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
+| operación | `GET /health` (liveness), `GET /ready` (readiness agregada: 12 servicios en producción y stage), `GET /metrics`, Swagger en `/docs` y `/docs-json` |
 
 Endpoints internos (servicio→servicio) protegidos con `x-internal-key`:
 `internal/items/**`, `internal/inventario/**`, `internal/usuarios/:id`,
@@ -695,11 +695,12 @@ RabbitMQ). Los logs son JSON estructurados con `x-request-id` correlacionado
 ## Conmutacion a Supabase (produccion)
 
 1. Cree el proyecto Supabase (Postgres + Auth).
-2. Ejecute **todas** las migraciones de `infra/db/init/` en orden (incluidas
-   `45_hardening.sql` y `46_commission_payload.sql`) en la consola SQL. El
-   manifiesto `scripts/config/db-migrations.json` es la fuente de verdad de los
-   hashes (R-DB-6); no edite una migración ya aplicada.
-3. Ejecute `99_rls.sql` (activa RLS por rol).
+2. Ejecute **todas** las migraciones con `infra/db/apply.sh` (ledger de hashes,
+   R-DB-6). El runner aplica después `99_rls.sql` y `99z_rls_hardening.sql` de
+   forma obligatoria; no los ejecute a mano.
+3. RLS queda activo con `core_engine_app` `NOBYPASSRLS`, sin políticas
+   `USING (true)` y con `FORCE RLS`. Verifique con `docs/runbook-rls.md` y
+   `npm run test:rls`.
 4. Iguale el secreto JWT HS256 y las URL de los servicios al proyecto. La
    diferencia de implementacion queda aislada en `packages/api-gateway/src/auth.rs`.
 

@@ -12,11 +12,11 @@ import { GHCR_OWNER, SERVICES, WORKFLOWS_DIR } from '../../config/project.mjs';
  * cumplen su contrato (R-CD-1, R-CD-2, R-CD-8).
  */
 
-// Exclusiones por entorno: stage valida commissions (ADR-37), pero produccion
-// lo mantiene fuera (ADR-17/ADR-22). market-intelligence se despliega en
-// stage y produccion desde la Fase 6.
+// Exclusiones por entorno: desde ADR-0053 commissions se despliega en stage y
+// producción (cobro centralizado + dispersión diaria). market-intelligence se
+// despliega en stage y producción desde la Fase 6.
 const EXCLUDED_FROM_STAGE = [];
-const EXCLUDED_FROM_PROD = ['commissions-service'];
+const EXCLUDED_FROM_PROD = [];
 
 const COMPOSES = [
   { rel: 'docker-compose.stage.yml', tag: 'stage', excluded: EXCLUDED_FROM_STAGE },
@@ -53,7 +53,7 @@ export default defineSuite({
       }
     });
 
-    test('ADR-37: stage despliega commissions y activa su readiness; prod lo excluye', () => {
+    test('ADR-0053: stage y producción despliegan commissions y su readiness', () => {
       const stage = read('docker-compose.stage.yml');
       assert.match(stage, /^ {2}commissions-service:$/m, 'stage debe definir commissions-service');
       assert.ok(
@@ -69,10 +69,16 @@ export default defineSuite({
       );
 
       const prod = read('docker-compose.yml');
-      assert.doesNotMatch(
+      assert.match(
         prod,
         /^ {2}commissions-service:$/m,
-        'produccion no debe definir commissions-service (ADR-17/ADR-22)',
+        'produccion debe definir commissions-service (ADR-0053)',
+      );
+      assert.ok(
+        prod.includes(
+          `image: ghcr.io/${GHCR_OWNER}/core-engine-commissions-service:prod`,
+        ),
+        'produccion debe consumir la imagen :prod de commissions-service',
       );
 
       for (const [rel, tag] of [

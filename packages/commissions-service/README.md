@@ -2,16 +2,16 @@
 
 `commissions-service` calcula y acredita la **comisión de la plataforma** por
 línea de venta, reparte el neto entre vendedor y empresario según participación,
-compensa devoluciones y ejecuta los **cortes quincenales** (días 1 y 15) con su
-libro de liquidaciones.
+compensa devoluciones y ejecuta el **cierre diario** con su libro de
+liquidaciones y payouts al negocio y al vendedor.
 
 Es el motor económico del marketplace (RN-04 / RN-06 / RN-07). Se despliega en
-**dev y stage**, pero **no en producción**: el portal de empresa se valida en
-stage antes de habilitarlo
-([ADR-0007](../../docs/adr/0007-commissions-service-en-rust.md)).
+**dev, stage y producción** desde ADR-0053: la plataforma cobra centralizado y
+dispersa diariamente.
 
 - [ADR-0007 · commissions-service en Rust](../../docs/adr/0007-commissions-service-en-rust.md)
 - [ADR-0021 · negocios por empresa](../../docs/adr/0021-negocios-por-empresa.md)
+- [ADR-0053 · cobro centralizado y dispersión diaria](../../docs/adr/0053-cobro-centralizado-dispersion-diaria.md)
 - Contrato: [`docs/openapi/commissions-service/`](../../docs/openapi/commissions-service/)
 
 ---
@@ -29,7 +29,7 @@ stage antes de habilitarlo
 | Consume | `order.completado`, `payment.procesado`, `devolucion.solicitada`, `devolucion.recibida`, `comision.acreditada` |
 | Publica | `comision.acreditada`, `venta.directa.acreditada` |
 | Dependencias | `orders` (detalle de orden), `inventory` (KPIs), `identity` (vendedores/capacidades) |
-| Workers | corte quincenal cada 30 s (dispara a las 00:05 de los días 1 y 15); outbox 1 s |
+| Workers | cierre diario a la hora configurada (00:10 por defecto); outbox 1 s |
 | Entornos | dev, **stage** (no producción) |
 | Expuesto al host | No |
 
@@ -48,6 +48,12 @@ stage antes de habilitarlo
 | `INVENTORY_SERVICE_URL` | No | `http://inventory-service:3013` | KPIs de inventario |
 | `IDENTITY_SERVICE_URL` | No | `http://identity-service:3001` | Vendedores/capacidades |
 | `INTERNAL_REQUEST_TIMEOUT_MS` | No | `3000` | Timeout interno |
+| `TILOPAY_DISPERSION_URL` | Para pagar con Tilopay | — | Base de la API de dispersión |
+| `TILOPAY_DISPERSION_PATH` | No | `/payouts` | Ruta de creación de payout |
+| `TILOPAY_DISPERSION_TOKEN` | Para pagar con Tilopay | `TILOPAY_KEY` | Bearer de dispersión |
+| `PAGADITO_DISPERSION_URL` | Para pagar con Pagadito | — | Base de la API de dispersión |
+| `PAGADITO_DISPERSION_PATH` | No | `/payouts` | Ruta de creación de payout |
+| `PAGADITO_DISPERSION_TOKEN` | Para pagar con Pagadito | — | Bearer de dispersión |
 
 ---
 
@@ -56,11 +62,12 @@ stage antes de habilitarlo
 | Módulo | Responsabilidad |
 |---|---|
 | `comisiones.rs` | Cálculo inmutable, acreditación por línea, compensación |
-| `liquidaciones.rs` | Periodos quincenales, consolidación, pago y libro |
+| `liquidaciones.rs` | Periodos, consolidación, pago y libro |
+| `dispersion.rs` | Cierre diario, payouts, cuentas y adaptadores Tilopay/Pagadito |
 | `pedidos.rs` | Consumidor de eventos del pedido |
 | `ventas.rs` | Estado de cuenta de vendedor y empresa |
 | `reportes.rs` | KPIs de ventas/inventario y reporte por negocio |
-| `worker.rs` | Disparador del corte quincenal |
+| `worker.rs` | Disparador del cierre y envío diario |
 | `outbox.rs` / `rabbit.rs` | Eventos y DLQ |
 | `http/` | Rutas públicas y guards de rol/capacidad |
 
@@ -71,9 +78,13 @@ stage antes de habilitarlo
 | Tabla | Contenido |
 |---|---|
 | `commissions.comisiones` | `order_id`, `linea_clave`, empresa/negocio/tienda/vendedor, venta, comisión, montos vendedor/empresario, participación, estado (`acreditada`/`compensada`) |
-| `commissions.pagos` | Pago simulado por orden |
+| `commissions.pagos` | Pago por orden con fee de pasarela, impuestos y neto liquidado |
 | `commissions.liquidaciones` | Corte por vendedor y periodo |
 | `commissions.liquidaciones_empresas` | Corte por empresa/negocio |
+| `commissions.cuentas_pago` | Cuenta/token de destino por beneficiario y proveedor |
+| `commissions.payouts` | Payout diario por beneficiario y su estado |
+| `commissions.payout_items` | Liquidaciones incluidas en cada payout |
+| `commissions.configuracion_dispersion` | Proveedor, hora, mínimo y retención |
 | `commissions.compensaciones_devoluciones` | Devoluciones aplicadas a la siguiente liquidación |
 | `commissions.eventos_procesados` | Idempotencia |
 | `commissions.outbox` | Eventos |
@@ -121,26 +132,33 @@ liquidación** (RN-06), nunca se edita el histórico.
 
 ---
 
-## 5. Liquidaciones (RN-07)
+## 5. Liquidaciones y dispersión diaria
 
-### Periodos
+### Cierre diario
 
-| Fecha de corte | Periodo cerrado |
-|---|---|
-| Día 1, 00:05 | 16 → fin del mes anterior |
-| Día 15, 00:05 | 1 → 15 del mes actual |
-| Día 16+ (manual) | 16 → fin del mes actual |
-
-- Zona horaria local (`TZ`, por defecto `America/Managua`).
-- El worker revisa cada **30 s** y ejecuta una sola vez por día.
-- `POST /api/v2/admin/liquidaciones/corte` permite forzar un corte manual.
-- Al cerrar se consolidan comisiones `acreditada` del periodo, se restan
+- El worker revisa cada **30 s** y, a la hora local configurada (`00:10` por
+  defecto), cierra el día anterior.
+- `POST /api/v2/admin/dispersion/cerrar-dia?fecha=YYYY-MM-DD` permite forzar el
+  cierre de una fecha.
+- Al cerrar se consolidan comisiones `acreditada` del día, se restan
   compensaciones pendientes y se crean:
   - `commissions.liquidaciones` por vendedor;
   - `commissions.liquidaciones_empresas` por empresa/negocio.
-- `POST /api/v2/admin/liquidaciones/{id}/pagar` marca `pagada` (pago simulado
-  en MVP).
-- Un periodo ya cerrado no se duplica.
+- Luego se crea un **payout por beneficiario**:
+  - vendedor: su comisión neta;
+  - negocio/empresa: el remanente tras la comisión de plataforma.
+- La retención configurada (`retencion_bps`) se descuenta del payout y el neto
+  queda en `monto_neto_cents`.
+- `POST /api/v2/admin/dispersion/payouts/{id}/enviar` envía al proveedor
+  configurado. `POST .../{id}/confirmar` lo marca confirmado y sus
+  liquidaciones pasan a `pagada`.
+- El fee de pasarela es costo de la plataforma: no se descuenta del payout del
+  negocio ni del vendedor.
+
+### Periodos históricos
+
+`POST /api/v2/admin/liquidaciones/corte` sigue disponible para cortes
+quincenales/manuales. La dispersión diaria usa periodos de un día.
 
 ---
 
@@ -153,6 +171,14 @@ liquidación** (RN-06), nunca se edita el histórico.
 | GET | `/api/v2/empresarios/me/liquidaciones` | empresario |
 | GET | `/api/v2/empresarios/me/ventas` | empresario |
 | GET | `/api/v2/empresarios/me/reportes/negocios` | empresario |
+| GET | `/api/v2/empresarios/me/dispersion` | empresario |
+| GET | `/api/v2/vendedores/me/dispersion` | vendedor |
+| GET/PUT | `/api/v2/admin/dispersion/configuracion` | admin |
+| GET/POST | `/api/v2/admin/dispersion/cuentas` | admin |
+| GET | `/api/v2/admin/dispersion/payouts` | admin |
+| POST | `/api/v2/admin/dispersion/cerrar-dia` | admin |
+| POST | `/api/v2/admin/dispersion/payouts/{id}/enviar` | admin |
+| POST | `/api/v2/admin/dispersion/payouts/{id}/confirmar` | admin |
 | POST | `/api/v2/admin/liquidaciones/corte` | admin |
 | POST | `/api/v2/admin/liquidaciones/{id}/pagar` | admin |
 | GET | `/api/v2/admin/reportes` | admin |

@@ -8,7 +8,7 @@ regenera con `npm run architecture:report`; CI falla si está desactualizado.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [analytics-service](../../packages/analytics-service/README.md) | analytics | olap | 3016 | analytics | analitica_negocios | dev, stage, prod | 0 | 4 | core-platform | production |
 | [api-gateway](../../packages/api-gateway/README.md) | gateway | edge | 8080 | — | — | dev, stage, prod | 0 | 0 | core-platform | production |
-| [commissions-service](../../packages/commissions-service/README.md) | commissions | transactional | 3006 | commissions | comisiones, liquidaciones | dev, stage | 2 | 4 | core-platform | production |
+| [commissions-service](../../packages/commissions-service/README.md) | commissions | transactional | 3006 | commissions | comisiones, liquidaciones | dev, stage, prod | 2 | 4 | core-platform | production |
 | [field-service](../../packages/field-service/README.md) | field | core | 3008 | field | operacion_campo | dev, stage, prod | 0 | 0 | core-platform | production |
 | [finance-service](../../packages/finance-service/README.md) | finance | transactional | 3007 | finance | facturacion, facturacion_electronica | dev, stage, prod | 3 | 7 | core-platform | production |
 | [identity-service](../../packages/identity-service/README.md) | identity | core | 3001 | identity | — | dev, stage, prod | 0 | 0 | core-platform | production |
