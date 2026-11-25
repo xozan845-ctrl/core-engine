@@ -113,6 +113,10 @@ async fn main() {
         Arc::clone(&contabilidad),
         ordenes.clone(),
         config.emitir_comprobantes_fiscales,
+    )
+    .con_certificacion(
+        config.facturacion_proveedor_certificado,
+        config.facturacion_permitir_sin_certificado,
     );
     if let Some(url) = config.facturacion_proveedor_url.clone() {
         facturacion = facturacion
