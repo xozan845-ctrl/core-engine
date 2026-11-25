@@ -956,3 +956,147 @@ async fn debe_cerrar_dia_y_pagar_a_vendedor_y_empresa_con_retencion() {
     db.pool().close().await;
     pool.close().await;
 }
+
+#[tokio::test]
+async fn debe_gestionar_configuracion_cuentas_y_payouts_de_dispersion() {
+    use commissions_service::dispersion::Dispersion;
+    use serde_json::json;
+
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let comisiones = Comisiones::nueva(Arc::clone(&db), 0.12);
+    let liquidaciones = Arc::new(Liquidaciones::nueva(Arc::clone(&db)));
+    let dispersion = Dispersion::nueva(Arc::clone(&db), liquidaciones);
+    let empresa = Uuid::new_v4().to_string();
+    let vendedor = Uuid::new_v4().to_string();
+
+    assert!(
+        dispersion
+            .configuracion()
+            .await
+            .expect("config")
+            .proveedor_codigo
+            == "tilopay"
+    );
+    for invalido in [
+        json!({"proveedor_codigo": "otro"}),
+        json!({"hora_local": "25:00"}),
+        json!({"moneda": "NI"}),
+        json!({"minimo_cents": -1}),
+        json!({"retencion_bps": 20_000}),
+    ] {
+        let error = dispersion
+            .guardar_configuracion(&invalido)
+            .await
+            .expect_err("configuracion invalida");
+        assert_eq!(error.codigo, "VALIDACION");
+    }
+    let config = dispersion
+        .guardar_configuracion(&json!({
+            "proveedor_codigo": "tilopay",
+            "activo": false,
+            "hora_local": "00:20",
+            "minimo_cents": 0,
+            "moneda": "NIO",
+            "retencion_bps": 100,
+        }))
+        .await
+        .expect("configuracion valida");
+    assert_eq!(config.hora_local, "00:20");
+    assert_eq!(config.retencion_bps, 100);
+
+    for invalido in [
+        json!({"beneficiario_tipo": "otro", "beneficiario_id": empresa, "proveedor": "tilopay", "referencia_externa": "x"}),
+        json!({"beneficiario_tipo": "empresa", "beneficiario_id": empresa, "proveedor": "otro", "referencia_externa": "x"}),
+        json!({"beneficiario_tipo": "empresa", "beneficiario_id": empresa, "proveedor": "tilopay", "referencia_externa": ""}),
+    ] {
+        let error = dispersion
+            .guardar_cuenta(&invalido)
+            .await
+            .expect_err("cuenta invalida");
+        assert_eq!(error.codigo, "VALIDACION");
+    }
+    let cuenta = dispersion
+        .guardar_cuenta(&json!({
+            "beneficiario_tipo": "empresa",
+            "beneficiario_id": empresa,
+            "proveedor": "tilopay",
+            "referencia_externa": "cta-1",
+            "moneda": "NIO",
+        }))
+        .await
+        .expect("cuenta");
+    assert_eq!(cuenta.referencia_externa, "cta-1");
+    let cuentas = dispersion.listar_cuentas().await.expect("cuentas");
+    assert!(cuentas.iter().any(|fila| fila.id == cuenta.id));
+    let actualizada = dispersion
+        .guardar_cuenta(&json!({
+            "beneficiario_tipo": "empresa",
+            "beneficiario_id": empresa,
+            "proveedor": "tilopay",
+            "referencia_externa": "cta-2",
+            "moneda": "NIO",
+        }))
+        .await
+        .expect("cuenta actualizada");
+    assert_eq!(actualizada.id, cuenta.id);
+    assert_eq!(actualizada.referencia_externa, "cta-2");
+
+    let order_id = Uuid::new_v4().to_string();
+    let fecha = chrono::NaiveDate::from_ymd_opt(2002, 1, 2).expect("fecha aislada");
+    let mut tx = db.transaccion().await.expect("tx");
+    comisiones
+        .acreditar_linea(
+            &mut tx,
+            &DatosLinea {
+                order_id: order_id.clone(),
+                linea_clave: "of-config".into(),
+                empresa_id: empresa.clone(),
+                negocio_id: None,
+                tienda_id: Uuid::new_v4().to_string(),
+                vendedor_id: vendedor.clone(),
+                venta_cents: 10_000,
+                participacion: 60,
+                cantidad: 1,
+            },
+        )
+        .await
+        .expect("acreditar");
+    tx.commit().await.expect("commit");
+    sqlx::query("UPDATE commissions.comisiones SET creado_en = $2::date WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(&order_id).expect("uuid"))
+        .bind(fecha)
+        .execute(&pool)
+        .await
+        .expect("fecha aislada");
+
+    let resumen = dispersion.cerrar_dia(fecha).await.expect("cerrar dia");
+    assert!(resumen.payouts_creados >= 2);
+    let payouts_empresa = dispersion
+        .listar_payouts_empresa(&empresa, None)
+        .await
+        .expect("payouts empresa");
+    let payout = payouts_empresa.first().expect("payout empresa");
+    let por_fecha = dispersion
+        .listar_payouts(Some(fecha), Some("pendiente"), None)
+        .await
+        .expect("payouts filtrados");
+    assert!(por_fecha.iter().any(|fila| fila.id == payout.id));
+    let vendedor_payouts = dispersion
+        .listar_payouts_vendedor(&vendedor)
+        .await
+        .expect("payouts vendedor");
+    assert_eq!(vendedor_payouts.len(), 1);
+    let fallido = dispersion
+        .marcar_fallido(&payout.id, "prueba")
+        .await
+        .expect("fallido");
+    assert_eq!(fallido.estado, "fallido");
+    let envio = dispersion.enviar_pendientes().await.expect("sin activo");
+    assert_eq!(envio.payouts_enviados, 0);
+
+    db.pool().close().await;
+    pool.close().await;
+}
