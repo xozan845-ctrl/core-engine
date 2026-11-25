@@ -132,6 +132,7 @@ export const ALLOWED_COMMIT_SCOPES = [
   // Gobernanza y entrega
   'rules',
   'architecture',
+  'audit',
   'docs',
   'plan',
   'ci',
