@@ -90,6 +90,7 @@ export const ALLOWED_COMMIT_SCOPES = [
   'api-gateway',
   'identity',
   'identity-service',
+  'email',
   'auth',
   'personal',
   'catalog',
