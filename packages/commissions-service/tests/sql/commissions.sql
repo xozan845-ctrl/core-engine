@@ -33,6 +33,69 @@ CREATE TABLE IF NOT EXISTS commissions.pagos (
   metodo      text NOT NULL DEFAULT 'simulado',
   creado_en   timestamptz NOT NULL DEFAULT NOW()
 );
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS proveedor text NOT NULL DEFAULT '';
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS moneda text NOT NULL DEFAULT '';
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS comision_pasarela_cents integer NOT NULL DEFAULT 0;
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS impuesto_pasarela_cents integer NOT NULL DEFAULT 0;
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS retencion_cents integer NOT NULL DEFAULT 0;
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS monto_liquidado_cents integer NOT NULL DEFAULT 0;
+ALTER TABLE commissions.pagos ADD COLUMN IF NOT EXISTS moneda_liquidacion text NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS commissions.configuracion_dispersion (
+  id               smallint PRIMARY KEY DEFAULT 1,
+  proveedor_codigo text NOT NULL DEFAULT 'tilopay',
+  activo           boolean NOT NULL DEFAULT false,
+  hora_local       text NOT NULL DEFAULT '00:10',
+  minimo_cents     integer NOT NULL DEFAULT 0,
+  moneda           text NOT NULL DEFAULT 'NIO',
+  retencion_bps    integer NOT NULL DEFAULT 0,
+  actualizado_en   timestamptz NOT NULL DEFAULT NOW()
+);
+INSERT INTO commissions.configuracion_dispersion (id) VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS commissions.cuentas_pago (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  beneficiario_tipo   text NOT NULL,
+  beneficiario_id     uuid NOT NULL,
+  proveedor           text NOT NULL,
+  referencia_externa  text NOT NULL DEFAULT '',
+  moneda              text NOT NULL DEFAULT 'NIO',
+  detalle             jsonb NOT NULL DEFAULT '{}'::jsonb,
+  activo              boolean NOT NULL DEFAULT true,
+  creado_en           timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en      timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (beneficiario_tipo, beneficiario_id, proveedor)
+);
+
+CREATE TABLE IF NOT EXISTS commissions.payouts (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  fecha               date NOT NULL,
+  beneficiario_tipo   text NOT NULL,
+  beneficiario_id     uuid NOT NULL,
+  empresa_id          uuid,
+  negocio_id          uuid,
+  monto_cents         integer NOT NULL,
+  retencion_cents     integer NOT NULL DEFAULT 0,
+  monto_neto_cents    integer NOT NULL,
+  moneda              text NOT NULL DEFAULT 'NIO',
+  proveedor           text NOT NULL,
+  estado              text NOT NULL DEFAULT 'pendiente',
+  referencia_externa  text NOT NULL DEFAULT '',
+  error               text NOT NULL DEFAULT '',
+  creado_en           timestamptz NOT NULL DEFAULT NOW(),
+  actualizado_en      timestamptz NOT NULL DEFAULT NOW(),
+  UNIQUE (beneficiario_tipo, beneficiario_id, fecha)
+);
+
+CREATE TABLE IF NOT EXISTS commissions.payout_items (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payout_id         uuid NOT NULL REFERENCES commissions.payouts(id) ON DELETE CASCADE,
+  liquidacion_tipo  text NOT NULL,
+  liquidacion_id    uuid NOT NULL,
+  monto_cents       integer NOT NULL,
+  UNIQUE (payout_id, liquidacion_tipo, liquidacion_id)
+);
 
 CREATE TABLE IF NOT EXISTS commissions.liquidaciones (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),

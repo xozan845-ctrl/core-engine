@@ -30,6 +30,16 @@ para que las decisiones no se diluyan (R-DO-7).
 
 ### P1 — Endurecimiento operativo y de integración
 
+> **Cierre de pagos centralizados:** ver
+> [`pendientes-cobro-dispersion.md`](./pendientes-cobro-dispersion.md) para los
+> bloqueadores de credenciales, contrato de dispersión, conciliación y sandbox
+> de [ADR-0053](./adr/0053-cobro-centralizado-dispersion-diaria.md).
+
+> **Cierre de facturación electrónica:** ver
+> [`pendientes-facturacion-electronica.md`](./pendientes-facturacion-electronica.md)
+> para certificación DGI/proveedor, credenciales, XML/firma y decisión de
+> piloto sin comprobante fiscal de [ADR-0049](./adr/0049-regiones-tributarias.md).
+
 | # | Tema | Estado actual | Disparador | Diseño mínimo | Aceptación |
 |---|---|---|---|---|---|
 | 1 | **PITR real** | Dump lógico diario; RPO 24 h | Un tenant con volumen alto o requisito de RPO < 24 h | `wal_level=replica`, `archive_mode=on`, archivado WAL fuera del host, `pg_basebackup`/pgBackRest y restore drill con timestamp | Restaurar a un minuto concreto en staging y documentar RPO/RTO |

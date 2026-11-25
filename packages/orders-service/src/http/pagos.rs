@@ -356,11 +356,11 @@ async fn procesar_webhook_pasarela(
     datos: &Value,
 ) -> Result<Response, ApiError> {
     let actor = "00000000-0000-4000-8000-000000000000";
-    let (pago, estado) = state
+    let (pago, consulta) = state
         .pagos()?
         .resolver_webhook(proveedor, referencia, Some(datos))
         .await?;
-    match estado {
+    match consulta.estado {
         EstadoExterno::Aprobado => {
             if pago.estado != "pendiente" {
                 return ok(serde_json::to_value(pago).map_err(|_| ApiError::interno())?);

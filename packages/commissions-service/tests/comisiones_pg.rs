@@ -3,7 +3,7 @@
 
 use async_trait::async_trait;
 use commissions_service::clients::{ItemOrden, KpisNoDisponible, OrdenInterna, Ordenes};
-use commissions_service::comisiones::{Comisiones, DatosLinea};
+use commissions_service::comisiones::{Comisiones, DatosLinea, DatosPago};
 use commissions_service::db::Db;
 use commissions_service::liquidaciones::{Liquidaciones, LiquidacionesPort, Periodo};
 use commissions_service::outbox::Outbox;
@@ -191,11 +191,27 @@ async fn debe_registrar_el_pago_una_sola_vez_por_orden() {
     let order_id = Uuid::new_v4().to_string();
     let mut tx = db.transaccion().await.expect("tx");
     let primero = comisiones
-        .registrar_pago(&mut tx, &order_id, 2_500)
+        .registrar_pago(
+            &mut tx,
+            &DatosPago {
+                order_id: order_id.clone(),
+                monto_cents: 2_500,
+                metodo: "simulado".to_string(),
+                ..DatosPago::default()
+            },
+        )
         .await
         .expect("pago");
     let segundo = comisiones
-        .registrar_pago(&mut tx, &order_id, 9_999)
+        .registrar_pago(
+            &mut tx,
+            &DatosPago {
+                order_id: order_id.clone(),
+                monto_cents: 9_999,
+                metodo: "simulado".to_string(),
+                ..DatosPago::default()
+            },
+        )
         .await
         .expect("pago repetido");
     tx.commit().await.expect("commit");
@@ -847,4 +863,96 @@ async fn debe_servir_los_endpoints_internos_de_ciclo_de_vida() {
     let _ = commissions_service::http::interno::purgar_tenant(State(estado), headers, Json(req()))
         .await
         .expect("purgar http");
+}
+
+#[tokio::test]
+async fn debe_cerrar_dia_y_pagar_a_vendedor_y_empresa_con_retencion() {
+    use commissions_service::dispersion::Dispersion;
+    use serde_json::json;
+
+    let Some((db, pool)) = preparar().await else {
+        eprintln!("TEST_DATABASE_URL no definida: se omite la integracion");
+        return;
+    };
+    let comisiones = Comisiones::nueva(Arc::clone(&db), 0.12);
+    let liquidaciones = Arc::new(Liquidaciones::nueva(Arc::clone(&db)));
+    let dispersion = Dispersion::nueva(Arc::clone(&db), liquidaciones);
+    let order_id = Uuid::new_v4().to_string();
+    let empresa = Uuid::new_v4().to_string();
+    let vendedor = Uuid::new_v4().to_string();
+    let fecha = chrono::NaiveDate::from_ymd_opt(2001, 1, 1).expect("fecha aislada");
+    let mut tx = db.transaccion().await.expect("tx");
+    comisiones
+        .acreditar_linea(
+            &mut tx,
+            &DatosLinea {
+                order_id: order_id.clone(),
+                linea_clave: "of-dispersion".into(),
+                empresa_id: empresa.clone(),
+                negocio_id: None,
+                tienda_id: Uuid::new_v4().to_string(),
+                vendedor_id: vendedor.clone(),
+                venta_cents: 10_000,
+                participacion: 60,
+                cantidad: 1,
+            },
+        )
+        .await
+        .expect("acreditar");
+    tx.commit().await.expect("commit");
+    sqlx::query("UPDATE commissions.comisiones SET creado_en = $2::date WHERE order_id = $1::uuid")
+        .bind(Uuid::parse_str(&order_id).expect("uuid"))
+        .bind(fecha)
+        .execute(&pool)
+        .await
+        .expect("fecha aislada");
+
+    dispersion
+        .guardar_configuracion(&json!({
+            "proveedor_codigo": "tilopay",
+            "activo": false,
+            "hora_local": "00:10",
+            "minimo_cents": 0,
+            "moneda": "NIO",
+            "retencion_bps": 100,
+        }))
+        .await
+        .expect("configuracion");
+    let resumen = dispersion.cerrar_dia(fecha).await.expect("cerrar dia");
+    assert!(resumen.payouts_creados >= 2);
+
+    let payouts_vendedor = dispersion
+        .listar_payouts(None, None, Some(("vendedor", &vendedor)))
+        .await
+        .expect("payouts vendedor");
+    let payout_vendedor = payouts_vendedor.first().expect("payout vendedor");
+    assert_eq!(payout_vendedor.monto_cents, 5_280);
+    assert_eq!(payout_vendedor.retencion_cents, 53);
+    assert_eq!(payout_vendedor.monto_neto_cents, 5_227);
+
+    let payouts_empresa = dispersion
+        .listar_payouts_empresa(&empresa, None)
+        .await
+        .expect("payouts empresa");
+    let payout_empresa = payouts_empresa.first().expect("payout empresa");
+    assert_eq!(payout_empresa.monto_cents, 3_520);
+    assert_eq!(payout_empresa.retencion_cents, 35);
+    assert_eq!(payout_empresa.monto_neto_cents, 3_485);
+
+    let confirmado = dispersion
+        .confirmar(&payout_vendedor.id, Some("ext-dispersion-1"))
+        .await
+        .expect("confirmar");
+    assert_eq!(confirmado.estado, "confirmado");
+    let estado: String = sqlx::query_scalar(
+        "SELECT estado FROM commissions.liquidaciones WHERE vendedor_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&vendedor).expect("uuid"))
+    .fetch_one(&pool)
+    .await
+    .expect("liquidacion");
+    assert_eq!(estado, "pagada");
+
+    db.pool().close().await;
+    pool.close().await;
 }

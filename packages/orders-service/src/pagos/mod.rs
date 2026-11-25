@@ -27,8 +27,10 @@ mod prelude {
 use self::prelude::*;
 use serde_json::json;
 
+pub(crate) use proveedores::liquidacion_de;
 pub use proveedores::{
-    CargoExterno, EstadoExterno, ProveedorHttp, ProveedorManual, ProveedorPagos, ProveedorSimulado,
+    CargoExterno, ConsultaExterna, EstadoExterno, LiquidacionPasarela, ProveedorHttp,
+    ProveedorManual, ProveedorPagos, ProveedorSimulado,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -74,6 +76,16 @@ pub struct Pago {
     #[serde(default, skip_serializing)]
     pub referencia_proveedor: String,
     pub proveedor: String,
+    /// Desglose de liquidación que reportó la pasarela. El fee de pasarela es
+    /// costo de la plataforma; el neto se reconcilia contra la dispersión.
+    pub comision_pasarela_cents: i64,
+    pub impuesto_pasarela_cents: i64,
+    pub retencion_cents: i64,
+    pub monto_liquidado_cents: i64,
+    pub moneda_liquidacion: String,
+    pub proveedor_liquidacion: String,
+    #[serde(default, skip_serializing)]
+    pub detalle_pasarela: Value,
     pub monto_reembolsado_cents: i64,
     pub motivo_rechazo: String,
     pub confirmado_por: Option<String>,
@@ -92,6 +104,21 @@ impl Pagos {
         Self {
             db,
             proveedor_default: Arc::new(ProveedorSimulado),
+        }
+    }
+
+    /// Código del proveedor global de la plataforma. Lo usa la transición de
+    /// cancelación para no rechazar un cargo externo que aún puede conciliarse.
+    pub fn proveedor_default_codigo(&self) -> String {
+        self.proveedor_default.nombre()
+    }
+
+    /// Construye el registro con un proveedor global explícito. Lo usan el
+    /// arranque configurado y las pruebas que necesitan una pasarela real.
+    pub fn con_proveedor(db: Arc<Db>, proveedor: Arc<dyn ProveedorPagos>) -> Self {
+        Self {
+            db,
+            proveedor_default: proveedor,
         }
     }
 

@@ -402,7 +402,7 @@ fn fusionar_config(base: &Value, extra: &Value) -> Value {
 /// Claves que solo puede definir la plataforma (admin), nunca el tenant:
 /// permitir que el tenant las sobrescriba convierte la configuración de pagos
 /// en un SSRF con exfiltración de variables de entorno.
-const CONFIG_RESERVADA: [&str; 13] = [
+const CONFIG_RESERVADA: [&str; 14] = [
     "url",
     "base_url",
     "clave_env",
@@ -416,6 +416,7 @@ const CONFIG_RESERVADA: [&str; 13] = [
     "callback_url",
     "return_url",
     "ambiente",
+    "liquidacion_unidad",
 ];
 
 /// Fusiona la config del proveedor con la del tenant, ignorando las claves
