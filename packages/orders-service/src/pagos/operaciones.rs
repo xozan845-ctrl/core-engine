@@ -38,7 +38,9 @@ impl Pagos {
                     actualizado_en = NOW()
               WHERE id = $1::uuid AND estado = 'pendiente'
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                        retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                        detalle_pasarela, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )
@@ -113,7 +115,16 @@ impl Pagos {
             .get("cargo_externo")
             .and_then(Value::as_bool)
             .unwrap_or(metodo.codigo == "simulado");
-        let (proveedor_codigo, proveedor) = self.proveedor_para(empresa_id, negocio_id).await?;
+        let (proveedor_codigo, proveedor) = if metodo.codigo == "tarjeta" {
+            // Cobro centralizado: tarjeta siempre entra por la cuenta de la
+            // plataforma, nunca por la configuración de un tenant.
+            (
+                self.proveedor_default.nombre(),
+                Arc::clone(&self.proveedor_default),
+            )
+        } else {
+            self.proveedor_para(empresa_id, negocio_id).await?
+        };
         let simulado_permitido = metodo.codigo == "simulado"
             || metodo
                 .config
@@ -149,7 +160,36 @@ impl Pagos {
             .as_ref()
             .map(|cargo| cargo.referencia.clone())
             .unwrap_or_default();
-        let pago_url = cargo.and_then(|cargo| cargo.url);
+        let pago_url = cargo.as_ref().and_then(|cargo| cargo.url.clone());
+        let liquidacion = cargo.as_ref().and_then(|cargo| cargo.liquidacion.clone());
+        let comision_pasarela = liquidacion
+            .as_ref()
+            .map(|valor| valor.comision_cents)
+            .unwrap_or(0);
+        let impuesto_pasarela = liquidacion
+            .as_ref()
+            .map(|valor| valor.impuesto_cents)
+            .unwrap_or(0);
+        let retencion = liquidacion
+            .as_ref()
+            .map(|valor| valor.retencion_cents)
+            .unwrap_or(0);
+        let monto_liquidado = liquidacion
+            .as_ref()
+            .map(|valor| valor.monto_liquidado_cents)
+            .unwrap_or(0);
+        let moneda_liquidacion = liquidacion
+            .as_ref()
+            .map(|valor| valor.moneda.clone())
+            .unwrap_or_default();
+        let proveedor_liquidacion = liquidacion
+            .as_ref()
+            .map(|valor| valor.proveedor.clone())
+            .unwrap_or_default();
+        let detalle_pasarela = liquidacion
+            .as_ref()
+            .map(|valor| valor.detalle.to_string())
+            .unwrap_or_else(|| "{}".to_string());
         let mut tx = self
             .db
             .transaccion_servicio()
@@ -158,9 +198,12 @@ impl Pagos {
         sqlx::query(
             "INSERT INTO orders.pagos
                (order_id, empresa_id, metodo_codigo, estado, monto_cents, moneda,
-                referencia, proveedor, confirmado_en)
+                referencia, proveedor, confirmado_en, proveedor_liquidacion,
+                comision_pasarela_cents, impuesto_pasarela_cents, retencion_cents,
+                monto_liquidado_cents, moneda_liquidacion, detalle_pasarela)
              VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8,
-                     CASE WHEN $4 = 'confirmado' THEN NOW() ELSE NULL END)",
+                     CASE WHEN $4 = 'confirmado' THEN NOW() ELSE NULL END,
+                     $9, $10, $11, $12, $13, $14, $15::jsonb)",
         )
         .bind(order_id)
         .bind(empresa_id)
@@ -170,6 +213,13 @@ impl Pagos {
         .bind(moneda)
         .bind(&referencia)
         .bind(&proveedor)
+        .bind(&proveedor_liquidacion)
+        .bind(comision_pasarela)
+        .bind(impuesto_pasarela)
+        .bind(retencion)
+        .bind(monto_liquidado)
+        .bind(&moneda_liquidacion)
+        .bind(&detalle_pasarela)
         .execute(&mut *tx)
         .await
         .map_err(crate::event_store::error_db)?;
@@ -283,7 +333,9 @@ impl Pagos {
                 SET conciliado_en = COALESCE(conciliado_en, NOW()), actualizado_en = NOW()
               WHERE id = $1::uuid
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                        retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                        detalle_pasarela, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )
@@ -327,7 +379,9 @@ impl Pagos {
                 SET estado = $2, monto_reembolsado_cents = $3, actualizado_en = NOW()
               WHERE id = $1::uuid
               RETURNING id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                        moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                        moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                        retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                        detalle_pasarela, monto_reembolsado_cents,
                         motivo_rechazo, confirmado_por, conciliado_en,
                         confirmado_en, creado_en",
         )

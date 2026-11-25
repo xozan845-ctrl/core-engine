@@ -20,7 +20,8 @@ use orders_service::expiracion::ExpiracionOrdenes;
 use orders_service::fidelizacion::Fidelizacion;
 use orders_service::fulfillments::Fulfillments;
 use orders_service::outbox::Outbox;
-use orders_service::pagos::Pagos;
+use orders_service::pagos::{Pagos, ProveedorHttp, ProveedorPagos};
+use orders_service::pasarelas::tilopay::Tilopay;
 use orders_service::pedidos::Pedidos;
 use orders_service::salon::{CrearComandaInput, CrearMesaInput, Salon};
 use orders_service::suscripciones::{CrearSuscripcionInput, Suscripciones};
@@ -420,6 +421,13 @@ async fn provisionar(url: &str) {
           referencia text NOT NULL DEFAULT '',
           referencia_proveedor text NOT NULL DEFAULT '',
           proveedor text NOT NULL DEFAULT 'simulado',
+          proveedor_liquidacion text NOT NULL DEFAULT '',
+          comision_pasarela_cents integer NOT NULL DEFAULT 0,
+          impuesto_pasarela_cents integer NOT NULL DEFAULT 0,
+          retencion_cents integer NOT NULL DEFAULT 0,
+          monto_liquidado_cents integer NOT NULL DEFAULT 0,
+          moneda_liquidacion text NOT NULL DEFAULT '',
+          detalle_pasarela jsonb NOT NULL DEFAULT '{}'::jsonb,
           monto_reembolsado_cents integer NOT NULL DEFAULT 0,
           motivo_rechazo text NOT NULL DEFAULT '',
           confirmado_por uuid,
@@ -715,6 +723,28 @@ fn infra_con_directo(
     cupon: Option<CuponValidado>,
     fiscal: Option<ConfiguracionFiscal>,
 ) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_base(db, stock, tasa, directo, promocion, cupon, fiscal, None)
+}
+
+fn infra_con_proveedor(
+    db: Arc<Db>,
+    stock: i64,
+    proveedor: Arc<dyn ProveedorPagos>,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
+    infra_con_base(db, stock, None, false, None, None, None, Some(proveedor))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn infra_con_base(
+    db: Arc<Db>,
+    stock: i64,
+    tasa: Option<f64>,
+    directo: bool,
+    promocion: Option<PromocionLinea>,
+    cupon: Option<CuponValidado>,
+    fiscal: Option<ConfiguracionFiscal>,
+    proveedor: Option<Arc<dyn ProveedorPagos>>,
+) -> (Arc<Checkout>, Arc<Carrito>, Arc<Pedidos>) {
     let clientes: Arc<dyn ClientesPort> = Arc::new(ClientesFake {
         stock,
         tasa,
@@ -751,6 +781,10 @@ fn infra_con_directo(
     let pedidos = Arc::new(Pedidos {
         tasa_comision: 0.12,
     });
+    let pagos = match proveedor {
+        Some(proveedor) => Pagos::con_proveedor(Arc::clone(&db), proveedor),
+        None => Pagos::nueva(Arc::clone(&db)),
+    };
     let checkout = Arc::new(Checkout {
         db: Arc::clone(&db),
         clientes: Arc::clone(&clientes),
@@ -758,7 +792,7 @@ fn infra_con_directo(
         vistas,
         pedidos: Arc::clone(&pedidos),
         outbox: Outbox::nueva("orders.outbox"),
-        pagos: Arc::new(Pagos::nueva(Arc::clone(&db))),
+        pagos: Arc::new(pagos),
         tipos: Arc::new(TiposOrden::nueva(Arc::clone(&db))),
         fulfillments: Arc::new(Fulfillments::nueva(Arc::clone(&db))),
         tasa_comision: 0.12,
@@ -1358,25 +1392,12 @@ async fn debe_dejar_pendiente_un_cargo_de_pasarela_real() {
     .execute(db.pool())
     .await
     .expect("metodo tarjeta");
-    sqlx::query(
-        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
-         VALUES ('http_mock', 'HTTP Mock', 'http', true, jsonb_build_object('url', $1))",
-    )
-    .bind(&base)
-    .execute(db.pool())
-    .await
-    .expect("proveedor http");
-    sqlx::query(
-        "INSERT INTO orders.configuracion_pagos
-           (empresa_id, proveedor_codigo, activo, config)
-         VALUES ($1::uuid, 'http_mock', true, '{}'::jsonb)",
-    )
-    .bind(EMPRESA)
-    .execute(db.pool())
-    .await
-    .expect("configuracion pagos");
 
-    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let (checkout, _, _) = infra_con_proveedor(
+        Arc::clone(&db),
+        10,
+        Arc::new(ProveedorHttp::nuevo(base, None)),
+    );
     let orden = checkout
         .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
         .await
@@ -1393,16 +1414,12 @@ async fn debe_dejar_pendiente_un_cargo_de_pasarela_real() {
     .await
     .expect("pago");
     assert_eq!(estado, "pendiente");
-    assert_eq!(proveedor, "http_mock");
+    assert_eq!(proveedor, "http");
     assert!(!referencia.is_empty());
 
-    // Sin pasarela configurada no se puede cobrar con tarjeta usando el simulado.
-    sqlx::query("DELETE FROM orders.configuracion_pagos WHERE empresa_id = $1::uuid")
-        .bind(EMPRESA)
-        .execute(db.pool())
-        .await
-        .expect("quitar configuracion");
-    let error = checkout
+    // Sin pasarela real en la plataforma no se puede cobrar con tarjeta.
+    let (checkout_simulado, _, _) = infra(Arc::clone(&db), 10);
+    let error = checkout_simulado
         .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
         .await
         .expect_err("no debe cobrar sin pasarela");
@@ -1426,7 +1443,17 @@ async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
         AxumJson(json!({ "type": "200", "url": "https://pago.example/1" }))
     }
     async fn consult() -> AxumJson<Value> {
-        AxumJson(json!({ "type": "200", "response": [{ "code": "1" }] }))
+        AxumJson(json!({
+            "type": "200",
+            "response": [{
+                "code": "1",
+                "comision": 3.5,
+                "impuesto": 0.5,
+                "retencion": 0.1,
+                "monto_liquidado": 96.0,
+                "moneda_liquidacion": "USD"
+            }]
+        }))
     }
 
     let _guard = DB_LOCK.lock().await;
@@ -1460,25 +1487,9 @@ async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
     .execute(db.pool())
     .await
     .expect("metodo tarjeta");
-    sqlx::query(
-        "INSERT INTO orders.proveedores_pago (codigo, nombre, tipo, activo, config)
-         VALUES ('tilopay', 'Tilopay', 'tilopay', true, $1::jsonb)",
-    )
-    .bind(configuracion.to_string())
-    .execute(db.pool())
-    .await
-    .expect("proveedor tilopay");
-    sqlx::query(
-        "INSERT INTO orders.configuracion_pagos
-           (empresa_id, proveedor_codigo, activo, config)
-         VALUES ($1::uuid, 'tilopay', true, '{}'::jsonb)",
-    )
-    .bind(EMPRESA)
-    .execute(db.pool())
-    .await
-    .expect("configuracion pagos");
 
-    let (checkout, _, _) = infra(Arc::clone(&db), 10);
+    let proveedor = Arc::new(Tilopay::nuevo(&configuracion).expect("proveedor tilopay"));
+    let (checkout, _, _) = infra_con_proveedor(Arc::clone(&db), 10, proveedor.clone());
     let orden = checkout
         .ejecutar(&compra_con_metodo(1, "tarjeta"), COMPRADOR)
         .await
@@ -1486,8 +1497,9 @@ async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
     assert_eq!(orden.estado, "creada");
     assert!(orden.pago_url.is_some());
 
+    let pagos_conciliacion = Arc::new(Pagos::con_proveedor(Arc::clone(&db), proveedor));
     let conciliacion = ConciliacionPagos::nueva(
-        Arc::new(Pagos::nueva(Arc::clone(&db))),
+        Arc::clone(&pagos_conciliacion),
         Arc::new(FlujoPagos::nuevo(Arc::clone(&checkout))),
         0,
         200,
@@ -1502,6 +1514,21 @@ async fn debe_conciliar_un_pago_de_tilopay_aprobado() {
             .await
             .expect("pago");
     assert_eq!(estado, "confirmado");
+    let liquidacion: (i32, i32, i32, i32, String, String) = sqlx::query_as(
+        "SELECT comision_pasarela_cents, impuesto_pasarela_cents, retencion_cents,
+                monto_liquidado_cents, moneda_liquidacion, proveedor_liquidacion
+           FROM orders.pagos WHERE order_id = $1::uuid",
+    )
+    .bind(Uuid::parse_str(&orden.id).expect("uuid"))
+    .fetch_one(db.pool())
+    .await
+    .expect("liquidacion");
+    assert_eq!(liquidacion.0, 350);
+    assert_eq!(liquidacion.1, 50);
+    assert_eq!(liquidacion.2, 10);
+    assert_eq!(liquidacion.3, 9_600);
+    assert_eq!(liquidacion.4, "USD");
+    assert_eq!(liquidacion.5, "tilopay");
     let orden_estado: String =
         sqlx::query_scalar("SELECT estado FROM orders.orden_vista WHERE id = $1::uuid")
             .bind(Uuid::parse_str(&orden.id).expect("uuid"))

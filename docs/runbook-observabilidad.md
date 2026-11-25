@@ -33,6 +33,7 @@ Antes de intervenir, registrar la hora, la alerta, el servicio afectado y un
 3. Buscar en logs JSON del servicio los mensajes `Fallo al publicar evento outbox`; conservar `event_id` y `x-request-id`.
 4. No borrar filas pendientes ni publicar manualmente sin evidencia: el relay reintenta en el siguiente ciclo.
 5. Confirmar que el backlog vuelve a cero y que la tasa de fallos se detiene durante dos ventanas.
+6. Si el backlog es de `commissions.outbox` y el tipo es `venta.directa.acreditada` o `comision.acreditada`, revisar además que `finance.ventas_lineas` tenga el subledger de la orden; sin ese evento la venta queda en “Fondos por liquidar”. Ver `docs/audits/2026-11-25-cierre-venta-directa.md`.
 
 ## RabbitMQ y DLQ
 

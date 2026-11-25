@@ -60,9 +60,9 @@ impl ConciliacionPagos {
             revisados: pendientes.len() as u64,
             ..ResumenConciliacion::default()
         };
-        for pago in pendientes {
-            let estado = match self.pagos.consultar_pago(&pago, None).await {
-                Ok(estado) => estado,
+        for mut pago in pendientes {
+            let consulta = match self.pagos.consultar_pago(&pago, None).await {
+                Ok(consulta) => consulta,
                 Err(error) => {
                     resumen.errores += 1;
                     logs::warn(
@@ -77,7 +77,21 @@ impl ConciliacionPagos {
                     continue;
                 }
             };
-            let resultado = match estado {
+            if let Some(liquidacion) = &consulta.liquidacion {
+                if let Err(error) = self.pagos.aplicar_liquidacion(&mut pago, liquidacion).await {
+                    resumen.errores += 1;
+                    logs::warn(
+                        "orders",
+                        crate::campos! {
+                            "msg": "no se pudo guardar la liquidacion de la pasarela",
+                            "pago_id": pago.id,
+                            "codigo": error.codigo,
+                        },
+                    );
+                    continue;
+                }
+            }
+            let resultado = match consulta.estado {
                 EstadoExterno::Aprobado => {
                     // Primero la orden, después el pago: si la transición falla,
                     // el pago sigue pendiente y el próximo ciclo lo reintenta.

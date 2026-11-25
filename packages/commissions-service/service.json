@@ -5,7 +5,7 @@
   "metadata": {
     "name": "commissions-service",
     "boundedContext": "commissions",
-    "description": "Comisiones, liquidaciones quincenales, estado de cuenta y reportes.",
+    "description": "Comisiones, cierre diario, dispersión al negocio/vendedor y reportes.",
     "owner": "core-platform",
     "lifecycle": "production",
     "tags": [
@@ -28,7 +28,8 @@
     "internalApi": true,
     "environments": [
       "dev",
-      "stage"
+      "stage",
+      "prod"
     ],
     "dependencies": {
       "sync": [
