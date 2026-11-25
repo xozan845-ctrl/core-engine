@@ -168,6 +168,7 @@ async fn preparar() -> Option<Contexto> {
         config,
         metrics,
         Servicios {
+            db: Arc::clone(&db),
             auth,
             auditoria,
             usuarios: Arc::clone(&usuarios),

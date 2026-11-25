@@ -514,17 +514,13 @@ async fn crear_ubicacion_principal(
     empresa_id: &str,
     negocio_id: &str,
 ) -> Result<(), ApiError> {
-    sqlx::query(
-        "INSERT INTO inventory.ubicaciones
-           (empresa_id, negocio_id, codigo, nombre, tipo, predeterminada)
-         VALUES ($1::uuid, $2::uuid,
-                 'principal_' || substr(replace($2::text, '-', ''), 1, 8),
-                 'Principal', 'bodega', true)
-         ON CONFLICT DO NOTHING",
+    // R-MS-16/ADR-0051: inventory es dueño de sus ubicaciones.
+    sqlx::query_scalar::<_, i32>(
+        "SELECT inventory.crear_ubicacion_predeterminada($1::uuid, $2::uuid)",
     )
     .bind(empresa_id)
     .bind(negocio_id)
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await
     .map_err(interno)?;
     Ok(())

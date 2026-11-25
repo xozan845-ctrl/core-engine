@@ -178,6 +178,7 @@ async fn main() {
         config,
         metrics,
         Servicios {
+            db: Arc::clone(&db),
             auth,
             auditoria,
             usuarios,

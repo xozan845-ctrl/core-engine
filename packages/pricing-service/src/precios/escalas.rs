@@ -104,14 +104,14 @@ impl Precios {
         item_id: &str,
     ) -> Result<(), ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
-        sqlx::query(
-            "UPDATE item.items
-                SET tipo_precio = 'escala', actualizado_en = NOW()
-              WHERE id = $1::uuid AND empresa_id = $2::uuid AND tipo_precio <> 'escala'",
+        // R-MS-16/ADR-0051: item es dueño de su flag; la función corre en su
+        // esquema y en la misma transacción.
+        sqlx::query_scalar::<_, i32>(
+            "SELECT item.marcar_tipo_precio($1::uuid, $2::uuid, 'escala')",
         )
-        .bind(item_id)
         .bind(empresa_id)
-        .execute(&mut *tx)
+        .bind(item_id)
+        .fetch_one(&mut *tx)
         .await
         .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
