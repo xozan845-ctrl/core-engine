@@ -332,6 +332,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn debe_responder_ready_segun_el_estado_de_postgres() {
+        let app = build_router(estado_de_prueba(config()));
+        let response = app
+            .oneshot(
+                HttpRequest::get("/ready")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert!(
+            response.status() == StatusCode::OK
+                || response.status() == StatusCode::SERVICE_UNAVAILABLE
+        );
+        let valor: Value = serde_json::from_str(&cuerpo(response).await).expect("json");
+        assert!(valor["listo"].is_boolean());
+    }
+
+    #[tokio::test]
     async fn debe_exponer_metricas_en_texto_prometheus() {
         let state = estado_de_prueba(config());
         let app = build_router(state);
