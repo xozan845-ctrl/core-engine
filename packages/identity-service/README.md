@@ -75,8 +75,9 @@ capacidades, tenants, temas o partes).
 
 `EMAIL_MODE` distinto de `log`/`smtp` impide arrancar. Con `smtp`,
 `SMTP_HOST`, `EMAIL_FROM` y el par usuario/contraseña se validan al inicio.
-`SMTP_TLS_ENABLED=false` se rechaza en producción y cuando hay credenciales;
-el E2E lo usa sólo con el Mailpit efímero que no anuncia STARTTLS.
+`SMTP_TLS_ENABLED=false` sólo es válido para `SMTP_HOST=mailpit`,
+`SMTP_PORT=1025` y sin credenciales SMTP; los demás destinos requieren TLS.
+El E2E lo usa sólo con el Mailpit efímero que no anuncia STARTTLS.
 
 ---
 
