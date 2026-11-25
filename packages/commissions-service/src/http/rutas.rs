@@ -273,7 +273,7 @@ pub async fn cerrar_dia_dispersion(
         Some(valor) => NaiveDate::parse_from_str(valor, "%Y-%m-%d").map_err(|_| {
             ApiError::validacion(json!([{"campo": "fecha", "restricciones": ["isDate"]}]))
         })?,
-        None => hoy_local().pred_opt().unwrap_or_else(|| hoy_local()),
+        None => hoy_local().pred_opt().unwrap_or_else(hoy_local),
     };
     let resumen = state.dispersion()?.cerrar_dia(fecha).await?;
     Ok((
