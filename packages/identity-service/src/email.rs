@@ -41,6 +41,7 @@ pub struct EmailSmtp {
     from: String,
     host: String,
     port: u16,
+    tls_enabled: bool,
     user: Option<String>,
     password: Option<String>,
 }
@@ -59,16 +60,18 @@ impl EmailSmtp {
             from,
             host,
             port: config.smtp_port,
+            tls_enabled: config.smtp_tls_enabled,
             user: config.smtp_user.clone(),
             password: config.smtp_password.clone(),
         })
     }
 
     fn transporte(&self) -> SmtpTransport {
-        // 465 = TLS implícito; cualquier otro puerto (587) exige STARTTLS.
-        // Nunca `builder_dangerous`: las credenciales SMTP y los tokens de
-        // reset/verificación no viajan en claro.
-        let constructor = if self.port == 465 {
+        // SMTP sin TLS sólo es admisible para el Mailpit efímero de desarrollo;
+        // Config rechaza esta opción en producción y si hay credenciales.
+        let constructor = if !self.tls_enabled {
+            SmtpTransport::builder_dangerous(&self.host)
+        } else if self.port == 465 {
             SmtpTransport::relay(&self.host).expect("host SMTP valido")
         } else {
             SmtpTransport::starttls_relay(&self.host).expect("host SMTP valido")
