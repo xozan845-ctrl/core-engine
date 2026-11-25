@@ -51,6 +51,7 @@ const DOCS_HTML: &str = r#"<!doctype html>
 pub fn build_router(state: AppState) -> Router {
     let router = crate::rutas::registrar(Router::new())
         .route("/health", get(health))
+        .route("/ready", get(ready))
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
@@ -69,6 +70,19 @@ pub(crate) fn aplicar_capas(router: Router, state: AppState) -> Router {
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
     Json(state.metrics.salud())
+}
+
+async fn ready(State(state): State<AppState>) -> impl IntoResponse {
+    let listo = sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(state.db().pool())
+        .await
+        .is_ok();
+    let status = if listo {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    (status, Json(serde_json::json!({ "listo": listo })))
 }
 
 async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
@@ -315,6 +329,25 @@ mod tests {
         assert_eq!(valor["servicio"], "finance-service");
         assert!(valor["uptime_seg"].is_number());
         assert!(valor.get("data").is_none());
+    }
+
+    #[tokio::test]
+    async fn debe_responder_ready_segun_el_estado_de_postgres() {
+        let app = build_router(estado_de_prueba(config()));
+        let response = app
+            .oneshot(
+                HttpRequest::get("/ready")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+        assert!(
+            response.status() == StatusCode::OK
+                || response.status() == StatusCode::SERVICE_UNAVAILABLE
+        );
+        let valor: Value = serde_json::from_str(&cuerpo(response).await).expect("json");
+        assert!(valor["listo"].is_boolean());
     }
 
     #[tokio::test]

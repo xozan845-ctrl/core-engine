@@ -166,3 +166,45 @@ CREATE TABLE IF NOT EXISTS inventory.devoluciones_procesadas (
   order_id uuid NOT NULL,
   procesado_en timestamptz NOT NULL DEFAULT NOW()
 );
+
+-- ADR-0051: API de dominio que inventory usa en lugar de escribir item.item_series.
+CREATE OR REPLACE FUNCTION item.marcar_series_vendidas(
+  p_order_id uuid, p_series_ids uuid[], p_garantia_meses integer
+) RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE actualizadas integer;
+BEGIN
+  UPDATE item.item_series
+     SET estado='vendido', order_id=p_order_id, vendido_en=NOW(), ubicacion_id=NULL,
+         garantia_hasta=CASE WHEN p_garantia_meses IS NULL THEN NULL
+           ELSE (CURRENT_DATE + (p_garantia_meses || ' months')::interval)::date END,
+         actualizado_en=NOW()
+   WHERE id = ANY(p_series_ids) AND estado='disponible';
+  GET DIAGNOSTICS actualizadas = ROW_COUNT;
+  RETURN actualizadas;
+END $$;
+
+CREATE OR REPLACE FUNCTION item.liberar_series(
+  p_order_id uuid, p_series_ids uuid[], p_ubicacion_id uuid
+) RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE actualizadas integer;
+BEGIN
+  UPDATE item.item_series s
+     SET estado='disponible', order_id=NULL, vendido_en=NULL,
+         ubicacion_id=COALESCE(p_ubicacion_id, s.ubicacion_id), actualizado_en=NOW()
+   WHERE s.id = ANY(p_series_ids) AND s.order_id=p_order_id AND s.estado='vendido';
+  GET DIAGNOSTICS actualizadas = ROW_COUNT;
+  RETURN actualizadas;
+END $$;
+
+CREATE OR REPLACE FUNCTION item.devolver_series(
+  p_order_id uuid, p_series_ids uuid[], p_ubicacion_id uuid
+) RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE actualizadas integer;
+BEGIN
+  UPDATE item.item_series s
+     SET estado='devuelto', devuelto_en=NOW(),
+         ubicacion_id=COALESCE(p_ubicacion_id, s.ubicacion_id), actualizado_en=NOW()
+   WHERE s.id = ANY(p_series_ids) AND s.order_id=p_order_id AND s.estado='vendido';
+  GET DIAGNOSTICS actualizadas = ROW_COUNT;
+  RETURN actualizadas;
+END $$;

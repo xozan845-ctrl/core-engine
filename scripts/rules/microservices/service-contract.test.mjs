@@ -113,6 +113,15 @@ export default defineSuite({
       assertCheck(assert, findings, 'docs', 'Documentación o contrato incompletos:');
     });
 
+    test('R-DB-1/R-MS-16: cero escrituras directas a esquemas ajenos', () => {
+      assertCheck(
+        assert,
+        findings,
+        'cross-schema-write',
+        'Hay escrituras directas a tablas de otro servicio:',
+      );
+    });
+
     test('R-AF-2: la deuda arquitectónica aceptada no crece ni queda obsoleta', () => {
       const newDebt = newFindings.filter((finding) => finding.baselineable);
       assert.deepEqual(

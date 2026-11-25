@@ -183,18 +183,15 @@ impl Empresas {
             .execute(&mut *tx)
             .await
             .map_err(interno)?;
+            // R-MS-16/ADR-0051: inventory es dueño de sus ubicaciones; la
+            // función crea la principal sin escribir su tabla desde identity.
             sqlx::query(
-                "INSERT INTO inventory.ubicaciones
-                   (empresa_id, negocio_id, codigo, nombre, tipo, predeterminada)
-                 SELECT $1::uuid, n.id,
-                        'principal_' || substr(replace(n.id::text, '-', ''), 1, 8),
-                        'Principal', 'bodega', true
+                "SELECT inventory.crear_ubicacion_predeterminada($1::uuid, n.id)
                    FROM identity.negocios n
-                  WHERE n.empresa_id = $1::uuid AND n.es_predeterminado
-                 ON CONFLICT DO NOTHING",
+                  WHERE n.empresa_id = $1::uuid AND n.es_predeterminado",
             )
             .bind(&empresa_id)
-            .execute(&mut *tx)
+            .fetch_all(&mut *tx)
             .await
             .map_err(interno)?;
             sqlx::query(
