@@ -67,6 +67,7 @@ capacidades, tenants, temas o partes).
 | `EMAIL_FROM` | Sí con `smtp` | — | Remitente |
 | `SMTP_HOST` | Sí con `smtp` | — | Servidor SMTP |
 | `SMTP_PORT` | No | `587` | Puerto |
+| `SMTP_TLS_ENABLED` | No | `true` | Exige TLS/STARTTLS; `false` sólo para Mailpit local en desarrollo y sin credenciales |
 | `SMTP_USER` / `SMTP_PASSWORD` | Juntos | — | Autenticación SMTP |
 | `PLATAFORMA_PLAN_EMPRESARIO` | No | `empresario_plus` | Plan que habilita más de un negocio (ADR-0046) |
 | `PLATAFORMA_EMPRESAS_GRATIS` | No | `1` | Empresas incluidas sin cobro |
@@ -74,6 +75,8 @@ capacidades, tenants, temas o partes).
 
 `EMAIL_MODE` distinto de `log`/`smtp` impide arrancar. Con `smtp`,
 `SMTP_HOST`, `EMAIL_FROM` y el par usuario/contraseña se validan al inicio.
+`SMTP_TLS_ENABLED=false` se rechaza en producción y cuando hay credenciales;
+el E2E lo usa sólo con el Mailpit efímero que no anuncia STARTTLS.
 
 ---
 

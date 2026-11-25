@@ -211,6 +211,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@core-engine.test}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
