@@ -117,6 +117,11 @@ curl -X POST http://localhost:8080/api/v2/finanzas/series \
 7. Si aplica facturación electrónica, configurar
    `proveedor_electronico=dgi` (o `http`) y el endpoint/credenciales
    (`FACTURACION_PROVEEDOR_URL`, `FACTURACION_PROVEEDOR_KEY`).
+   Sin certificación del proveedor, `EMITIR_COMPROBANTES_FISCALES` debe quedar
+   en `false`; si el piloto opera sin comprobante fiscal válido, dejar
+   `FACTURACION_PERMITIR_SIN_CERTIFICADO=true` y asumir que el PDF saldrá
+   marcado **NO FISCAL**. Ver
+   [`pendientes-facturacion-electronica.md`](./pendientes-facturacion-electronica.md).
 
 8. Probar el selector:
 

@@ -1,7 +1,8 @@
 # ADR-0049 — Regiones tributarias seleccionables por pack y tenant
 
 - **Fecha:** 2026-11-23
-- **Estado:** Aceptado (implementado; piloto Nicaragua)
+- **Estado:** Aceptado (implementado; piloto Nicaragua con certificación electrónica pendiente)
+- **Cierre pendiente:** [pendientes-facturacion-electronica.md](../pendientes-facturacion-electronica.md)
 - **Relacionado:** [ADR-0026](./0026-fiscalidad-por-tenant.md),
   [ADR-0031](./0031-facturacion-electronica-pdf.md),
   [ADR-0038](./0038-iva-por-linea-checkout.md),

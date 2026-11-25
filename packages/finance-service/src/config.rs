@@ -25,6 +25,10 @@ pub struct Config {
     pub emitir_comprobantes_fiscales: bool,
     pub facturacion_proveedor_url: Option<String>,
     pub facturacion_proveedor_key: Option<String>,
+    /// El proveedor fue certificado por el país/proveedor autorizado.
+    pub facturacion_proveedor_certificado: bool,
+    /// Aceptación explícita de operar el piloto sin comprobante fiscal válido.
+    pub facturacion_permitir_sin_certificado: bool,
     pub storage_service_url: Option<String>,
     pub pdf_almacenamiento: String,
     pub outbox_tabla: String,
@@ -110,6 +114,12 @@ impl Config {
                 .unwrap_or(false),
             facturacion_proveedor_url: leer("FACTURACION_PROVEEDOR_URL"),
             facturacion_proveedor_key: leer("FACTURACION_PROVEEDOR_KEY"),
+            facturacion_proveedor_certificado: leer("FACTURACION_PROVEEDOR_CERTIFICADO")
+                .map(|valor| valor.eq_ignore_ascii_case("true"))
+                .unwrap_or(false),
+            facturacion_permitir_sin_certificado: leer("FACTURACION_PERMITIR_SIN_CERTIFICADO")
+                .map(|valor| valor.eq_ignore_ascii_case("true"))
+                .unwrap_or(false),
             outbox_tabla: leer("OUTBOX_TABLA").unwrap_or_else(|| "outbox".to_string()),
         })
     }
@@ -122,6 +132,14 @@ impl Config {
         }
         if self.rabbitmq_url.is_none() {
             return Err(ConfigError::Faltante("RABBITMQ_URL"));
+        }
+        if self.emitir_comprobantes_fiscales && !self.facturacion_permitir_sin_certificado {
+            if self.facturacion_proveedor_url.is_none() {
+                return Err(ConfigError::Faltante("FACTURACION_PROVEEDOR_URL"));
+            }
+            if !self.facturacion_proveedor_certificado {
+                return Err(ConfigError::Faltante("FACTURACION_PROVEEDOR_CERTIFICADO"));
+            }
         }
         Ok(())
     }
@@ -152,6 +170,8 @@ mod tests {
         );
         assert_eq!(config.commission_rate, TASA_COMISION_DEFAULT);
         assert!(!config.emitir_comprobantes_fiscales);
+        assert!(!config.facturacion_proveedor_certificado);
+        assert!(!config.facturacion_permitir_sin_certificado);
         assert_eq!(config.outbox_tabla, "outbox");
         assert_eq!(config.database_url, None);
     }
@@ -183,6 +203,38 @@ mod tests {
         assert_eq!(config.commission_rate, 0.1);
         assert!(config.emitir_comprobantes_fiscales);
         assert_eq!(config.outbox_tabla, "finance.outbox");
+    }
+
+    #[test]
+    fn debe_exigir_proveedor_certificado_para_emitir_comprobantes() {
+        let base = vec![
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("RABBITMQ_URL", "amqp://localhost"),
+            ("EMITIR_COMPROBANTES_FISCALES", "true"),
+        ];
+        let config = Config::from_pairs(base.clone()).expect("config");
+        assert_eq!(
+            config.validar_arranque(),
+            Err(ConfigError::Faltante("FACTURACION_PROVEEDOR_URL"))
+        );
+
+        let mut con_url = base.clone();
+        con_url.push(("FACTURACION_PROVEEDOR_URL", "https://fiscal.example"));
+        let config = Config::from_pairs(con_url.clone()).expect("config");
+        assert_eq!(
+            config.validar_arranque(),
+            Err(ConfigError::Faltante("FACTURACION_PROVEEDOR_CERTIFICADO"))
+        );
+
+        let mut certificado = con_url.clone();
+        certificado.push(("FACTURACION_PROVEEDOR_CERTIFICADO", "true"));
+        let config = Config::from_pairs(certificado).expect("config");
+        assert_eq!(config.validar_arranque(), Ok(()));
+
+        let mut piloto = base;
+        piloto.push(("FACTURACION_PERMITIR_SIN_CERTIFICADO", "true"));
+        let config = Config::from_pairs(piloto).expect("config");
+        assert_eq!(config.validar_arranque(), Ok(()));
     }
 
     #[test]
