@@ -219,16 +219,13 @@ impl Regiones {
         // El override de empresa (negocio_id NULL) se realinea con la nueva
         // región y conserva sus flags de facturación electrónica. Los
         // overrides por negocio se respetan: son una decisión explícita.
-        sqlx::query(
-            "UPDATE finance.configuracion_fiscal
-                SET jurisdiccion = $2, actualizado_en = NOW()
-              WHERE empresa_id = $1::uuid AND negocio_id IS NULL",
-        )
-        .bind(empresa_id)
-        .bind(&nueva.codigo)
-        .execute(&mut *tx)
-        .await
-        .map_err(interno)?;
+        // R-MS-16/ADR-0051: finance es dueño de su configuración fiscal.
+        sqlx::query_scalar::<_, i32>("SELECT finance.actualizar_region_fiscal($1::uuid, $2)")
+            .bind(empresa_id)
+            .bind(&nueva.codigo)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(interno)?;
 
         sqlx::query(
             "INSERT INTO identity.empresa_region_historial

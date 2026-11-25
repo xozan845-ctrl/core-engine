@@ -290,21 +290,27 @@ impl Precios {
         item_id: &str,
     ) -> Result<(), ApiError> {
         let mut tx = self.db.transaccion().await.map_err(interno)?;
-        sqlx::query(
-            "UPDATE item.items i
-                SET tipo_precio = CASE WHEN EXISTS (
+        let tipo: String = sqlx::query_scalar(
+            "SELECT CASE WHEN EXISTS (
                       SELECT 1 FROM pricing.lista_precio_items p
-                       WHERE p.empresa_id = i.empresa_id AND p.item_id = i.id
+                       WHERE p.empresa_id = $1::uuid AND p.item_id = $2::uuid
                          AND p.lista_id IS NULL AND p.desde_cantidad > 1
-                    ) THEN 'escala' ELSE 'fijo' END,
-                    actualizado_en = NOW()
-              WHERE i.id = $1::uuid AND i.empresa_id = $2::uuid",
+                    ) THEN 'escala' ELSE 'fijo' END",
         )
-        .bind(item_id)
         .bind(empresa_id)
-        .execute(&mut *tx)
+        .bind(item_id)
+        .fetch_one(&mut *tx)
         .await
         .map_err(interno)?;
+        // R-MS-16/ADR-0051: item es dueño de su flag; la función corre en su
+        // esquema y en la misma transacción.
+        sqlx::query_scalar::<_, i32>("SELECT item.marcar_tipo_precio($1::uuid, $2::uuid, $3)")
+            .bind(empresa_id)
+            .bind(item_id)
+            .bind(&tipo)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(interno)?;
         tx.commit().await.map_err(interno)?;
         Ok(())
     }

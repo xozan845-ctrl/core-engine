@@ -1,6 +1,7 @@
 //! Estado compartido del servicio (equivalente a la DI de NestJS, R-MS-3).
 
 use crate::config::Config;
+use crate::db::Db;
 use crate::dominio::api_keys::ApiKeys;
 use crate::dominio::auditoria::Auditoria;
 use crate::dominio::auth::Auth;
@@ -26,6 +27,7 @@ use std::time::Instant;
 
 #[derive(Clone)]
 pub struct Servicios {
+    pub db: Arc<Db>,
     pub auth: Arc<Auth>,
     pub auditoria: Arc<Auditoria>,
     pub usuarios: Arc<Usuarios>,
@@ -73,6 +75,10 @@ impl AppState {
             inicio: Instant::now(),
             servicios: Some(Arc::new(servicios)),
         }
+    }
+
+    pub fn db(&self) -> Result<&Arc<Db>, crate::errors::ApiError> {
+        Ok(&self.servicios()?.db)
     }
 
     pub fn servicios(&self) -> Result<&Arc<Servicios>, crate::errors::ApiError> {
