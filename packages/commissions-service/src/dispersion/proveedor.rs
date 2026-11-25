@@ -24,6 +24,7 @@ pub trait ProveedorDispersion: Send + Sync {
 /// se configuran en el entorno (`TILOPAY_DISPERSION_URL`/`_PATH` y
 /// `PAGADITO_DISPERSION_URL`/`_PATH`). Sin URL el adaptador falla cerrado: no
 /// se puede enviar dinero a una ruta adivinada.
+#[derive(Debug)]
 pub struct DispersionHttp {
     proveedor: String,
     url: Option<String>,
@@ -130,5 +131,146 @@ impl ProveedorDispersion for DispersionNoDisponible {
 
     async fn enviar(&self, _payout: &Payout, _cuenta: &CuentaPago) -> Result<String, ApiError> {
         Err(ApiError::servicio_no_disponible("pasarela de dispersión"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dispersion::{CuentaPago, Payout};
+    use axum::extract::Json as AxumJson;
+    use axum::routing::post;
+    use axum::Router;
+
+    fn payout() -> Payout {
+        Payout {
+            id: "00000000-0000-0000-0000-000000000001".into(),
+            fecha: "2026-11-25".into(),
+            beneficiario_tipo: "vendedor".into(),
+            beneficiario_id: "00000000-0000-0000-0000-000000000002".into(),
+            empresa_id: None,
+            negocio_id: None,
+            monto_cents: 1_000,
+            retencion_cents: 0,
+            monto_neto_cents: 1_000,
+            moneda: "NIO".into(),
+            proveedor: "tilopay".into(),
+            estado: "pendiente".into(),
+            referencia_externa: String::new(),
+            error: String::new(),
+            creado_en: "2026-11-25T00:00:00.000Z".into(),
+        }
+    }
+
+    fn cuenta(referencia: &str) -> CuentaPago {
+        CuentaPago {
+            id: "00000000-0000-0000-0000-000000000003".into(),
+            beneficiario_tipo: "vendedor".into(),
+            beneficiario_id: "00000000-0000-0000-0000-000000000002".into(),
+            proveedor: "tilopay".into(),
+            referencia_externa: referencia.into(),
+            moneda: "NIO".into(),
+            activo: true,
+        }
+    }
+
+    async fn aceptar() -> AxumJson<Value> {
+        AxumJson(json!({ "referencia": "ext-1" }))
+    }
+
+    async fn rechazar() -> (axum::http::StatusCode, AxumJson<Value>) {
+        (
+            axum::http::StatusCode::BAD_GATEWAY,
+            AxumJson(json!({ "message": "rechazado" })),
+        )
+    }
+
+    #[tokio::test]
+    async fn debe_validar_proveedor_url_y_cuenta() {
+        assert_eq!(
+            DispersionHttp::nuevo("otro")
+                .expect_err("proveedor invalido")
+                .codigo,
+            "DISPERSION_PROVEEDOR_INVALIDO"
+        );
+
+        std::env::remove_var("PAGADITO_DISPERSION_URL");
+        let sin_url = DispersionHttp::nuevo("pagadito").expect("adapter");
+        assert_eq!(
+            sin_url
+                .enviar(&payout(), &cuenta("cta-1"))
+                .await
+                .expect_err("sin url")
+                .codigo,
+            "DISPERSION_NO_CONFIGURADA"
+        );
+    }
+
+    #[tokio::test]
+    async fn debe_enviar_y_traducir_respuestas_del_proveedor() {
+        let app = Router::new()
+            .route("/payout", post(aceptar))
+            .route("/rechazo", post(rechazar));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("puerto mock");
+        let base = format!("http://{}", listener.local_addr().expect("addr"));
+        let servidor = tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("servidor mock");
+        });
+
+        std::env::set_var("TILOPAY_DISPERSION_URL", &base);
+        std::env::set_var("TILOPAY_DISPERSION_PATH", "/payout");
+        std::env::set_var("TILOPAY_DISPERSION_TOKEN", "token");
+        let adapter = DispersionHttp::nuevo("tilopay").expect("adapter");
+        assert_eq!(
+            adapter
+                .enviar(&payout(), &cuenta("cta-1"))
+                .await
+                .expect("envio"),
+            "ext-1"
+        );
+        assert_eq!(
+            adapter.consultar("ext-1").await.expect("consulta"),
+            "pendiente"
+        );
+        assert_eq!(
+            adapter
+                .enviar(&payout(), &cuenta(""))
+                .await
+                .expect_err("cuenta vacia")
+                .codigo,
+            "CUENTA_PAGO_INCOMPLETA"
+        );
+
+        std::env::set_var("TILOPAY_DISPERSION_PATH", "/rechazo");
+        let rechazo = DispersionHttp::nuevo("tilopay").expect("adapter");
+        assert_eq!(
+            rechazo
+                .enviar(&payout(), &cuenta("cta-1"))
+                .await
+                .expect_err("rechazo")
+                .codigo,
+            "DISPERSION_RECHAZADA"
+        );
+
+        std::env::remove_var("TILOPAY_DISPERSION_URL");
+        std::env::remove_var("TILOPAY_DISPERSION_PATH");
+        std::env::remove_var("TILOPAY_DISPERSION_TOKEN");
+        servidor.abort();
+    }
+
+    #[tokio::test]
+    async fn debe_fallar_cerrado_el_proveedor_no_disponible() {
+        let proveedor = DispersionNoDisponible;
+        assert_eq!(proveedor.nombre(), "no-disponible");
+        assert_eq!(
+            proveedor
+                .enviar(&payout(), &cuenta("cta"))
+                .await
+                .expect_err("no disponible")
+                .codigo,
+            "SERVICIO_NO_DISPONIBLE"
+        );
     }
 }
