@@ -18,6 +18,7 @@
     "test:integration": "node scripts/tools/integration-runner.mjs",
     "db:migrations": "node scripts/tools/db-migrations.mjs",
     "db:rls": "node scripts/tools/db-rls.mjs",
+    "test:rls": "node scripts/tools/rls-ab-test.mjs",
     "env:check": "node scripts/tools/env-check.mjs",
     "promotion:check": "node scripts/tools/promotion-check.mjs",
     "security:secrets": "node scripts/tools/secrets-check.mjs",
