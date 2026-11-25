@@ -185,27 +185,31 @@ impl Reservas {
             .await
             .map_err(interno)?;
 
-            sqlx::query(
-                "WITH objetivo AS (
-                   SELECT s.id FROM item.item_series s
-                    WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
-                      AND s.item_id = $2::uuid
-                    ORDER BY s.vendido_en, s.id LIMIT $3
-                    FOR UPDATE OF s
-                 )
-                 UPDATE item.item_series s
-                    SET estado = 'disponible', order_id = NULL, vendido_en = NULL,
-                        ubicacion_id = COALESCE($4::uuid, s.ubicacion_id),
-                        actualizado_en = NOW()
-                   FROM objetivo o WHERE s.id = o.id",
+            let series: Vec<Uuid> = sqlx::query_scalar(
+                "SELECT s.id FROM item.item_series s
+                  WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
+                    AND s.item_id = $2::uuid
+                  ORDER BY s.vendido_en, s.id LIMIT $3
+                  FOR UPDATE OF s",
             )
             .bind(order_id)
             .bind(item_id)
             .bind(item.cantidad)
-            .bind(ubicacion)
-            .execute(&mut **tx)
+            .fetch_all(&mut **tx)
             .await
             .map_err(interno)?;
+            if !series.is_empty() {
+                // R-MS-16/ADR-0051: la transición la ejecuta item en esta tx.
+                sqlx::query_scalar::<_, i32>(
+                    "SELECT item.liberar_series($1::uuid, $2::uuid[], $3::uuid)",
+                )
+                .bind(order_id)
+                .bind(&series)
+                .bind(ubicacion)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(interno)?;
+            }
 
             let lotes = sqlx::query(
                 "SELECT lote_id, cantidad FROM inventory.reservas_lotes
@@ -267,35 +271,44 @@ impl Reservas {
         items: &Value,
     ) -> Result<(), ApiError> {
         for item in lineas_de(items) {
-            sqlx::query(
-                "WITH objetivo AS (
-                   SELECT s.id
-                     FROM item.item_series s
-                     JOIN item.items i ON i.id = s.item_id
-                    WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
-                      AND i.empresa_id = $2::uuid AND LOWER(i.codigo) = LOWER($3)
-                    ORDER BY s.vendido_en, s.id
-                    LIMIT $4
-                    FOR UPDATE OF s
-                 )
-                 UPDATE item.item_series s
-                    SET estado = 'devuelto', devuelto_en = NOW(),
-                        ubicacion_id = COALESCE((
-                          SELECT u.id FROM inventory.ubicaciones u
-                           WHERE u.empresa_id = $2::uuid AND u.predeterminada AND u.activo
-                           LIMIT 1
-                        ), s.ubicacion_id),
-                        actualizado_en = NOW()
-                   FROM objetivo o
-                  WHERE s.id = o.id",
+            let ubicacion: Option<Uuid> = sqlx::query_scalar(
+                "SELECT u.id FROM inventory.ubicaciones u
+                  WHERE u.empresa_id = $1::uuid AND u.predeterminada AND u.activo
+                  LIMIT 1",
+            )
+            .bind(&item.empresa_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(interno)?;
+            let series: Vec<Uuid> = sqlx::query_scalar(
+                "SELECT s.id
+                   FROM item.item_series s
+                   JOIN item.items i ON i.id = s.item_id
+                  WHERE s.order_id = $1::uuid AND s.estado = 'vendido'
+                    AND i.empresa_id = $2::uuid AND LOWER(i.codigo) = LOWER($3)
+                  ORDER BY s.vendido_en, s.id
+                  LIMIT $4
+                  FOR UPDATE OF s",
             )
             .bind(order_id)
             .bind(&item.empresa_id)
             .bind(&item.sku)
             .bind(item.cantidad)
-            .execute(&mut **tx)
+            .fetch_all(&mut **tx)
             .await
             .map_err(interno)?;
+            if !series.is_empty() {
+                // R-MS-16/ADR-0051: item ejecuta la transición en esta tx.
+                sqlx::query_scalar::<_, i32>(
+                    "SELECT item.devolver_series($1::uuid, $2::uuid[], $3::uuid)",
+                )
+                .bind(order_id)
+                .bind(&series)
+                .bind(ubicacion)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(interno)?;
+            }
         }
         Ok(())
     }

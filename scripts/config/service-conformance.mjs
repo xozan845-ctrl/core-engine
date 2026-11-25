@@ -338,12 +338,20 @@ export function collectConformance() {
     // ── Aislamiento de datos: sin SQL a esquemas ajenos ───────────────────
     if (spec.schema) {
       const foreign = new Set();
+      const foreignWrites = new Set();
       const pattern = /(FROM|JOIN|INTO|UPDATE|DELETE\s+FROM)\s+([a-z_]+)\.[a-z_]+/g;
+      const writePattern = /(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+([a-z_]+)\.[a-z_]+/g;
       for (const file of serviceFiles(dir)) {
         const source = stripTestModules(readOrEmpty(file));
         for (const match of source.matchAll(pattern)) {
           const schema = match[2];
           if (SYSTEM_SCHEMAS.has(schema) && schema !== spec.schema) foreign.add(schema);
+        }
+        for (const match of source.matchAll(writePattern)) {
+          const schema = match[2];
+          if (SYSTEM_SCHEMAS.has(schema) && schema !== spec.schema) {
+            foreignWrites.add(schema);
+          }
         }
       }
       for (const schema of [...foreign].sort()) {
@@ -354,6 +362,15 @@ export function collectConformance() {
           `consulta/actualiza el esquema ajeno "${schema}"`,
           `R-DB-1/R-MS-16: consume ${schema} por API interna o por eventos y proyecta en "${spec.schema}".`,
           true,
+        );
+      }
+      for (const schema of [...foreignWrites].sort()) {
+        push(
+          'cross-schema-write',
+          dir,
+          schema,
+          `escribe directamente en el esquema ajeno "${schema}"`,
+          `R-DB-1/R-MS-16: usa la API/función de dominio del servicio dueño o un evento; una escritura directa no se admite (ni como deuda).`,
         );
       }
     }

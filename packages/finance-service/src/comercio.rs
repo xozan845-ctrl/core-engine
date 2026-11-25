@@ -82,6 +82,12 @@ pub struct Comercio {
     db: Arc<Db>,
 }
 
+impl Comercio {
+    pub fn db(&self) -> &Arc<Db> {
+        &self.db
+    }
+}
+
 // ── contenedores de petición ────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
