@@ -74,6 +74,10 @@ impl AppState {
         }
     }
 
+    pub fn db(&self) -> &Arc<crate::db::Db> {
+        self.comercio.db()
+    }
+
     pub fn con_capacidades(mut self, capacidades: Arc<dyn Capacidades>) -> Self {
         self.capacidades = capacidades;
         self

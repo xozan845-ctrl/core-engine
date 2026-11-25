@@ -59,6 +59,7 @@ este índice evita mezclar las decisiones nuevas con las ADR históricas.
 | [0048](./0048-pasarelas-tilopay-pagadito.md) | Aceptado (implementado; verificación sandbox pendiente) | Adaptadores Tilopay y Pagadito, webhooks como señal, conciliación programada y pago tardío |
 | [0049](./0049-regiones-tributarias.md) | Aceptado (implementado; piloto Nicaragua) | Región tributaria seleccionable por pack y tenant, manifiesto fiscal y resolución fail-closed |
 | [0050](./0050-contrato-servicio-y-fitness-functions.md) | Aceptado (implementado) | Contrato de servicio declarativo (`service.json`), perfiles, fitness functions y baseline de deuda |
+| [0051](./0051-funciones-dominio-como-api-transitoria.md) | Aceptado (implementado; transitorio) | Funciones de dominio en el esquema dueño para eliminar DML cross-schema preservando atomicidad |
 
 ## Convención
 

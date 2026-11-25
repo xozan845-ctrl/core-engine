@@ -200,21 +200,23 @@ impl Reservas {
                     .iter()
                     .map(|fila| fila.get::<Uuid, _>("id"))
                     .collect::<Vec<_>>();
-                sqlx::query(
-                    "UPDATE item.item_series
-                        SET estado = 'vendido', order_id = $1::uuid, vendido_en = NOW(),
-                            ubicacion_id = NULL,
-                            garantia_hasta = CASE WHEN $3::int IS NULL THEN NULL
-                              ELSE (CURRENT_DATE + ($3::int || ' months')::interval)::date END,
-                            actualizado_en = NOW()
-                      WHERE id = ANY($2::uuid[])",
+                // R-MS-16/ADR-0051: la transición de la serie la ejecuta una
+                // función del esquema item dentro de esta misma transacción.
+                let actualizadas: i32 = sqlx::query_scalar(
+                    "SELECT item.marcar_series_vendidas($1::uuid, $2::uuid[], $3::int)",
                 )
                 .bind(order_id)
                 .bind(&ids)
                 .bind(garantia_meses)
-                .execute(&mut **tx)
+                .fetch_one(&mut **tx)
                 .await
                 .map_err(interno)?;
+                if actualizadas as usize != ids.len() {
+                    return Err(ApiError::dominio(
+                        "SERIAL_INSUFICIENTE",
+                        "Una o más unidades serializadas dejaron de estar disponibles.",
+                    ));
+                }
             }
 
             if let Some(ubicacion) = ubicacion_uuid {

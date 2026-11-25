@@ -131,6 +131,7 @@
   "99_comprobante_pdf_storage.sql": "51e7535ac41640e1216d6c189ae19c4ad7bc10395b5090778be16b293f0d04da",
   "99_cupones.sql": "e2c746f2cc6ec343083b3fdad95b9b40be3c5995c72edff09fb45255f1029128",
   "99_cupones_orders.sql": "55714ec9d35bd720994716a29f4d27613fb3145beca1b73b473749bbf5426e1b",
+  "99_domain_functions.sql": "098fa8cbc57dbe7b4870cab57f023fd5d296cfd14d2ccfa1689bdd0790867a66",
   "99_exportacion_jobs.sql": "aec97aca2fdd1afb75f528b9f2ab2001558d6f59a340f36171051219b3242d4d",
   "99_facturacion_electronica.sql": "756bb431002de8055540b993c9d13078844acdb8fa1c14e6e5c351cc71cd02a8",
   "99_idempotencia_http.sql": "1e2230353eafd0befd6a2bb3d25f78577a8b40a6ae271316f60517c2ce38f45c",

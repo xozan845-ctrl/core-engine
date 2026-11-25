@@ -131,3 +131,15 @@ CREATE TABLE IF NOT EXISTS pricing.cupon_usos (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_cupon_usos_cupon_orden_test
   ON pricing.cupon_usos (cupon_id, order_id);
+
+-- ADR-0051: API de dominio que pricing usa en lugar de escribir item.items.
+CREATE OR REPLACE FUNCTION item.marcar_tipo_precio(
+  p_empresa_id uuid, p_item_id uuid, p_tipo text
+) RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE actualizados integer;
+BEGIN
+  UPDATE item.items SET tipo_precio=p_tipo, actualizado_en=NOW()
+   WHERE id=p_item_id AND empresa_id=p_empresa_id AND tipo_precio<>p_tipo;
+  GET DIAGNOSTICS actualizados = ROW_COUNT;
+  RETURN actualizados;
+END $$;

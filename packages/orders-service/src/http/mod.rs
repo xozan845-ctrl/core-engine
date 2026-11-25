@@ -51,6 +51,7 @@ const DOCS_HTML: &str = r#"<!doctype html>
 pub fn build_router(state: AppState) -> Router {
     let router = Router::new()
         .route("/health", get(health))
+        .route("/ready", get(ready))
         .route("/metrics", get(metrics))
         .route("/docs", get(docs))
         .route("/docs-json", get(docs_json))
@@ -93,6 +94,22 @@ pub fn aplicar_capas(router: Router, state: AppState) -> Router {
 
 async fn health(State(state): State<AppState>) -> Json<crate::metrics::MetricaSalud> {
     Json(state.metrics.salud())
+}
+
+async fn ready(State(state): State<AppState>) -> impl IntoResponse {
+    let listo = match state.db() {
+        Ok(db) => sqlx::query_scalar::<_, i32>("SELECT 1")
+            .fetch_one(db.pool())
+            .await
+            .is_ok(),
+        Err(_) => false,
+    };
+    let status = if listo {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+    (status, Json(serde_json::json!({ "listo": listo })))
 }
 
 async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
