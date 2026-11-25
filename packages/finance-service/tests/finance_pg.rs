@@ -102,7 +102,8 @@ async fn provisionar(url: &str) {
         r#"
         DROP SCHEMA IF EXISTS finance CASCADE;
         CREATE SCHEMA finance;
-        CREATE SCHEMA IF NOT EXISTS identity;
+        DROP SCHEMA IF EXISTS identity CASCADE;
+        CREATE SCHEMA identity;
 
         CREATE TABLE IF NOT EXISTS identity.partes (
           id uuid PRIMARY KEY,
@@ -1230,7 +1231,7 @@ async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
         })
         .await
         .expect("comprobante");
-    assert_eq!(comprobante.electronica_estado.as_deref(), Some("aceptada"));
+    assert_eq!(comprobante.electronica_estado.as_deref(), Some("no_fiscal"));
     assert!(comprobante
         .electronica_referencia
         .as_deref()
@@ -1249,6 +1250,7 @@ async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
     let texto = String::from_utf8_lossy(&pdf);
     assert!(texto.contains("RUC-1"));
     assert!(texto.contains("SKU-60"));
+    assert!(texto.contains("COMPROBANTE NO FISCAL"));
     let guardados: i64 = sqlx::query_scalar(
         "SELECT COUNT(*)::bigint FROM finance.comprobante_pdf WHERE comprobante_id = $1::uuid",
     )
@@ -1267,6 +1269,64 @@ async fn debe_emitir_electronica_y_generar_pdf_cuando_el_tenant_lo_activa() {
         .expect("pdf")
         .expect("pdf bytes");
     assert_eq!(pdf, pdf_repetido);
+}
+
+#[tokio::test]
+async fn debe_fallar_cerrado_si_el_piloto_no_acepta_facturacion_sin_certificar() {
+    let Some(url) = url() else { return };
+    let _guard = DB_LOCK.lock().await;
+    provisionar(&url).await;
+    let db = Arc::new(Db::conectar(&url).await.expect("db"));
+    let contabilidad = Arc::new(Contabilidad::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+    ));
+    let tributacion = Tributacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+    );
+    tributacion
+        .guardar_configuracion_facturacion(
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            None,
+            "NI",
+            true,
+            true,
+            "simulado",
+            "pruebas",
+            false,
+            true,
+        )
+        .await
+        .expect("configuracion");
+    let facturacion = Facturacion::nueva(
+        Arc::clone(&db),
+        Outbox::nueva("finance.outbox"),
+        Arc::clone(&contabilidad),
+        Arc::new(OrdenesFijas),
+        true,
+    )
+    .con_certificacion(false, false);
+    let error = facturacion
+        .emitir(EmitirComprobante {
+            tipo: "FACTURA".into(),
+            orden_id: "22222222-2222-4222-8222-222222222222".into(),
+            parte_id: None,
+            razon_social: Some("Cliente".into()),
+            ruc: None,
+        })
+        .await
+        .expect_err("no debe emitir con simulador sin aceptacion");
+    assert_eq!(error.codigo, "FACTURACION_NO_CERTIFICADA");
+    let comprobantes: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM finance.comprobantes
+          WHERE empresa_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("comprobantes");
+    assert_eq!(comprobantes, 0);
 }
 
 #[tokio::test]

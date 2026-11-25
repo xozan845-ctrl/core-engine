@@ -95,6 +95,16 @@ fn texto_comprobante(comprobante: &Comprobante) -> Vec<String> {
         format!("Cliente: {razon_social}"),
         format!("RUC cliente: {ruc_cliente}"),
     ];
+    let fiscal = matches!(
+        comprobante.electronica_estado.as_deref(),
+        Some("aceptada") | Some("aceptada_dgi") | Some("ACEPTADA")
+    );
+    if !fiscal {
+        lineas.insert(
+            0,
+            "*** COMPROBANTE NO FISCAL - NO VALIDO ANTE LA DGI ***".to_string(),
+        );
+    }
     if !orden.is_empty() {
         lineas.push(format!("Orden: {orden}"));
     }
@@ -254,6 +264,16 @@ mod tests {
         assert!(pdf.starts_with(b"%PDF-1.4"));
         assert!(pdf.windows(5).any(|ventana| ventana == b"xref\n"));
         assert!(pdf.windows(5).any(|ventana| ventana == b"%%EOF"));
+    }
+
+    #[test]
+    fn debe_marcar_como_no_fiscal_un_comprobante_simulado() {
+        let mut datos = comprobante();
+        datos.electronica_estado = Some("no_fiscal".into());
+        let pdf = comprobante_pdf(&datos);
+        let texto = String::from_utf8_lossy(&pdf);
+        assert!(texto.contains("COMPROBANTE NO FISCAL"));
+        assert!(texto.contains("NO VALIDO ANTE LA DGI"));
     }
 
     #[test]
