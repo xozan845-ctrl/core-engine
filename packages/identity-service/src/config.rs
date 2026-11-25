@@ -42,6 +42,8 @@ pub struct Config {
     pub email_from: Option<String>,
     pub smtp_host: Option<String>,
     pub smtp_port: u16,
+    /// Permite SMTP sin TLS solo en desarrollo y sin credenciales (Mailpit).
+    pub smtp_tls_enabled: bool,
     pub smtp_user: Option<String>,
     pub smtp_password: Option<String>,
     /// Exige correo verificado para login/refresh. Por defecto se activa en
@@ -144,6 +146,14 @@ impl Config {
                     .ok_or(ConfigError::Invalida("SMTP_PORT", valor))?,
                 None => 587,
             },
+            smtp_tls_enabled: match leer("SMTP_TLS_ENABLED") {
+                Some(valor) if valor.eq_ignore_ascii_case("true") => true,
+                Some(valor) if valor.eq_ignore_ascii_case("false") => false,
+                Some(valor) => {
+                    return Err(ConfigError::Invalida("SMTP_TLS_ENABLED", valor));
+                }
+                None => true,
+            },
             smtp_user: leer("SMTP_USER"),
             smtp_password: leer("SMTP_PASSWORD"),
             exigir_correo_verificado: leer("AUTH_EXIGIR_CORREO_VERIFICADO")
@@ -211,6 +221,14 @@ impl Config {
                 return Err(ConfigError::Invalida(
                     "SMTP_USER",
                     "SMTP_USER y SMTP_PASSWORD deben configurarse juntos.".to_string(),
+                ));
+            }
+            if !self.smtp_tls_enabled
+                && (self.produccion || self.smtp_user.is_some() || self.smtp_password.is_some())
+            {
+                return Err(ConfigError::Invalida(
+                    "SMTP_TLS_ENABLED",
+                    "SMTP sin TLS solo se permite en desarrollo y sin credenciales.".to_string(),
                 ));
             }
         }
@@ -390,6 +408,56 @@ mod tests {
             config.validar_arranque(),
             Err(ConfigError::Invalida("EMAIL_MODE", "invalido".to_string()))
         );
+    }
+
+    #[test]
+    fn smtp_sin_tls_solo_se_permite_en_desarrollo_sin_credenciales() {
+        let local = Config::from_pairs([
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("EMAIL_MODE", "smtp"),
+            ("EMAIL_FROM", "no-reply@example.test"),
+            ("SMTP_HOST", "mailpit"),
+            ("SMTP_PORT", "1025"),
+            ("SMTP_TLS_ENABLED", "false"),
+        ])
+        .expect("config");
+        assert!(local.validar_arranque().is_ok());
+
+        let credenciales = Config::from_pairs([
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("EMAIL_MODE", "smtp"),
+            ("EMAIL_FROM", "no-reply@example.test"),
+            ("SMTP_HOST", "mailpit"),
+            ("SMTP_TLS_ENABLED", "false"),
+            ("SMTP_USER", "user"),
+            ("SMTP_PASSWORD", "password"),
+        ])
+        .expect("config");
+        assert!(matches!(
+            credenciales.validar_arranque(),
+            Err(ConfigError::Invalida("SMTP_TLS_ENABLED", _))
+        ));
+
+        let produccion = Config::from_pairs([
+            ("NODE_ENV", "production"),
+            ("JWT_SECRET", "jwt-secret"),
+            ("ADMIN_EMAIL", "admin@example.test"),
+            ("ADMIN_PASSWORD", "strong-password"),
+            ("DATABASE_URL", "postgres://localhost/core"),
+            ("EMAIL_MODE", "smtp"),
+            ("EMAIL_FROM", "no-reply@example.test"),
+            ("SMTP_HOST", "smtp.example.test"),
+            ("SMTP_TLS_ENABLED", "false"),
+            (
+                "MFA_ENCRYPTION_KEY",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            ),
+        ])
+        .expect("config");
+        assert!(matches!(
+            produccion.validar_arranque(),
+            Err(ConfigError::Invalida("SMTP_TLS_ENABLED", _))
+        ));
     }
 
     #[test]

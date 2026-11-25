@@ -51,6 +51,9 @@ jobs:
           EMAIL_FROM: no-reply@core-engine.test
           SMTP_HOST: mailpit
           SMTP_PORT: "1025"
+          # Mailpit del stack efímero no ofrece TLS; identidad sólo permite
+          # desactivarlo fuera de producción y sin credenciales SMTP.
+          SMTP_TLS_ENABLED: "false"
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Wait for gateway readiness
         run: |
