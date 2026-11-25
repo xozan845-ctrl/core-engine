@@ -467,9 +467,7 @@ impl Dispersion {
             return Ok(ResumenDia::default());
         }
         let proveedor = DispersionHttp::nuevo(&config.proveedor_codigo)?;
-        let mut payouts = self
-            .listar_payouts(None, Some("pendiente"), None)
-            .await?;
+        let mut payouts = self.listar_payouts(None, Some("pendiente"), None).await?;
         payouts.extend(self.listar_payouts(None, Some("fallido"), None).await?);
         let mut resumen = ResumenDia::default();
         for payout in payouts {
