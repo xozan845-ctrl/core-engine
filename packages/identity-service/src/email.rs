@@ -67,8 +67,8 @@ impl EmailSmtp {
     }
 
     fn transporte(&self) -> SmtpTransport {
-        // SMTP sin TLS sólo es admisible para el Mailpit efímero de desarrollo;
-        // Config rechaza esta opción en producción y si hay credenciales.
+        // SMTP sin TLS sólo es admisible para mailpit:1025 y sin credenciales;
+        // Config rechaza cualquier otro host/puerto o configuración con auth.
         let constructor = if !self.tls_enabled {
             SmtpTransport::builder_dangerous(&self.host)
         } else if self.port == 465 {

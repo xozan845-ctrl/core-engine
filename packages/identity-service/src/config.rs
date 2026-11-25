@@ -42,7 +42,7 @@ pub struct Config {
     pub email_from: Option<String>,
     pub smtp_host: Option<String>,
     pub smtp_port: u16,
-    /// Permite SMTP sin TLS solo en desarrollo y sin credenciales (Mailpit).
+    /// Permite SMTP sin TLS sólo contra mailpit:1025 y sin credenciales.
     pub smtp_tls_enabled: bool,
     pub smtp_user: Option<String>,
     pub smtp_password: Option<String>,
@@ -224,11 +224,15 @@ impl Config {
                 ));
             }
             if !self.smtp_tls_enabled
-                && (self.produccion || self.smtp_user.is_some() || self.smtp_password.is_some())
+                && (self.smtp_host.as_deref() != Some("mailpit")
+                    || self.smtp_port != 1025
+                    || self.smtp_user.is_some()
+                    || self.smtp_password.is_some())
             {
                 return Err(ConfigError::Invalida(
                     "SMTP_TLS_ENABLED",
-                    "SMTP sin TLS solo se permite en desarrollo y sin credenciales.".to_string(),
+                    "SMTP sin TLS solo se permite para mailpit:1025 y sin credenciales."
+                        .to_string(),
                 ));
             }
         }
