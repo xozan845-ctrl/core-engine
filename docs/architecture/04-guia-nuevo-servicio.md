@@ -146,7 +146,9 @@ CREATE TABLE IF NOT EXISTS example.aggregates (
 );
 ```
 
-2. Añade RLS y política en `infra/db/supabase/99_rls.sql`.
+2. Añade RLS y política en `infra/db/supabase/99_rls.sql`; si la tabla no
+   encaja en el barrido dinámico de `99z_rls_hardening.sql`, añade la política
+   específica ahí. Toda tabla debe quedar con `FORCE RLS` y sin `USING (true)`.
 3. Añade índices para FKs lógicas y filtros frecuentes.
 4. Registra la migración:
 

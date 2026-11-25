@@ -42,6 +42,7 @@ if [ -n "${CORE_ENGINE_APP_PASSWORD:-}" ]; then
       GRANT authenticated TO core_engine_app;
     END \$\$;"
   printf "ALTER ROLE core_engine_app LOGIN PASSWORD '%s';\n" "$APP_PWD" | $PSQL -q
+  $PSQL -q -c "ALTER ROLE core_engine_app NOSUPERUSER NOBYPASSRLS;"
 fi
 
 if [ ! -d "$INIT_DIR" ]; then
@@ -80,30 +81,32 @@ for archivo in "$INIT_DIR"/*.sql; do
     continue
   fi
   echo "migraciones: aplicando $nombre"
-  $PSQL -f "$archivo"
+  $PSQL -q -c "SET request.jwt.claims = '{\"rol\":\"super_admin\"}'" -f "$archivo"
   $PSQL -q -c "
     INSERT INTO public.schema_migrations (nombre, checksum)
     VALUES ('$nombre', '$checksum');"
   aplicadas=$((aplicadas + 1))
 done
 
-# RLS de Supabase: se aplica al final y solo si el archivo está presente.
-RLS="${DIR}/supabase/99_rls.sql"
-if [ -f "$RLS" ] && [ "${APPLY_RLS:-false}" = "true" ]; then
-  checksum="$(sha256sum "$RLS" | cut -d' ' -f1)"
+# RLS es obligatorio. Se aplica al final, después de todas las tablas, y luego
+# un endurecimiento que elimina bypass, activa FORCE RLS y cubre tablas nuevas.
+for archivo in "${DIR}/supabase/99_rls.sql" "${DIR}/supabase/99z_rls_hardening.sql"; do
+  [ -f "$archivo" ] || continue
+  nombre="$(basename "$archivo")"
+  checksum="$(sha256sum "$archivo" | cut -d' ' -f1)"
   registrado="$($PSQL -At -c \
-    "SELECT checksum FROM public.schema_migrations WHERE nombre = '99_rls.sql'")"
+    "SELECT checksum FROM public.schema_migrations WHERE nombre = '$nombre'")"
   if [ -z "$registrado" ]; then
-    echo "migraciones: aplicando 99_rls.sql"
-    $PSQL -f "$RLS"
+    echo "migraciones: aplicando $nombre"
+    $PSQL -q -c "SET request.jwt.claims = '{\"rol\":\"super_admin\"}'" -f "$archivo"
     $PSQL -q -c "
       INSERT INTO public.schema_migrations (nombre, checksum)
-      VALUES ('99_rls.sql', '$checksum');"
+      VALUES ('$nombre', '$checksum');"
     aplicadas=$((aplicadas + 1))
   elif [ "$registrado" != "$checksum" ]; then
-    echo "migraciones: 99_rls.sql cambió después de aplicarse (drift)" >&2
+    echo "migraciones: $nombre cambió después de aplicarse (drift)" >&2
     exit 1
   fi
-fi
+done
 
 echo "migraciones: OK ($aplicadas aplicadas)"
