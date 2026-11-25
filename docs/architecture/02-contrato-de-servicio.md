@@ -145,7 +145,9 @@ La suite comprueba que:
 
 - Migración aditiva en `infra/db/init/` + manifiesto de hash (R-DB-6).
 - Toda tabla nueva: RLS habilitado + política en `infra/db/supabase/99_rls.sql`
-  (R-SB-2).
+  o `99z_rls_hardening.sql` (R-SB-2), con `FORCE RLS` y sin `USING (true)`.
+- Añadir la tabla al escenario A/B de `scripts/tools/rls-ab-test.mjs` si es
+  sensible o se relaciona indirectamente con un tenant.
 - Índices para FKs lógicas y filtros frecuentes (R-DB-4).
 - Soft delete en datos transaccionales (R-DB-5).
 
