@@ -7,7 +7,7 @@
 //! nombre: no hay secretos en código.
 
 use crate::errors::ApiError;
-use crate::pagos::{CargoExterno, EstadoExterno, ProveedorPagos};
+use crate::pagos::{liquidacion_de, CargoExterno, ConsultaExterna, EstadoExterno, ProveedorPagos};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
@@ -40,6 +40,8 @@ pub struct Pagadito {
     uid: String,
     wsk: String,
     currency_default: String,
+    /// Unidad de los montos de liquidación: `major` (3.50) o `cents` (350).
+    liquidacion_unidad: String,
 }
 
 impl Pagadito {
@@ -64,6 +66,12 @@ impl Pagadito {
                 .filter(|valor| !valor.is_empty())
                 .unwrap_or("USD")
                 .to_string(),
+            liquidacion_unidad: config
+                .get("liquidacion_unidad")
+                .and_then(Value::as_str)
+                .map(|valor| valor.trim().to_ascii_lowercase())
+                .filter(|valor| *valor == "cents")
+                .unwrap_or_else(|| "major".to_string()),
         })
     }
 
@@ -181,6 +189,7 @@ impl ProveedorPagos for Pagadito {
         Ok(CargoExterno {
             referencia: order_id.to_string(),
             url: Some(url),
+            liquidacion: liquidacion_de("pagadito", &valor, &self.liquidacion_unidad),
         })
     }
 
@@ -208,6 +217,14 @@ impl ProveedorPagos for Pagadito {
         referencia: &str,
         datos: Option<&Value>,
     ) -> Result<EstadoExterno, ApiError> {
+        Ok(self.consultar_detallado(referencia, datos).await?.estado)
+    }
+
+    async fn consultar_detallado(
+        &self,
+        referencia: &str,
+        datos: Option<&Value>,
+    ) -> Result<ConsultaExterna, ApiError> {
         // El webhook trae `resource.token`; si no, la referencia operativa ya
         // es el token persistido en `orders.pagos.referencia_proveedor`.
         let token_trans = datos
@@ -229,18 +246,28 @@ impl ProveedorPagos for Pagadito {
             ])
             .await?;
         if valor.get("code").and_then(Value::as_str) != Some("PG1003") {
-            return Ok(EstadoExterno::Pendiente);
+            return Ok(ConsultaExterna {
+                estado: EstadoExterno::Pendiente,
+                liquidacion: None,
+            });
         }
         let estado = valor
             .get("value")
             .and_then(|value| value.get("status"))
             .and_then(Value::as_str)
             .unwrap_or("");
-        match estado {
-            "COMPLETED" => Ok(EstadoExterno::Aprobado),
-            "FAILED" | "CANCELED" | "EXPIRED" | "REVOKED" => Ok(EstadoExterno::Rechazado),
-            _ => Ok(EstadoExterno::Pendiente),
-        }
+        let estado = match estado {
+            "COMPLETED" => EstadoExterno::Aprobado,
+            "FAILED" | "CANCELED" | "EXPIRED" | "REVOKED" => EstadoExterno::Rechazado,
+            _ => EstadoExterno::Pendiente,
+        };
+        let liquidacion = valor
+            .get("value")
+            .and_then(|value| liquidacion_de("pagadito", value, &self.liquidacion_unidad));
+        Ok(ConsultaExterna {
+            estado,
+            liquidacion,
+        })
     }
 }
 

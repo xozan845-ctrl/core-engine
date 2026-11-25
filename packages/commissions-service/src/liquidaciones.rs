@@ -341,7 +341,7 @@ impl LiquidacionesPort for Liquidaciones {
         crate::logs::info(
             "commissions.liquidacion",
             campos! {
-                "msg": "Corte quincenal ejecutado",
+                "msg": "Corte de liquidacion ejecutado",
                 "periodo": format!("{inicio}..{fin}"),
                 "vendedores": liquidaciones.len(),
             },

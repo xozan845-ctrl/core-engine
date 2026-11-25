@@ -323,6 +323,344 @@
           "Comisiones · Reportes"
         ]
       }
+    },
+    "/api/v2/admin/dispersion/configuracion": {
+      "get": {
+        "operationId": "DispersionController_configuracion",
+        "responses": {
+          "200": {
+            "description": "Configuración de dispersión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar proveedor, hora y retención de dispersión",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      },
+      "put": {
+        "operationId": "DispersionController_guardarConfiguracion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuración guardada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elegir Tilopay/Pagadito y parámetros de dispersión",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/admin/dispersion/cuentas": {
+      "get": {
+        "operationId": "DispersionController_cuentas",
+        "responses": {
+          "200": {
+            "description": "Cuentas de pago",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar cuentas de destino por beneficiario",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      },
+      "post": {
+        "operationId": "DispersionController_guardarCuenta",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar cuenta/token de destino",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/admin/dispersion/payouts": {
+      "get": {
+        "operationId": "DispersionController_payouts",
+        "parameters": [
+          {
+            "name": "fecha",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payouts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar payouts",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/admin/dispersion/cerrar-dia": {
+      "post": {
+        "operationId": "DispersionController_cerrarDia",
+        "parameters": [
+          {
+            "name": "fecha",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Cierre ejecutado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cerrar un día y crear payouts",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/admin/dispersion/payouts/{id}/enviar": {
+      "post": {
+        "operationId": "DispersionController_enviar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payout enviado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enviar payout al proveedor de dispersión",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/admin/dispersion/payouts/{id}/confirmar": {
+      "post": {
+        "operationId": "DispersionController_confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payout confirmado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirmar payout y marcar liquidaciones pagadas",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/empresarios/me/dispersion": {
+      "get": {
+        "operationId": "DispersionController_empresa",
+        "responses": {
+          "200": {
+            "description": "Payouts de la empresa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Payouts de la empresa autenticada",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
+    },
+    "/api/v2/vendedores/me/dispersion": {
+      "get": {
+        "operationId": "DispersionController_vendedor",
+        "responses": {
+          "200": {
+            "description": "Payouts del vendedor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvelopeDispersionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Payouts del vendedor autenticado",
+        "tags": [
+          "Comisiones · Dispersión"
+        ]
+      }
     }
   },
   "components": {
@@ -923,6 +1261,22 @@
           "estado",
           "fecha"
         ]
+      },
+      "EnvelopeDispersionResponseDto": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaRespuestaResponseDto"
+          }
+        }
       }
     }
   }

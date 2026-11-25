@@ -4,6 +4,7 @@ use crate::auth::{Capacidades, CapacidadesNoDisponible};
 use crate::comisiones::{ComisionesNoDisponible, ComisionesPort};
 use crate::config::Config;
 use crate::db::Db;
+use crate::dispersion::Dispersion;
 use crate::errors::ApiError;
 use crate::liquidaciones::{LiquidacionesNoDisponible, LiquidacionesPort};
 use crate::metrics::Metrics;
@@ -21,6 +22,7 @@ pub struct AppState {
     pub ventas: Arc<dyn VentasPort>,
     pub reportes: Arc<dyn ReportesPort>,
     pub capacidades: Arc<dyn Capacidades>,
+    pub dispersion: Option<Arc<Dispersion>>,
     pub db: Option<Arc<Db>>,
     pub inicio: Instant,
 }
@@ -36,6 +38,7 @@ impl AppState {
             ventas: Arc::new(VentasNoDisponible),
             reportes: Arc::new(ReportesNoDisponible),
             capacidades: Arc::new(CapacidadesNoDisponible),
+            dispersion: None,
             db: None,
             inicio: Instant::now(),
         }
@@ -59,6 +62,7 @@ impl AppState {
             ventas,
             reportes,
             capacidades,
+            dispersion: None,
             db: None,
             inicio: Instant::now(),
         }
@@ -67,6 +71,17 @@ impl AppState {
     pub fn con_db(mut self, db: Arc<Db>) -> Self {
         self.db = Some(db);
         self
+    }
+
+    pub fn con_dispersion(mut self, dispersion: Arc<Dispersion>) -> Self {
+        self.dispersion = Some(dispersion);
+        self
+    }
+
+    pub fn dispersion(&self) -> Result<&Arc<Dispersion>, ApiError> {
+        self.dispersion
+            .as_ref()
+            .ok_or_else(|| ApiError::servicio_no_disponible("dispersion"))
     }
 
     pub fn db(&self) -> Result<&Arc<Db>, ApiError> {
