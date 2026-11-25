@@ -6,6 +6,10 @@
 - **Método:** ejecución de las fitness functions + lectura estática de los puntos que el baseline declara como deuda + contraste de eventos, perfiles y dependencias. **No** se levantó el stack completo para esta auditoría (el smoke E2E de stage se ejecutó antes de la promoción: run `45477519288`, success). **No** se hizo pentest ni prueba de carga.
 - **Regla del documento:** cada hallazgo lleva evidencia reproducible. Lo que no se pudo verificar se declara en la sección 8.
 
+> **Actualización 2026-11-25:** los 4 hallazgos P1 de escritura cross-schema y el
+> `/ready` de `orders`, `inventory`, `identity` y `finance` se cerraron. Ver
+> [`2026-11-25-cierre-fase1.md`](./2026-11-25-cierre-fase1.md).
+
 ---
 
 ## 1. Veredicto
