@@ -198,9 +198,14 @@ jobs:
 
       - name: 🛡️ Escanear la imagen (HIGH/CRITICAL)
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run == false
-        uses: aquasecurity/trivy-action@v0.28.0
+        # SHA inmutable de trivy-action v0.36.0: su composite fija setup-trivy por
+        # SHA y no depende de tags que upstream pueda borrar (rompió v0.28.0).
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/core-engine-${{ matrix.service }}@${{ steps.build.outputs.digest }}
+          # Se conserva el escáner que declaraba v0.28.0 para no cambiar el gate
+          # de vulnerabilidades en esta release; su actualización será un cambio aparte.
+          version: v0.56.1
           format: table
           exit-code: "1"
           ignore-unfixed: true
