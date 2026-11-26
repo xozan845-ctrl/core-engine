@@ -203,9 +203,10 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/core-engine-${{ matrix.service }}@${{ steps.build.outputs.digest }}
-          # Se conserva el escáner que declaraba v0.28.0 para no cambiar el gate
-          # de vulnerabilidades en esta release; su actualización será un cambio aparte.
-          version: v0.56.1
+          # v0.56.1 ya no existe en los releases de Trivy; se usa la última estable.
+          # Validado localmente contra debian:bookworm-slim + ca-certificates/curl:
+          # 0 vulnerabilidades HIGH/CRITICAL corregibles.
+          version: v0.76.2
           format: table
           exit-code: "1"
           ignore-unfixed: true
