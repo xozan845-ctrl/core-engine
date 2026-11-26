@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo multi-negocio y modo tenant</title>
+<style>
+  :root {
+    --ink: #17202a;
+    --muted: #5b6773;
+    --line: #d5dbe1;
+    --soft: #f4f6f8;
+    --accent: #123b5d;
+    --accent-soft: #eaf1f7;
+    --warn: #7a4b00;
+    --warn-soft: #fff7e6;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: #fff;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 178mm;
+    margin: 0 auto;
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--accent);
+    line-height: 1.25;
+    margin: 0;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  h1 {
+    font-size: 23pt;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: 15pt;
+    margin-top: 20pt;
+    padding-bottom: 4pt;
+    border-bottom: 1.5pt solid var(--accent);
+  }
+
+  h3 {
+    font-size: 12pt;
+    margin-top: 14pt;
+  }
+
+  h4 {
+    font-size: 10.5pt;
+    margin-top: 10pt;
+  }
+
+  p { margin: 0 0 8pt 0; }
+
+  ul, ol { margin: 0 0 9pt 0; padding-left: 18pt; }
+
+  li { margin: 0 0 4pt 0; }
+
+  strong { color: #0f2d47; }
+
+  .cover {
+    min-height: 250mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .cover-top {
+    padding-top: 18mm;
+  }
+
+  .eyebrow {
+    color: var(--muted);
+    font-size: 8.5pt;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 10pt;
+  }
+
+  .cover h1 {
+    font-size: 30pt;
+    max-width: 150mm;
+    margin-bottom: 8pt;
+  }
+
+  .subtitle {
+    font-size: 13pt;
+    color: var(--muted);
+    margin-bottom: 24pt;
+  }
+
+  .rule {
+    width: 34mm;
+    height: 3pt;
+    background: var(--accent);
+    margin: 18pt 0;
+  }
+
+  .meta {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8pt;
+    font-size: 9.5pt;
+  }
+
+  .meta td {
+    padding: 5pt 0;
+    border-bottom: 0.5pt solid var(--line);
+    vertical-align: top;
+  }
+
+  .meta td:first-child {
+    width: 42mm;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .abstract {
+    background: var(--accent-soft);
+    border-left: 4pt solid var(--accent);
+    padding: 10pt 12pt;
+    margin: 16pt 0;
+  }
+
+  .note {
+    background: var(--warn-soft);
+    border-left: 4pt solid var(--warn);
+    padding: 9pt 11pt;
+    margin: 12pt 0;
+    font-size: 9.8pt;
+  }
+
+  .note strong { color: var(--warn); }
+
+  .section {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .toc {
+    margin-top: 8pt;
+  }
+
+  .toc ol {
+    list-style: none;
+    padding-left: 0;
+    counter-reset: item;
+  }
+
+  .toc li {
+    counter-increment: item;
+    border-bottom: 0.5pt dotted var(--line);
+    padding: 5pt 0;
+  }
+
+  .toc li::before {
+    content: counter(item) ". ";
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .diagram {
+    background: var(--soft);
+    border: 0.5pt solid var(--line);
+    padding: 9pt 11pt;
+    margin: 9pt 0 12pt 0;
+    font-family: "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+    font-size: 8.6pt;
+    line-height: 1.45;
+    white-space: pre;
+    overflow-wrap: normal;
+    page-break-inside: avoid;
+  }
+
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8pt 0 12pt 0;
+    font-size: 9.2pt;
+    page-break-inside: avoid;
+  }
+
+  table.data th {
+    background: var(--accent);
+    color: #fff;
+    text-align: left;
+    padding: 6pt 7pt;
+    font-weight: 600;
+    vertical-align: top;
+  }
+
+  table.data td {
+    border: 0.5pt solid var(--line);
+    padding: 5.5pt 7pt;
+    vertical-align: top;
+  }
+
+  table.data tr:nth-child(even) td { background: #fafbfc; }
+
+  .caption {
+    color: var(--muted);
+    font-size: 8.8pt;
+    margin: -6pt 0 10pt 0;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12pt;
+    margin: 8pt 0 10pt 0;
+  }
+
+  .card {
+    border: 0.5pt solid var(--line);
+    border-radius: 3pt;
+    padding: 9pt 10pt;
+    page-break-inside: avoid;
+  }
+
+  .card h4 { margin-top: 0; }
+
+  .kpi {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 2pt;
+    padding: 2pt 6pt;
+    font-size: 8.5pt;
+    font-weight: 700;
+    margin-right: 4pt;
+  }
+
+  .footnote {
+    color: var(--muted);
+    font-size: 8.6pt;
+    border-top: 0.5pt solid var(--line);
+    padding-top: 6pt;
+    margin-top: 14pt;
+  }
+
+  .signature {
+    margin-top: 30pt;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24pt;
+    page-break-inside: avoid;
+  }
+
+  .signature div {
+    border-top: 0.8pt solid var(--ink);
+    padding-top: 6pt;
+    font-size: 9pt;
+    color: var(--muted);
+  }
+
+  @media print {
+    body { font-size: 10pt; }
+    .page { max-width: none; }
+    .cover { min-height: 255mm; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- PORTADA -->
+  <section class="cover">
+    <div class="cover-top">
+      <div class="eyebrow">Documento de arquitectura operativa · DOC-MT-001</div>
+      <h1>Modelo multi-negocio y modo tenant</h1>
+      <div class="subtitle">Empresa, negocio y usuario en la configuración de pagos y liquidación</div>
+      <div class="rule"></div>
+
+      <div class="abstract">
+        <strong>Resumen.</strong> El modelo distingue tres entidades que no deben confundirse:
+        empresa, negocio y usuario. En modo tenant, las credenciales de pago pertenecen al negocio
+        o a la empresa, nunca al usuario. Este documento formaliza los escenarios de un empresario
+        con varios negocios y de varios empresarios independientes, la precedencia de configuración,
+        el tratamiento fiscal y las reglas de liquidación.
+      </div>
+
+      <table class="meta">
+        <tr><td>Código</td><td>DOC-MT-001</td></tr>
+        <tr><td>Versión</td><td>1.0</td></tr>
+        <tr><td>Fecha</td><td>26 de noviembre de 2026</td></tr>
+        <tr><td>Estado</td><td>Documento de diseño aprobado para revisión</td></tr>
+        <tr><td>Ámbito</td><td>Plataforma Core Engine · pagos, multi-negocio y liquidación</td></tr>
+        <tr><td>Audiencia</td><td>Producto, arquitectura, operaciones, fiscalidad y legal</td></tr>
+        <tr><td>Clasificación</td><td>Uso interno</td></tr>
+      </table>
+
+      <div class="note">
+        <strong>Nota de implementación.</strong> El cobro con tarjeta en modo plataforma es el
+        comportamiento actual (ADR-0053). El modo tenant descrito aquí es el modelo objetivo para
+        habilitar cuentas Tilopay/Pagadito propias del negocio; no debe interpretarse como una
+        funcionalidad ya activa en producción.
+      </div>
+    </div>
+
+    <div class="footnote">
+      Este documento no sustituye la revisión legal, fiscal ni contractual de cada jurisdicción.
+      Las decisiones de merchant of record, retenciones y facturación deben validarse con el
+      proveedor autorizado y con asesoría fiscal.
+    </div>
+  </section>
+
+  <!-- ÍNDICE -->
+  <section>
+    <h2>Contenido</h2>
+    <div class="toc">
+      <ol>
+        <li><a href="#definiciones">Definiciones y alcance</a></li>
+        <li><a href="#credenciales">Principio de propiedad de las credenciales</a></li>
+        <li><a href="#escenario-a">Escenario A: un empresario con tres negocios</a></li>
+        <li><a href="#escenario-b">Escenario B: tres empresarios con un negocio cada uno</a></li>
+        <li><a href="#comparacion">Comparación de escenarios</a></li>
+        <li><a href="#recomendaciones">Recomendaciones de diseño</a></li>
+        <li><a href="#conclusion">Conclusión</a></li>
+        <li><a href="#anexo">Anexo: modelo conceptual de configuración</a></li>
+        <li><a href="#control">Control de cambios</a></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 1 -->
+  <section class="section" id="definiciones">
+    <h2>1. Definiciones y alcance</h2>
+    <p>El modelo de la plataforma separa tres conceptos que suelen confundirse en la operación diaria:</p>
+
+    <table class="data">
+      <thead>
+        <tr><th style="width:24%">Concepto</th><th style="width:18%">Identificador</th><th>Definición</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Empresa</strong></td><td><code>empresa_id</code></td><td>Tenant fiscal y legal. Es la entidad que contrata, factura, tiene RUC y responde ante la autoridad tributaria.</td></tr>
+        <tr><td><strong>Negocio</strong></td><td><code>negocio_id</code></td><td>Unidad operativa dentro de la empresa: sucursal, marca, punto de venta o línea de negocio. Puede tener su propia cuenta merchant, RUC o extracto.</td></tr>
+        <tr><td><strong>Usuario</strong></td><td><code>usuario_id</code></td><td>Persona que opera la plataforma. Está asignada a una empresa y, opcionalmente, a un negocio. No es propietaria de las credenciales de pago.</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Tabla 1. Entidades del modelo multi-negocio.</p>
+
+    <p>El alcance de este documento es la configuración de pagos en <strong>modo tenant</strong>: el
+    consumidor paga a la cuenta Tilopay/Pagadito del negocio, la plataforma no custodia el precio
+    de la venta y la comisión se gestiona por facturación o por un mecanismo de saldo/prepago.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="section" id="credenciales">
+    <h2>2. Principio de propiedad de las credenciales</h2>
+    <p>En modo tenant, las credenciales de pago pertenecen al <strong>negocio</strong> o a la
+    <strong>empresa</strong>, nunca al usuario. Esta regla evita que la operación dependa de una
+    persona y permite conservar la cuenta cuando cambia el personal.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h4>Correcto</h4>
+        <p>La cuenta merchant se asocia a <code>empresa_id</code> o a <code>negocio_id</code>. Si el
+        usuario dueño cambia, la cuenta sigue perteneciendo al negocio.</p>
+      </div>
+      <div class="card">
+        <h4>Incorrecto</h4>
+        <p>Guardar la clave o el token en el perfil del usuario. Si ese usuario se desactiva, el
+        negocio pierde la capacidad de cobrar o conciliar.</p>
+      </div>
+    </div>
+
+    <p>Las credenciales deben residir en un gestor de secretos o en un token emitido por el
+    proveedor. No deben almacenarse en texto plano en la base de datos ni en variables de entorno
+    globales del servicio.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="section" id="escenario-a">
+    <h2>3. Escenario A: un empresario con tres negocios</h2>
+
+    <h3>3.1 Estructura</h3>
+    <div class="diagram">Empresa (1)
+  ├── Negocio 1
+  ├── Negocio 2
+  └── Negocio 3</div>
+    <p>Es una sola empresa con tres negocios. No son tres tenants ni tres empresas: es un único
+    <code>empresa_id</code> con tres <code>negocio_id</code>.</p>
+
+    <h3>3.2 Usuarios y plan</h3>
+    <ul>
+      <li>Puede existir un solo usuario dueño que administra los tres negocios.</li>
+      <li>También pueden existir tres usuarios de staff, cada uno asignado a un negocio.</li>
+      <li>En la versión base, el cupo por defecto es <strong>1 negocio gratis</strong>
+        (<code>PLATAFORMA_NEGOCIOS_GRATIS=1</code>).</li>
+      <li>Para operar tres negocios se requiere <strong><code>empresario_plus</code></strong>
+        (USD 35/mes), salvo que un administrador o la configuración del entorno indiquen otra cosa.</li>
+      <li>Los tres usuarios no convierten el caso en tres empresas. Sigue siendo una empresa y una
+        suscripción de empresario.</li>
+    </ul>
+
+    <h3>3.3 Configuración de pagos</h3>
+    <p>Cada negocio puede tener su propia cuenta Tilopay/Pagadito:</p>
+    <div class="diagram">configuracion_pagos
+  ├── empresa_id = E1, negocio_id = N1, cuenta = Tilopay A
+  ├── empresa_id = E1, negocio_id = N2, cuenta = Pagadito B
+  └── empresa_id = E1, negocio_id = N3, cuenta = Tilopay C</div>
+
+    <p>También pueden compartir una cuenta a nivel de empresa, si el dueño lo decide
+    explícitamente:</p>
+    <div class="diagram">configuracion_pagos
+  └── empresa_id = E1, negocio_id = NULL, cuenta = Tilopay única</div>
+
+    <h3>3.4 Precedencia y fail-closed</h3>
+    <p>La resolución de la cuenta de cobro debe seguir este orden:</p>
+    <ol>
+      <li>configuración del <strong>negocio</strong>;</li>
+      <li>si no existe, configuración de la <strong>empresa</strong>;</li>
+      <li>si no existe, <strong>fallar cerrado</strong> con <code>CUENTA_PAGO_NO_CONFIGURADA</code>.</li>
+    </ol>
+
+    <div class="note">
+      <strong>Regla de aislamiento.</strong> El negocio 2 no debe usar silenciosamente la cuenta del
+      negocio 1. En modo tenant, el dinero de cada negocio debe ir a su cuenta o a la cuenta
+      empresarial configurada de forma explícita para todos.
+    </div>
+
+    <h3>3.5 Comisiones, IVA y conciliación</h3>
+    <p>La plataforma debe calcular la comisión <strong>por negocio</strong>, porque cada negocio
+    puede tener:</p>
+    <ul>
+      <li>cuenta merchant distinta;</li>
+      <li>RUC distinto;</li>
+      <li>extracto bancario distinto;</li>
+      <li>comisión, IVA o retención distinta.</li>
+    </ul>
+
+    <p>La facturación puede presentarse de dos formas:</p>
+    <ul>
+      <li><strong>una factura por negocio</strong>, alineada con cada cuenta merchant;</li>
+      <li><strong>una factura consolidada por empresa</strong>, con detalle por negocio.</li>
+    </ul>
+    <p>En ambos casos, el subledger y la conciliación deben conservar <code>negocio_id</code>.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="section" id="escenario-b">
+    <h2>4. Escenario B: tres empresarios con un negocio cada uno</h2>
+    <p>Si se trata de tres empresarios distintos, cada uno con su propio negocio, el modelo es el
+    siguiente:</p>
+
+    <div class="diagram">Empresa A → Negocio A → Usuario A → cuenta Tilopay A
+Empresa B → Negocio B → Usuario B → cuenta Pagadito B
+Empresa C → Negocio C → Usuario C → cuenta Tilopay C</div>
+
+    <p>Aquí sí son tres tenants independientes:</p>
+    <ul>
+      <li>tres <code>empresa_id</code> distintos;</li>
+      <li>tres configuraciones de pago;</li>
+      <li>tres cuentas merchant;</li>
+      <li>cada uno puede estar en versión base porque tiene un solo negocio;</li>
+      <li>RLS impide que A vea datos de B;</li>
+      <li>cada empresa recibe su propia factura de comisión.</li>
+    </ul>
+
+    <p>Esto es distinto de “un empresario con tres negocios”. En el primer caso hay una empresa y
+    tres negocios; en este hay tres empresas y tres negocios.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="section" id="comparacion">
+    <h2>5. Comparación de escenarios</h2>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Escenario</th>
+          <th>Empresas</th>
+          <th>Negocios</th>
+          <th>Usuarios</th>
+          <th>Plan</th>
+          <th>Cuentas de pago</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1 empresario, 3 negocios</td>
+          <td>1</td>
+          <td>3</td>
+          <td>1 dueño + staff</td>
+          <td><code>empresario_plus</code></td>
+          <td>1 por negocio o 1 empresarial</td>
+        </tr>
+        <tr>
+          <td>3 empresarios, 1 negocio cada uno</td>
+          <td>3</td>
+          <td>3</td>
+          <td>3 dueños</td>
+          <td>Base para cada uno</td>
+          <td>3 cuentas independientes</td>
+        </tr>
+        <tr>
+          <td>1 empresario, 1 negocio, 3 usuarios</td>
+          <td>1</td>
+          <td>1</td>
+          <td>3</td>
+          <td>Base</td>
+          <td>1 cuenta empresarial/negocio</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="caption">Tabla 2. Comparación de los escenarios operativos.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="section" id="recomendaciones">
+    <h2>6. Recomendaciones de diseño</h2>
+    <ol>
+      <li>Configurar credenciales por <code>negocio_id</code> cuando cada negocio tenga su propia cuenta merchant.</li>
+      <li>Permitir una configuración por <code>empresa_id</code> solo como decisión explícita del dueño, nunca como fallback silencioso.</li>
+      <li>No asociar credenciales al <code>usuario_id</code>; si el usuario cambia, la cuenta del negocio debe permanecer.</li>
+      <li>Calcular comisión, IVA y conciliación por negocio; consolidar la factura solo a nivel de presentación.</li>
+      <li>Mantener <code>empresario_plus</code> por empresario, no por usuario ni por negocio adicional.</li>
+      <li>Guardar secretos en un gestor de secretos o tokens del proveedor; nunca en texto plano en la base ni en variables globales.</li>
+      <li>Definir el modo de cobro por empresa o negocio: <code>plataforma</code> o <code>tenant</code>, con valor por defecto <code>plataforma</code>.</li>
+    </ol>
+  </section>
+
+  <!-- 7 -->
+  <section class="section" id="conclusion">
+    <h2>7. Conclusión</h2>
+    <div class="abstract">
+      <strong>Tres usuarios no significan tres negocios.</strong> Los negocios son unidades de la
+      empresa; los usuarios son operadores. En modo tenant, la cuenta de pago se configura por
+      negocio o por empresa, y cada negocio con cuenta propia debe liquidar y facturar por separado.
+    </div>
+    <p>La decisión clave no es cuántos usuarios existan, sino cuántas unidades económicas y
+    cuentas merchant existan. Esa decisión determina la configuración de pagos, la conciliación,
+    la facturación de comisiones y el nivel de aislamiento de datos.</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="section" id="anexo">
+    <h2>8. Anexo: modelo conceptual de configuración</h2>
+    <p>El modelo propuesto para modo tenant incorpora el modo de cobro y la referencia a la cuenta
+    del negocio, sin guardar secretos en la tabla:</p>
+
+    <div class="diagram">configuracion_pagos
+  ├── id
+  ├── empresa_id
+  ├── negocio_id          (NULL = configuración de empresa)
+  ├── modo_cobro         ('plataforma' | 'tenant')
+  ├── proveedor_codigo   ('tilopay' | 'pagadito')
+  ├── credencial_ref     (referencia al gestor de secretos)
+  ├── activo
+  └── actualizado_en</div>
+
+    <p>La resolución efectiva se documenta como una regla, no como una herencia automática entre
+    negocios:</p>
+
+    <div class="diagram">cuenta_efectiva(empresa, negocio):
+  si existe configuración del negocio y está activa:
+      usar esa cuenta
+  si no, si existe configuración de la empresa y está activa:
+      usar esa cuenta
+  si no:
+      error CUENTA_PAGO_NO_CONFIGURADA</div>
+
+    <p>La referencia a credenciales debe apuntar a un secreto gestionado fuera de la base. El
+    valor de la clave nunca se expone en la API ni en los logs.</p>
+  </section>
+
+  <!-- 9 -->
+  <section class="section" id="control">
+    <h2>9. Control de cambios</h2>
+    <table class="data">
+      <thead>
+        <tr><th style="width:16%">Versión</th><th style="width:20%">Fecha</th><th>Cambio</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1.0</td><td>26/11/2026</td><td>Documento inicial: definiciones, escenarios A/B, precedencia, comisiones y recomendaciones.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="signature">
+      <div>Revisión de producto</div>
+      <div>Revisión de arquitectura / fiscalidad</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
