@@ -986,7 +986,7 @@ name = "identity-service"
 version = "1.0.9"
 dependencies = [
  "axum",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bcrypt",
  "chrono",
  "chrono-tz",
