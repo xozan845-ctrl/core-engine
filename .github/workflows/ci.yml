@@ -143,6 +143,8 @@ jobs:
         run: npm ci --prefer-offline
       - name: Apply migrations + mandatory RLS
         run: sh infra/db/apply.sh
+      - name: Re-apply migrations (idempotente, sin drift)
+        run: sh infra/db/apply.sh
       - name: RLS A/B negative tests (users, orders, finance, storage)
         run: npm run test:rls
 
