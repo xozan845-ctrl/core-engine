@@ -22,25 +22,31 @@ La auditoría midió ~95 tablas de aplicación sin RLS, incluidas tablas sensibl
 2. **Idempotencia.** Cada `CREATE POLICY` de `99_rls.sql` va precedido de
    `DROP POLICY IF EXISTS`, para convivir con las políticas creadas por las
    migraciones de init y poder reaplicarse sin drift.
-3. **Sin bypass del rol de app.** Se eliminan las políticas
+3. **Cambios incrementales versionados.** `99_rls.sql` y
+   `99z_rls_hardening.sql` son inmutables una vez aplicados. Cualquier ajuste
+   posterior de RLS va en un archivo nuevo
+   `infra/db/supabase/migrations/AAAAMMDD_NN_tema.sql`, que `apply.sh` ejecuta
+   en orden lexicográfico y registra con checksum. Así una base persistente
+   (stage/prod) actualiza sin *drift* y cada cambio queda auditable.
+4. **Sin bypass del rol de app.** Se eliminan las políticas
    `TO core_engine_app USING (true)`. `core_engine_app` queda
    `NOSUPERUSER NOBYPASSRLS`; los jobs usan el claim de servicio
    `super_admin` que ya inyectan las conexiones.
-4. **Sin `USING (true)`.** Las lecturas públicas de storefront usan predicados
+5. **Sin `USING (true)`.** Las lecturas públicas de storefront usan predicados
    concretos (`estado = 'activa'`, `activo`, `id = 1`, etc.). Las tablas de
    outbox/eventos usan una política admin/servicio.
-5. **FORCE RLS.** Todas las tablas de aplicación con RLS quedan con
+6. **FORCE RLS.** Todas las tablas de aplicación con RLS quedan con
    `FORCE ROW LEVEL SECURITY`. El owner tampoco omite las políticas; las
    migraciones se ejecutan con claim `super_admin` y el backup usa un rol con
    `BYPASSRLS` (documentado en el runbook).
-6. **Cobertura dinámica.** `99z_rls_hardening.sql` recorre las tablas de
+7. **Cobertura dinámica.** `99z_rls_hardening.sql` recorre las tablas de
    aplicación, habilita RLS donde falte y crea:
    - política de tenant por `empresa_id`, `tenant_id` o `negocio_id`;
    - política admin-only si la tabla no tiene columna de tenant;
    - políticas específicas para usuarios, sesiones, timeline de pedidos,
      asientos y series fiscales.
-7. **Pruebas negativas A/B.** CI tiene un job dedicado con PostgreSQL/PostGIS
-   que aplica todas las migraciones + RLS y ejecuta
+8. **Pruebas negativas A/B.** CI tiene un job dedicado con PostgreSQL/PostGIS
+   que aplica todas las migraciones + RLS dos veces (idempotencia) y ejecuta
    `scripts/tools/rls-ab-test.mjs`: usuarios, pagos, comprobantes y objetos de
    storage de A no son visibles ni modificables desde B; `super_admin` ve ambos.
 
@@ -50,7 +56,9 @@ La auditoría midió ~95 tablas de aplicación sin RLS, incluidas tablas sensibl
   un fallo de query no filtra filas de otro tenant. Toda tabla nueva queda
   cubierta por el barrido dinámico.
 - **Datos:** `99_rls.sql` idempotente, nuevo `99z_rls_hardening.sql`, ledger de
-  migraciones actualizado.
+  migraciones actualizado. Los cambios posteriores viven en
+  `infra/db/supabase/migrations/`; el manifiesto
+  `scripts/config/db-migrations.json` cubre ambos directorios.
 - **Operación:** un owner sin `BYPASSRLS` ya no puede saltarse RLS por ser
   owner. Las tareas de mantenimiento deben usar claims de servicio o un rol
   `BYPASSRLS` explícito.
