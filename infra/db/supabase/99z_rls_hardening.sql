@@ -137,9 +137,19 @@ BEGIN
       EXECUTE format($f$
         CREATE POLICY rls_hardening_tenant ON %I.%I FOR ALL TO authenticated
         USING (auth.rol() IN ('super_admin', 'admin')
-               OR negocio_id::text = (auth.jwt() ->> 'negocio_id'))
+               OR negocio_id::text = (auth.jwt() ->> 'negocio_id')
+               OR EXISTS (
+                    SELECT 1 FROM identity.negocios n
+                     WHERE n.id = negocio_id
+                       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+                  ))
         WITH CHECK (auth.rol() IN ('super_admin', 'admin')
-               OR negocio_id::text = (auth.jwt() ->> 'negocio_id'))
+               OR negocio_id::text = (auth.jwt() ->> 'negocio_id')
+               OR EXISTS (
+                    SELECT 1 FROM identity.negocios n
+                     WHERE n.id = negocio_id
+                       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
+                  ))
       $f$, r.table_schema, r.table_name);
     ELSE
       EXECUTE format($f$
@@ -237,6 +247,22 @@ BEGIN
   $f$;
 END $$;
 
+
+-- 4a. Triggers de historial de slugs (SECURITY DEFINER) escriben como owner.
+-- El owner es código de confianza; el rol de app sigue aislado por tenant.
+DO $$
+BEGIN
+  EXECUTE format('DROP POLICY IF EXISTS empresa_slugs_owner ON identity.empresa_slugs');
+  EXECUTE format(
+    'CREATE POLICY empresa_slugs_owner ON identity.empresa_slugs FOR ALL TO %I USING (true) WITH CHECK (true)',
+    current_user
+  );
+  EXECUTE format('DROP POLICY IF EXISTS tienda_slugs_owner ON stores.tienda_slugs');
+  EXECUTE format(
+    'CREATE POLICY tienda_slugs_owner ON stores.tienda_slugs FOR ALL TO %I USING (true) WITH CHECK (true)',
+    current_user
+  );
+END $$;
 
 -- 4b. Catálogos fiscales de plataforma que los tenants deben poder leer.
 DO $$
