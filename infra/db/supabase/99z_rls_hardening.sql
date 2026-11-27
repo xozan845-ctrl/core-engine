@@ -137,19 +137,9 @@ BEGIN
       EXECUTE format($f$
         CREATE POLICY rls_hardening_tenant ON %I.%I FOR ALL TO authenticated
         USING (auth.rol() IN ('super_admin', 'admin')
-               OR negocio_id::text = (auth.jwt() ->> 'negocio_id')
-               OR EXISTS (
-                    SELECT 1 FROM identity.negocios n
-                     WHERE n.id = negocio_id
-                       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
-                  ))
+               OR negocio_id::text = (auth.jwt() ->> 'negocio_id'))
         WITH CHECK (auth.rol() IN ('super_admin', 'admin')
-               OR negocio_id::text = (auth.jwt() ->> 'negocio_id')
-               OR EXISTS (
-                    SELECT 1 FROM identity.negocios n
-                     WHERE n.id = negocio_id
-                       AND n.empresa_id::text = (auth.jwt() ->> 'tenant_id')
-                  ))
+               OR negocio_id::text = (auth.jwt() ->> 'negocio_id'))
       $f$, r.table_schema, r.table_name);
     ELSE
       EXECUTE format($f$
@@ -246,85 +236,6 @@ BEGIN
               ))
   $f$;
 END $$;
-
-
--- 4a. Triggers de historial de slugs (SECURITY DEFINER) escriben como owner.
--- El owner es código de confianza; el rol de app sigue aislado por tenant.
-DO $$
-BEGIN
-  EXECUTE format('DROP POLICY IF EXISTS empresa_slugs_owner ON identity.empresa_slugs');
-  EXECUTE format(
-    'CREATE POLICY empresa_slugs_owner ON identity.empresa_slugs FOR ALL TO %I USING (true) WITH CHECK (true)',
-    current_user
-  );
-  EXECUTE format('DROP POLICY IF EXISTS tienda_slugs_owner ON stores.tienda_slugs');
-  EXECUTE format(
-    'CREATE POLICY tienda_slugs_owner ON stores.tienda_slugs FOR ALL TO %I USING (true) WITH CHECK (true)',
-    current_user
-  );
-END $$;
-
--- 4b. Catálogos fiscales de plataforma que los tenants deben poder leer.
-DO $$
-BEGIN
-  EXECUTE 'ALTER TABLE finance.jurisdicciones ENABLE ROW LEVEL SECURITY';
-  EXECUTE 'DROP POLICY IF EXISTS jurisdicciones_lectura ON finance.jurisdicciones';
-  EXECUTE $f$
-    CREATE POLICY jurisdicciones_lectura ON finance.jurisdicciones
-    FOR SELECT TO anon, authenticated USING (activa)
-  $f$;
-
-  EXECUTE 'ALTER TABLE finance.regimenes_fiscales ENABLE ROW LEVEL SECURITY';
-  EXECUTE 'DROP POLICY IF EXISTS regimenes_fiscales_lectura ON finance.regimenes_fiscales';
-  EXECUTE $f$
-    CREATE POLICY regimenes_fiscales_lectura ON finance.regimenes_fiscales
-    FOR SELECT TO anon, authenticated USING (estado = 'activo')
-  $f$;
-END $$;
-
--- 4c. El creador ve la empresa que acaba de crear.
--- El onboarding usa `INSERT ... RETURNING` y el empresario aún no tiene
--- `tenant_id` en su token; sin esta lectura, RLS rechaza el RETURNING.
-DROP POLICY IF EXISTS empresas_miembros ON identity.empresas;
-CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
-  USING (id::text = (auth.jwt() ->> 'tenant_id')
-         OR (auth.rol() = 'empresario' AND creado_por = auth.uid()));
-
--- 4d. Binding inicial del empresario con la empresa que acaba de crear.
--- El onboarding actualiza `tenant_id` del usuario recién registrado; sin esta
--- política el UPDATE afecta 0 filas en silencio y el token no lleva tenant.
-DROP POLICY IF EXISTS usuarios_onboarding_tenant ON identity.usuarios;
-CREATE POLICY usuarios_onboarding_tenant ON identity.usuarios FOR UPDATE TO authenticated
-  USING (auth.rol() = 'empresario'
-         AND id = auth.uid()
-         AND tenant_id IS NULL)
-  WITH CHECK (auth.rol() = 'empresario'
-              AND EXISTS (
-                    SELECT 1 FROM identity.empresas e
-                     WHERE e.id = tenant_id
-                       AND e.creado_por = auth.uid()
-                  ));
-
--- 4e. Historial de precios de ofertas: lo escribe el vendedor dueño de la
--- oferta (y el servicio/admin). Sin esto, publicar una oferta falla con RLS.
-DROP POLICY IF EXISTS historico_precios_oferta ON stores.historico_precios;
-CREATE POLICY historico_precios_oferta ON stores.historico_precios FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1
-      FROM stores.ofertas o
-      JOIN stores.tiendas t ON t.id = o.tienda_id
-     WHERE o.id = oferta_id
-       AND (auth.rol() IN ('super_admin', 'admin')
-            OR t.propietario_usuario_id = auth.uid()
-            OR t.empresa_id::text = (auth.jwt() ->> 'tenant_id'))))
-  WITH CHECK (EXISTS (
-    SELECT 1
-      FROM stores.ofertas o
-      JOIN stores.tiendas t ON t.id = o.tienda_id
-     WHERE o.id = oferta_id
-       AND (auth.rol() IN ('super_admin', 'admin')
-            OR t.propietario_usuario_id = auth.uid()
-            OR t.empresa_id::text = (auth.jwt() ->> 'tenant_id'))));
 
 -- 5. FORCE RLS: ni el owner omite las políticas.
 DO $$
