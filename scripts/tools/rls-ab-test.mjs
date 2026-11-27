@@ -201,6 +201,34 @@ async function main() {
       'el tenant debe ver regiones de pack',
     );
 
+    // Onboarding: el creador aún sin tenant debe poder insertar su empresa con
+    // RETURNING (exige política SELECT sobre la fila nueva) y luego su negocio.
+    const creada = await conClaims({ sub: ids.userA, rol: 'empresario' }, async () => {
+      const empresa = await app.query(
+        `INSERT INTO identity.empresas
+           (nombre, slug, vertical_id, pack_codigo, pack_version, creado_por,
+            region_tributaria, region_tributaria_desde)
+         VALUES ('Empresa RLS', $1, 'retail', 'pack_retail', 1, $2, 'NI', CURRENT_DATE)
+         RETURNING id`,
+        [`rls-onboarding-${randomUUID().slice(0, 8)}`, ids.userA],
+      );
+      const empresaId = empresa.rows[0].id;
+      await app.query(`SELECT set_config('request.jwt.claims', $1, true)`, [
+        JSON.stringify({ sub: ids.userA, rol: 'empresario', tenant_id: empresaId }),
+      ]);
+      const negocio = await app.query(
+        `INSERT INTO identity.negocios
+           (empresa_id, codigo, nombre, vertical_id, pack_codigo, pack_version,
+            es_predeterminado, creado_por)
+         VALUES ($1, 'principal', 'Empresa RLS', 'retail', 'pack_retail', 1, true, $2)
+         RETURNING id`,
+        [empresaId, ids.userA],
+      );
+      return { empresaId, negocioId: negocio.rows[0].id };
+    });
+    assert.ok(creada.empresaId, 'el creador debe insertar su empresa');
+    assert.ok(creada.negocioId, 'el creador debe insertar su negocio');
+
     // Admin global: ve ambos tenants.
     const admin = await conClaims({ sub: randomUUID(), rol: 'super_admin' }, () =>
       app.query('SELECT tenant_id FROM identity.usuarios WHERE id = ANY($1::uuid[])', [
