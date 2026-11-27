@@ -30,6 +30,7 @@ const ids = {
   tenantB: randomUUID(),
   userA: randomUUID(),
   userB: randomUUID(),
+  userNuevo: randomUUID(),
   pagoA: randomUUID(),
   pagoB: randomUUID(),
   comprobanteA: randomUUID(),
@@ -77,6 +78,12 @@ async function main() {
         `rls-b-${ids.userB}@example.test`,
         ids.tenantB,
       ],
+    );
+
+    await owner.query(
+      `INSERT INTO identity.usuarios (id, nombre, correo, contrasena_hash, rol, tenant_id)
+       VALUES ($1, 'Nuevo', $2, 'x', 'empresario', NULL)`,
+      [ids.userNuevo, `rls-nuevo-${ids.userNuevo}@example.test`],
     );
 
     await owner.query(
@@ -203,18 +210,18 @@ async function main() {
 
     // Onboarding: el creador aún sin tenant debe poder insertar su empresa con
     // RETURNING (exige política SELECT sobre la fila nueva) y luego su negocio.
-    const creada = await conClaims({ sub: ids.userA, rol: 'empresario' }, async () => {
+    const creada = await conClaims({ sub: ids.userNuevo, rol: 'empresario' }, async () => {
       const empresa = await app.query(
         `INSERT INTO identity.empresas
            (nombre, slug, vertical_id, pack_codigo, pack_version, creado_por,
             region_tributaria, region_tributaria_desde)
          VALUES ('Empresa RLS', $1, 'retail', 'pack_retail', 1, $2, 'NI', CURRENT_DATE)
          RETURNING id`,
-        [`rls-onboarding-${randomUUID().slice(0, 8)}`, ids.userA],
+        [`rls-onboarding-${randomUUID().slice(0, 8)}`, ids.userNuevo],
       );
       const empresaId = empresa.rows[0].id;
       await app.query(`SELECT set_config('request.jwt.claims', $1, true)`, [
-        JSON.stringify({ sub: ids.userA, rol: 'empresario', tenant_id: empresaId }),
+        JSON.stringify({ sub: ids.userNuevo, rol: 'empresario', tenant_id: empresaId }),
       ]);
       const negocio = await app.query(
         `INSERT INTO identity.negocios
@@ -222,8 +229,13 @@ async function main() {
             es_predeterminado, creado_por)
          VALUES ($1, 'principal', 'Empresa RLS', 'retail', 'pack_retail', 1, true, $2)
          RETURNING id`,
-        [empresaId, ids.userA],
+        [empresaId, ids.userNuevo],
       );
+      const binding = await app.query(
+        `UPDATE identity.usuarios SET tenant_id = $1 WHERE id = $2`,
+        [empresaId, ids.userNuevo],
+      );
+      assert.equal(binding.rowCount, 1, 'el creador debe vincular su tenant');
       return { empresaId, negocioId: negocio.rows[0].id };
     });
     assert.ok(creada.empresaId, 'el creador debe insertar su empresa');
@@ -250,7 +262,7 @@ async function main() {
       [ids.pagoA, ids.pagoB],
     ]);
     await owner.query('DELETE FROM identity.usuarios WHERE id = ANY($1::uuid[])', [
-      [ids.userA, ids.userB],
+      [ids.userA, ids.userB, ids.userNuevo],
     ]);
   }
 
