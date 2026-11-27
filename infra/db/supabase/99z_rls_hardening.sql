@@ -282,6 +282,14 @@ BEGIN
   $f$;
 END $$;
 
+-- 4c. El creador ve la empresa que acaba de crear.
+-- El onboarding usa `INSERT ... RETURNING` y el empresario aún no tiene
+-- `tenant_id` en su token; sin esta lectura, RLS rechaza el RETURNING.
+DROP POLICY IF EXISTS empresas_miembros ON identity.empresas;
+CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
+  USING (id::text = (auth.jwt() ->> 'tenant_id')
+         OR (auth.rol() = 'empresario' AND creado_por = auth.uid()));
+
 -- 5. FORCE RLS: ni el owner omite las políticas.
 DO $$
 DECLARE r record;
