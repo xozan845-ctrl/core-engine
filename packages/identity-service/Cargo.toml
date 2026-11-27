@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 axum = "0.8"
-base64 = "0.22"
+base64 = "0.23"
 bcrypt = "0.19"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
