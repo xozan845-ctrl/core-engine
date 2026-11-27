@@ -19,6 +19,7 @@ RUN touch packages/finance-service/src/main.rs \
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
