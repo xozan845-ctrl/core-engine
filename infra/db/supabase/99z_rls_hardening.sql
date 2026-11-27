@@ -237,6 +237,25 @@ BEGIN
   $f$;
 END $$;
 
+
+-- 4b. Catálogos fiscales de plataforma que los tenants deben poder leer.
+DO $$
+BEGIN
+  EXECUTE 'ALTER TABLE finance.jurisdicciones ENABLE ROW LEVEL SECURITY';
+  EXECUTE 'DROP POLICY IF EXISTS jurisdicciones_lectura ON finance.jurisdicciones';
+  EXECUTE $f$
+    CREATE POLICY jurisdicciones_lectura ON finance.jurisdicciones
+    FOR SELECT TO anon, authenticated USING (activa)
+  $f$;
+
+  EXECUTE 'ALTER TABLE finance.regimenes_fiscales ENABLE ROW LEVEL SECURITY';
+  EXECUTE 'DROP POLICY IF EXISTS regimenes_fiscales_lectura ON finance.regimenes_fiscales';
+  EXECUTE $f$
+    CREATE POLICY regimenes_fiscales_lectura ON finance.regimenes_fiscales
+    FOR SELECT TO anon, authenticated USING (estado = 'activo')
+  $f$;
+END $$;
+
 -- 5. FORCE RLS: ni el owner omite las políticas.
 DO $$
 DECLARE r record;
