@@ -152,10 +152,17 @@
   "99_wishlist_verificadas.sql": "1b37314815829a283c35c44a18280694f84ec2f315a3d5179ef5f45c98e508f9",
   "99y_pasarelas_tipos.sql": "1aa4dd08c58c429bab59a6d9ae8a836499ec279579a88495a53133f8fe61c6c9",
   "99z_append_only.sql": "548c3b383409e222b2edcdd4fe317ae8e8387fe36c3801898b575c1f70f76ae1",
+  "99z_dispersion_diaria.sql": "570f8945197b9e5db8646740a3ce9f641638fc768dcf3811535b1379535f20dd",
+  "99z_pagos_liquidacion.sql": "ae712bd5902a25c47701df0b5e6243d6bbc741f9bd1c8faadfccbe5aad0d34da",
   "99z_pasarelas.sql": "06c3e5545b40691e45a5f6858e527fed4a56be76e1c8e73631333e453c5f3248",
   "99z_regiones_fiscal_completo.sql": "01bab94cb14684ed68a229d00db85832fe1f8d0fc543a229d2181b226199a4e3",
   "99z_reservas_onsite.sql": "6524ca2a675a1391234d4dad8222f7360c1f6b7cc2fb8452727887a3b9a280b0",
   "99z_rls_tenant.sql": "05c29a68848afce3c6250b88d13c5acbb02fc74184a9d1052a157e4caeef1272",
   "99z_scheduling_outbox_rls.sql": "b7e3cbf4962cff7243affda7011a88880ce7d5b6ebd33b99f4f5edd493847f38",
-  "99z_ventas_linea_rma.sql": "73d188483ef77744bcbe0fadd26b812ec967138ab20a08c0f6bf396793b8de8e"
+  "99z_ventas_linea_rma.sql": "73d188483ef77744bcbe0fadd26b812ec967138ab20a08c0f6bf396793b8de8e",
+  "20261127_01_rls_catalogos_fiscales.sql": "7bb87c2fb7ca77ce4ff7102a2ebf9777f8540b9dd88af9bc758bc1b901f2089e",
+  "20261127_02_rls_slugs_owner.sql": "fd531d15f3666d079dde14cbf98a2bd5bb26313c3a4fd185daecf305c9f2d8fb",
+  "20261127_03_rls_negocio_tenant.sql": "746f2ab5ca1be1213dec89a5fc7c0e6c25991c669518168df86861e08eefe917",
+  "20261127_04_rls_onboarding_empresa_usuario.sql": "e63f9144371072181779d241a4f1f7a58387202dc36a4895664cf47ea13341fa",
+  "20261127_05_rls_ofertas_historico_precios.sql": "f14e7f776d20d50ed4df9c6f7caf2b8c27411e22f95d14b3989a9bd84853b9a2"
 }

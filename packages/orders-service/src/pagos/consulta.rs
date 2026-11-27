@@ -10,9 +10,57 @@ impl Pagos {
         &self,
         pago: &Pago,
         datos: Option<&Value>,
-    ) -> Result<EstadoExterno, ApiError> {
+    ) -> Result<ConsultaExterna, ApiError> {
         let proveedor = self.proveedor_de_pago(pago).await?;
-        proveedor.consultar(referencia_operativa(pago), datos).await
+        proveedor
+            .consultar_detallado(referencia_operativa(pago), datos)
+            .await
+    }
+
+    /// Persiste el desglose de liquidación que reportó la pasarela y lo deja
+    /// en el `Pago` en memoria para que el evento `payment.procesado` lo lleve.
+    pub async fn aplicar_liquidacion(
+        &self,
+        pago: &mut Pago,
+        liquidacion: &LiquidacionPasarela,
+    ) -> Result<(), ApiError> {
+        let mut tx = self
+            .db
+            .transaccion_servicio()
+            .await
+            .map_err(crate::event_store::error_db)?;
+        sqlx::query(
+            "UPDATE orders.pagos
+                SET proveedor_liquidacion = $2,
+                    comision_pasarela_cents = $3,
+                    impuesto_pasarela_cents = $4,
+                    retencion_cents = $5,
+                    monto_liquidado_cents = $6,
+                    moneda_liquidacion = $7,
+                    detalle_pasarela = $8::jsonb,
+                    actualizado_en = NOW()
+              WHERE id = $1::uuid",
+        )
+        .bind(&pago.id)
+        .bind(&liquidacion.proveedor)
+        .bind(i32::try_from(liquidacion.comision_cents).unwrap_or(i32::MAX))
+        .bind(i32::try_from(liquidacion.impuesto_cents).unwrap_or(i32::MAX))
+        .bind(i32::try_from(liquidacion.retencion_cents).unwrap_or(i32::MAX))
+        .bind(i32::try_from(liquidacion.monto_liquidado_cents).unwrap_or(i32::MAX))
+        .bind(&liquidacion.moneda)
+        .bind(liquidacion.detalle.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(crate::event_store::error_db)?;
+        tx.commit().await.map_err(crate::event_store::error_db)?;
+        pago.proveedor_liquidacion = liquidacion.proveedor.clone();
+        pago.comision_pasarela_cents = liquidacion.comision_cents;
+        pago.impuesto_pasarela_cents = liquidacion.impuesto_cents;
+        pago.retencion_cents = liquidacion.retencion_cents;
+        pago.monto_liquidado_cents = liquidacion.monto_liquidado_cents;
+        pago.moneda_liquidacion = liquidacion.moneda.clone();
+        pago.detalle_pasarela = liquidacion.detalle.clone();
+        Ok(())
     }
 
     /// Pagos pendientes con proveedor externo que ya superaron la ventana de
@@ -31,7 +79,9 @@ impl Pagos {
         let filas = sqlx::query(
             "SELECT p.id, p.order_id, p.empresa_id, p.metodo_codigo, p.estado, p.monto_cents,
                     p.moneda, p.referencia, p.referencia_proveedor, p.proveedor,
-                    p.monto_reembolsado_cents, p.motivo_rechazo, p.confirmado_por,
+                    p.proveedor_liquidacion, p.comision_pasarela_cents, p.impuesto_pasarela_cents,
+                    p.retencion_cents, p.monto_liquidado_cents, p.moneda_liquidacion,
+                    p.detalle_pasarela, p.monto_reembolsado_cents, p.motivo_rechazo, p.confirmado_por,
                     p.conciliado_en, p.confirmado_en, p.creado_en
                FROM orders.pagos p
               WHERE p.estado = 'pendiente'
@@ -93,7 +143,9 @@ impl Pagos {
             .map_err(crate::event_store::error_db)?;
         let filas = sqlx::query(
             "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                    retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                    detalle_pasarela, monto_reembolsado_cents,
                     motivo_rechazo, confirmado_por, conciliado_en,
                     confirmado_en, creado_en
                FROM orders.pagos
@@ -116,7 +168,9 @@ impl Pagos {
             .map_err(crate::event_store::error_db)?;
         let fila = sqlx::query(
             "SELECT id, order_id, empresa_id, metodo_codigo, estado, monto_cents,
-                    moneda, referencia, referencia_proveedor, proveedor, monto_reembolsado_cents,
+                    moneda, referencia, referencia_proveedor, proveedor, proveedor_liquidacion, comision_pasarela_cents, impuesto_pasarela_cents,
+                    retencion_cents, monto_liquidado_cents, moneda_liquidacion,
+                    detalle_pasarela, monto_reembolsado_cents,
                     motivo_rechazo, confirmado_por, conciliado_en,
                     confirmado_en, creado_en
                FROM orders.pagos WHERE id = $1::uuid",

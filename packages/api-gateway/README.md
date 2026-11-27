@@ -31,7 +31,7 @@ reescritura y sus invariantes están en
 | Único puerto publicado al host | Sí (`8080:8080`) |
 | Esquema de BD | Ninguno: el gateway es *stateless* |
 | Outbox / RabbitMQ | No participa |
-| Readiness | Agrega `/health` de 11 servicios en producción y 12 en stage |
+| Readiness | Agrega `/health` de 12 servicios en producción y stage |
 | Documentación | `/docs`, `/docs-json`, `/docs-yaml` (privadas fuera de dev) |
 | Métricas | `/metrics` (formato Prometheus) |
 | Apagado | Ordenado ante `SIGINT` / `SIGTERM` |
@@ -44,7 +44,7 @@ reescritura y sus invariantes están en
 | `SERVICIO` | No | `api-gateway` | Etiqueta `servicio` en métricas y logs |
 | `JWT_SECRET` | **Sí en producción** (`NODE_ENV=production`) | `dev_secret` en dev | Firma/validación HS256 |
 | `NODE_ENV` | No | — | `production` activa el *fail-fast* de `JWT_SECRET` |
-| `ENTORNO` | No | vacío | `stage`/`staging` selecciona la lista de readiness de 12 servicios; cualquier otro valor usa la de producción (11) |
+| `ENTORNO` | No | vacío | `stage`/`staging` selecciona la lista de readiness de stage; cualquier otro valor usa la de producción (12 servicios desde ADR-0053) |
 | `INTERNAL_API_KEY` | Recomendada | — | Habilita `/ready`, `/metrics`, `/docs*` cuando el diagnóstico no es público |
 | `CORS_ORIGINS` | No | vacío | Lista separada por comas; sin coincidencia no se emite CORS |
 | `DIAGNOSTICOS_PUBLICOS` | No | `false` | `true` abre `/docs`, `/docs-json`, `/docs-yaml`, `/metrics` sin clave (solo dev) |
@@ -58,7 +58,7 @@ reescritura y sus invariantes están en
 | `STORES_SERVICE_URL` | No | `http://stores-service:3003` | Destino |
 | `ORDERS_SERVICE_URL` | No | `http://orders-service:3004` | Destino |
 | `LOGISTICS_SERVICE_URL` | No | `http://logistics-service:3005` | Destino |
-| `COMMISSIONS_SERVICE_URL` | No | `http://commissions-service:3006` | Destino (stage) |
+| `COMMISSIONS_SERVICE_URL` | No | `http://commissions-service:3006` | Destino |
 | `FINANCE_SERVICE_URL` | No | `http://finance-service:3007` | Destino |
 | `FIELD_SERVICE_URL` | No | `http://field-service:3008` | Destino |
 | `INTELLIGENCE_SERVICE_URL` | No | `http://market-intelligence-service:3009` | Destino (dev) |
@@ -350,11 +350,10 @@ cuerpo y status), de modo que el contrato de dominio se mantiene.
 `GET /ready` consulta en paralelo secuencial `GET http://<servicio>-service:<puerto>/health`
 con timeout de **1500 ms** por servicio y cachea el resultado `READY_CACHE_MS`.
 
-- Producción (`ENTORNO` distinto de `stage`/`staging`): 11 servicios
+- Producción y stage: 12 servicios
   (`identity`, `item`, `inventory`, `pricing`, `stores`, `orders`, `logistics`,
-  `scheduling`, `finance`, `field`, `storage`).
-- Stage: 12 servicios (suma `commissions`).
-- `commissions` **no** se consulta en producción porque no se despliega allí.
+  `scheduling`, `finance`, `field`, `storage`, `commissions`).
+- `commissions` se consulta desde ADR-0053, que lo incorpora a producción.
 - `notifications`, `analytics` e `intelligence` no forman parte del readiness.
 - `200` si todos responden `2xx`; `503` + `status: "degraded"` si alguno falla.
 - El cuerpo es `{status, servicios: {nombre: "ok"|"error:500"|"caido"}}`.
@@ -454,7 +453,8 @@ hay que reconstruir la imagen**; en CI lo verifica el gate G-8.
       apagados.
 - [ ] `CORS_ORIGINS` con los dominios reales (nunca `*`; el código no soporta
       comodines).
-- [ ] `ENTORNO=stage` solo en staging (cambia el readiness a 12 servicios).
+- [ ] `ENTORNO=stage` solo en staging (la lista de readiness es la misma desde
+      ADR-0053, pero stage mantiene su configuración propia).
 - [ ] Timeout de upstream alineado con el SLA del servicio más lento.
 - [ ] TLS terminado antes del gateway (Traefik/Dockploy); el gateway no hace
       TLS.

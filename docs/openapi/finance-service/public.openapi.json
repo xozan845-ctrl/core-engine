@@ -956,6 +956,13 @@
                         "ambiente_electronico": {
                           "type": "string"
                         },
+                        "certificacion_estado": {
+                          "type": "string",
+                          "enum": ["no_aplica", "no_certificada", "piloto_sin_comprobante", "certificada"]
+                        },
+                        "emite_comprobante_fiscal": {
+                          "type": "boolean"
+                        },
                         "tasa_iva": {
                           "type": "number"
                         },
@@ -1122,6 +1129,13 @@
                         },
                         "ambiente_electronico": {
                           "type": "string"
+                        },
+                        "certificacion_estado": {
+                          "type": "string",
+                          "enum": ["no_aplica", "no_certificada", "piloto_sin_comprobante", "certificada"]
+                        },
+                        "emite_comprobante_fiscal": {
+                          "type": "boolean"
                         },
                         "tasa_iva": {
                           "type": "number"

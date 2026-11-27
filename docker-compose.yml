@@ -12,9 +12,10 @@
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #
-# `commissions-service` no entra en este compose (producción): se despliega
-# en stage (ADR-37). `market-intelligence-service` se despliega en stage y
-# producción desde la Fase 6 (analítica transversal).
+# `commissions-service` se despliega en stage y producción desde ADR-0053:
+# la plataforma cobra centralizado y dispersa diariamente al negocio y al
+# vendedor. `market-intelligence-service` se despliega en stage y producción
+# desde la Fase 6 (analítica transversal).
 #
 # Entornos (3): producción = este archivo · pre-producción = `docker-compose.stage.yml`
 # · desarrollo = `docker-compose.dev.yml` (construye local).
@@ -102,7 +103,6 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
       CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
       MIGRATIONS_DIR: /migrations
-      APPLY_RLS: "false"
     volumes:
       - ./infra/db:/migrations:ro
     command: ["sh", "/migrations/apply.sh"]
@@ -261,6 +261,16 @@ services:
       SERVICIO: orders-service
       PORT: 3004
       OUTBOX_TABLA: orders.outbox
+
+  commissions-service:
+    <<: *servicio-base
+    image: ghcr.io/xozan845-ctrl/core-engine-commissions-service:prod
+    pull_policy: always
+    environment:
+      SERVICIO: commissions-service
+      PORT: 3006
+      OUTBOX_TABLA: commissions.outbox
+      COMMISSION_RATE: 0.12
 
   scheduling-service:
     <<: *servicio-base

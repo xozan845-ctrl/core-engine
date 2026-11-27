@@ -46,6 +46,10 @@
 | `IDENTITY_SERVICE_URL` | No | `http://identity-service:3001` | Vendedores/capacidades |
 | `COMMISSION_RATE` | No | `0.12` | Comisión (RN-04) |
 | `EMITIR_COMPROBANTES_FISCALES` | No | `false` | Emite `EMITIDO` en vez de `BORRADOR` |
+| `FACTURACION_PROVEEDOR_URL` | Si se emite electrónica | — | Endpoint del proveedor/gateway DGI |
+| `FACTURACION_PROVEEDOR_KEY` | Si se emite electrónica | — | Bearer del proveedor |
+| `FACTURACION_PROVEEDOR_CERTIFICADO` | Si se emite electrónica | `false` | El proveedor fue certificado por el país |
+| `FACTURACION_PERMITIR_SIN_CERTIFICADO` | No | `false` | Aceptación explícita de piloto sin comprobante fiscal |
 | `INTERNAL_REQUEST_TIMEOUT_MS` | No | `3000` | Timeout interno |
 
 ---
@@ -196,6 +200,10 @@ Todas las escrituras van en una transacción con outbox e idempotencia por
   - `IVA = base_gravada × tasa` (15 % por defecto);
   - total = base gravada + IVA + exento.
 - Estado `EMITIDO` si `EMITIR_COMPROBANTES_FISCALES=true`; si no, `BORRADOR`.
+- Sin `FACTURACION_PROVEEDOR_CERTIFICADO=true`, la emisión electrónica falla
+  con `FACTURACION_NO_CERTIFICADA`. El piloto solo puede operar con `simulado`
+  si acepta explícitamente `FACTURACION_PERMITIR_SIN_CERTIFICADO=true`; en ese
+  caso el comprobante queda `no_fiscal` y el PDF lo indica.
 - Emitir un comprobante genera el asiento contable y `comprobante.emitido`.
 - `POST /comprobantes/{id}/anular` conserva el registro y ajusta la
   contabilidad.
@@ -398,18 +406,24 @@ cargo test
 
 - La capacidad `facturacion_electronica` habilita la función por negocio.
 - `PUT /finanzas/configuracion-fiscal` acepta `facturacion_electronica`,
-  `formato_pdf`, `proveedor_electronico` (`simulado|http`),
+  `formato_pdf`, `proveedor_electronico` (`simulado|http|dgi`),
   `ambiente_electronico` (`pruebas|produccion`), `impuesto_activo` y
   `precios_con_impuesto`.
 - Con el flag activo, `emitir` llama al proveedor y guarda
   `electronica_estado`/`electronica_referencia`; un fallo deja el comprobante
   con estado `error` sin perder numeración.
+- **Sin certificación no se finge aceptación.** Con `simulado`, el comprobante
+  queda `no_fiscal`. Si el piloto no aceptó operar sin comprobante fiscal,
+  `emitir` falla antes de consumir el secuencial con
+  `FACTURACION_NO_CERTIFICADA`. `GET /finanzas/configuracion-fiscal` expone
+  `certificacion_estado` y `emite_comprobante_fiscal`.
 - `GET /finanzas/comprobantes/{id}/pdf` descarga el PDF si `formato_pdf=true`;
   sin el flag responde `PDF_NO_ACTIVADO`. El PDF incluye emisor, cliente,
   líneas con base/IVA/total y totales; se persiste en
   `finance.comprobante_pdf` en la primera descarga. Con
   `PDF_ALMACENAMIENTO=storage` el PDF se sube a `storage-service` y solo se
-  guarda `objeto_id`; si storage falla, cae a `bytea`.
+  guarda `objeto_id`; si storage falla, cae a `bytea`. Si el comprobante no
+  está aceptado fiscalmente, el PDF lleva la leyenda **NO FISCAL**.
 - Las notas de crédito parciales se emiten por
   `POST /internal/finance/notas-credito`, usan la serie `NC001` y pasan por el
   mismo proveedor electrónico configurado para facturas.

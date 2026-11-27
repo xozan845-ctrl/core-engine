@@ -102,6 +102,52 @@ jobs:
       - name: Verify multi-vertical pack/tenant consistency (R-I-12)
         run: npm run multi-vertical:check
 
+  rls-integration:
+    name: RLS A/B isolation (PostgreSQL)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_DB: rls_test
+          POSTGRES_USER: core_engine
+          POSTGRES_PASSWORD: test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core_engine -d rls_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: rls_test
+      PGUSER: core_engine
+      PGPASSWORD: test_only
+      CORE_ENGINE_APP_PASSWORD: probe_app_pw
+      MIGRATIONS_DIR: ${{ github.workspace }}/infra/db
+      RLS_TEST_DATABASE_URL: postgres://core_engine:test_only@127.0.0.1:5432/rls_test
+      RLS_TEST_APP_URL: postgres://core_engine_app:probe_app_pw@127.0.0.1:5432/rls_test
+      TZ: America/Managua
+    needs: security-gate
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+      - name: Apply migrations + mandatory RLS
+        run: sh infra/db/apply.sh
+      - name: Re-apply migrations (idempotente, sin drift)
+        run: sh infra/db/apply.sh
+      - name: RLS A/B negative tests (users, orders, finance, storage)
+        run: npm run test:rls
+
   matrix:
     name: Service matrix (service.json)
     runs-on: ubuntu-24.04
@@ -198,7 +244,7 @@ jobs:
   build:
     name: Build all services
     runs-on: ubuntu-24.04
-    needs: [rules-check, lint, integration-catalog, rust, docker-build]
+    needs: [rules-check, lint, integration-catalog, rls-integration, rust, docker-build]
     steps:
       - uses: actions/checkout@v7
         with:

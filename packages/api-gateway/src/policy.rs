@@ -135,7 +135,10 @@ pub fn politicas() -> &'static [Politica] {
             p(r"^/api/v2/auth/negocios$", &["GET"], Some(todos.clone())),
             p(r"^/api/v2/auth/(cambiar-contrasena|vincular-personal)$", &["POST"], Some(todos.clone())),
             p(r"^/api/v2/vendedores/(me/ventas|me/liquidaciones)$", &["GET"], Some(vec![VENDEDOR])),
+            p(r"^/api/v2/vendedores/me/dispersion$", &["GET"], Some(vec![VENDEDOR])),
             p(r"^/api/v2/empresarios/me/liquidaciones$", &["GET"], Some(vec![EMPRESARIO])),
+            p(r"^/api/v2/empresarios/me/dispersion$", &["GET"], Some(vec![EMPRESARIO])),
+            p(r"^/api/v2/admin/dispersion(/|$)", &["GET", "POST", "PATCH", "PUT"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/empresarios/me/reportes/negocios$", &["GET"], Some(vec![EMPRESARIO])),
             p(r"^/api/v2/analytics/plataforma$", &["GET"], Some(vec![SUPER_ADMIN, ADMIN])),
             p(r"^/api/v2/analytics(/|$)", &["GET", "POST", "PATCH"], Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO])),
@@ -294,6 +297,9 @@ mod tests {
         let webhooks =
             encontrar_politica("/api/v2/admin/notifications/webhooks", "POST").expect("webhooks");
         assert_eq!(webhooks.roles, Some(vec![SUPER_ADMIN, ADMIN, EMPRESARIO]));
+        let dispersion =
+            encontrar_politica("/api/v2/admin/dispersion/payouts", "GET").expect("dispersion");
+        assert_eq!(dispersion.roles, Some(vec![SUPER_ADMIN, ADMIN]));
         let plantillas = encontrar_politica("/api/v2/admin/notifications/plantillas", "PUT")
             .expect("plantillas");
         assert_eq!(plantillas.roles, Some(vec![SUPER_ADMIN, ADMIN]));

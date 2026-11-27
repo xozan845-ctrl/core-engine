@@ -11,7 +11,7 @@ pub struct Servicio {
     pub puerto: u16,
 }
 
-pub const SERVICIOS_PRODUCCION: [Servicio; 11] = [
+pub const SERVICIOS_PRODUCCION: [Servicio; 12] = [
     Servicio {
         nombre: "identity",
         puerto: 3001,
@@ -55,6 +55,10 @@ pub const SERVICIOS_PRODUCCION: [Servicio; 11] = [
     Servicio {
         nombre: "storage",
         puerto: 3010,
+    },
+    Servicio {
+        nombre: "commissions",
+        puerto: 3006,
     },
 ];
 
@@ -167,8 +171,14 @@ mod tests {
     #[test]
     fn debe_elegir_la_lista_por_entorno() {
         assert_eq!(servicios("stage").len(), 12);
-        assert_eq!(servicios("production").len(), 11);
-        assert_eq!(servicios("").len(), 11);
+        assert_eq!(servicios("production").len(), 12);
+        assert_eq!(servicios("").len(), 12);
+        assert!(
+            servicios("production")
+                .iter()
+                .any(|servicio| servicio.nombre == "commissions"),
+            "produccion debe consultar commissions: cierra la venta directa"
+        );
     }
 
     #[test]

@@ -86,6 +86,8 @@ impl Checkout {
                         actualizado_en = NOW()
                   WHERE p.order_id = $1::uuid
                     AND p.estado = 'pendiente'
+                    AND p.proveedor NOT IN ('tilopay', 'pagadito')
+                    AND p.proveedor <> $3
                     AND NOT EXISTS (
                           SELECT 1
                             FROM orders.proveedores_pago pr
@@ -95,6 +97,7 @@ impl Checkout {
             )
             .bind(order_id)
             .bind(motivo_cancelacion)
+            .bind(self.pagos.proveedor_default_codigo())
             .execute(&mut *tx)
             .await
             .map_err(error_db)?;

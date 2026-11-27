@@ -1,14 +1,14 @@
-//! Worker del corte quincenal (RN-07).
+//! Worker de dispersión diaria.
 //!
-//! Reemplaza `cron.schedule('5 0 1,15 * *')`: revisa cada 30 s la hora local
-//! (`TZ`, por defecto `America/Managua`) y ejecuta el cierre una sola vez por
-//! día 1 o 15 a las 00:05.
+//! A la hora configurada (por defecto 00:10 local) cierra el día anterior,
+//! crea los payouts por beneficiario y, si la dispersión está activa, los envía
+//! al proveedor configurado. Es idempotente: reintenta sin duplicar payouts.
 
 use crate::campos;
 use crate::db::zona_local;
-use crate::liquidaciones::LiquidacionesPort;
+use crate::dispersion::Dispersion;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
-use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
+use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use chrono_tz::Tz;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,47 +16,101 @@ use tokio::task::JoinHandle;
 
 pub const INTERVALO_REVISION: Duration = Duration::from_secs(30);
 
-/// `true` si en este minuto toca el corte y aún no se ejecutó hoy.
-pub fn debe_ejecutar(ahora: DateTime<Tz>, ultima: Option<NaiveDate>) -> bool {
-    ahora.hour() == 0
-        && ahora.minute() == 5
-        && matches!(ahora.day(), 1 | 15)
-        && ultima != Some(ahora.date_naive())
+/// `true` si en este minuto toca el cierre diario y aún no se ejecutó hoy.
+pub fn debe_ejecutar(ahora: DateTime<Tz>, hora_local: &str, ultima: Option<NaiveDate>) -> bool {
+    let Some((hora, minuto)) = hora_local.split_once(':') else {
+        return false;
+    };
+    let (Ok(hora), Ok(minuto)) = (hora.parse::<u32>(), minuto.parse::<u32>()) else {
+        return false;
+    };
+    ahora.hour() == hora && ahora.minute() == minuto && ultima != Some(ahora.date_naive())
 }
 
-pub fn iniciar_worker(liquidaciones: Arc<dyn LiquidacionesPort>) -> JoinHandle<()> {
+pub fn iniciar_worker(dispersion: Arc<Dispersion>) -> JoinHandle<()> {
     tokio::spawn(async move {
         crate::logs::info(
-            "commissions.liquidacion",
-            campos! { "msg": "Planificador de liquidacion quincenal activo (dias 1 y 15)" },
+            "commissions.dispersion",
+            campos! { "msg": "Planificador de dispersion diaria activo" },
         );
         let mut ultima: Option<NaiveDate> = None;
         let mut ticker = tokio::time::interval(INTERVALO_REVISION);
         loop {
             ticker.tick().await;
+            let config = match dispersion.configuracion().await {
+                Ok(config) => config,
+                Err(error) => {
+                    crate::logs::error(
+                        "commissions.dispersion",
+                        campos! { "msg": "No se pudo leer la configuracion de dispersion", "err": error.to_string() },
+                    );
+                    continue;
+                }
+            };
             let ahora = Utc::now().with_timezone(&zona_local());
-            if !debe_ejecutar(ahora, ultima) {
+            if !debe_ejecutar(ahora, &config.hora_local, ultima) {
                 continue;
             }
             ultima = Some(ahora.date_naive());
+            let fecha = ahora
+                .date_naive()
+                .pred_opt()
+                .unwrap_or_else(|| ahora.date_naive());
             let contexto = ContextoCorrelacion {
-                request_id: format!("liquidaciones-worker-{}", Utc::now().timestamp_millis()),
-                servicio: "liquidaciones-worker".to_string(),
+                request_id: format!("dispersion-worker-{}", Utc::now().timestamp_millis()),
+                servicio: "dispersion-worker".to_string(),
                 usuario_id: Some("00000000-0000-0000-0000-000000000000".to_string()),
                 rol: Some("super_admin".to_string()),
                 tenant_id: None,
                 negocio_id: None,
             };
-            let resultado = ejecutar_con_contexto(
-                contexto,
-                liquidaciones.cerrar_periodo_anterior(ahora.date_naive()),
-            )
-            .await;
-            if let Err(error) = resultado {
-                crate::logs::error(
-                    "commissions.liquidacion",
-                    campos! { "msg": "Fallo el corte quincenal", "err": error.to_string() },
-                );
+            match ejecutar_con_contexto(contexto, dispersion.cerrar_dia(fecha)).await {
+                Ok(resumen) => {
+                    crate::logs::info(
+                        "commissions.dispersion",
+                        campos! {
+                            "msg": "Cierre diario ejecutado",
+                            "fecha": fecha.format("%Y-%m-%d").to_string(),
+                            "liquidaciones": resumen.liquidaciones_cerradas,
+                            "payouts": resumen.payouts_creados,
+                        },
+                    );
+                }
+                Err(error) => {
+                    crate::logs::error(
+                        "commissions.dispersion",
+                        campos! { "msg": "Fallo el cierre diario", "err": error.to_string() },
+                    );
+                    continue;
+                }
+            }
+            if config.activo {
+                let contexto = ContextoCorrelacion {
+                    request_id: format!("dispersion-envio-{}", Utc::now().timestamp_millis()),
+                    servicio: "dispersion-worker".to_string(),
+                    usuario_id: Some("00000000-0000-0000-0000-000000000000".to_string()),
+                    rol: Some("super_admin".to_string()),
+                    tenant_id: None,
+                    negocio_id: None,
+                };
+                match ejecutar_con_contexto(contexto, dispersion.enviar_pendientes()).await {
+                    Ok(resumen) => {
+                        crate::logs::info(
+                            "commissions.dispersion",
+                            campos! {
+                                "msg": "Envio diario ejecutado",
+                                "enviados": resumen.payouts_enviados,
+                                "fallidos": resumen.payouts_fallidos,
+                            },
+                        );
+                    }
+                    Err(error) => {
+                        crate::logs::error(
+                            "commissions.dispersion",
+                            campos! { "msg": "Fallo el envio diario", "err": error.to_string() },
+                        );
+                    }
+                }
             }
         }
     })
@@ -75,21 +129,25 @@ mod tests {
     }
 
     #[test]
-    fn debe_ejecutar_el_dia_1_y_15_a_las_0005() {
-        assert!(debe_ejecutar(en_managua(2026, 9, 1, 0, 5), None));
-        assert!(debe_ejecutar(en_managua(2026, 9, 15, 0, 5), None));
+    fn debe_ejecutar_todos_los_dias_a_la_hora_configurada() {
+        assert!(debe_ejecutar(en_managua(2026, 9, 1, 0, 10), "00:10", None));
+        assert!(debe_ejecutar(en_managua(2026, 9, 2, 0, 10), "00:10", None));
     }
 
     #[test]
-    fn no_debe_ejecutar_otro_dia_u_otra_hora() {
-        assert!(!debe_ejecutar(en_managua(2026, 9, 2, 0, 5), None));
-        assert!(!debe_ejecutar(en_managua(2026, 9, 1, 0, 6), None));
-        assert!(!debe_ejecutar(en_managua(2026, 9, 1, 1, 5), None));
+    fn no_debe_ejecutar_fuera_de_la_hora_o_dos_veces_el_mismo_dia() {
+        let ahora = en_managua(2026, 9, 1, 0, 10);
+        assert!(!debe_ejecutar(ahora, "00:11", None));
+        assert!(!debe_ejecutar(ahora, "00:10", Some(ahora.date_naive())));
     }
 
     #[test]
-    fn no_debe_repetir_el_corte_del_mismo_dia() {
-        let ahora = en_managua(2026, 9, 15, 0, 5);
-        assert!(!debe_ejecutar(ahora, Some(ahora.date_naive())));
+    fn una_hora_invalida_no_dispara_el_worker() {
+        assert!(!debe_ejecutar(en_managua(2026, 9, 1, 0, 10), "24:00", None));
+        assert!(!debe_ejecutar(
+            en_managua(2026, 9, 1, 0, 10),
+            "sin-hora",
+            None
+        ));
     }
 }

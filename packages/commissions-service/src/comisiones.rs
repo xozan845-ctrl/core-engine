@@ -44,7 +44,30 @@ pub struct Pago {
     pub monto_cents: i64,
     pub estado: String,
     pub metodo: String,
+    pub proveedor: String,
+    pub moneda: String,
+    pub comision_pasarela_cents: i64,
+    pub impuesto_pasarela_cents: i64,
+    pub retencion_cents: i64,
+    pub monto_liquidado_cents: i64,
+    pub moneda_liquidacion: String,
     pub creado_en: String,
+}
+
+/// Datos de pago que llegan en `payment.procesado`. Los campos de liquidación
+/// son opcionales para no romper eventos antiguos.
+#[derive(Debug, Clone, Default)]
+pub struct DatosPago {
+    pub order_id: String,
+    pub monto_cents: i64,
+    pub metodo: String,
+    pub proveedor: String,
+    pub moneda: String,
+    pub comision_pasarela_cents: i64,
+    pub impuesto_pasarela_cents: i64,
+    pub retencion_cents: i64,
+    pub monto_liquidado_cents: i64,
+    pub moneda_liquidacion: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -91,8 +114,15 @@ impl Pago {
             id: uuid_texto(fila, "id")?,
             order_id: uuid_texto(fila, "order_id")?,
             monto_cents: i64::from(fila.try_get::<i32, _>("monto_cents")?),
-            estado: fila.try_get::<String, _>("estado")?,
-            metodo: fila.try_get::<String, _>("metodo")?,
+            estado: fila.try_get("estado")?,
+            metodo: fila.try_get("metodo")?,
+            proveedor: fila.try_get("proveedor")?,
+            moneda: fila.try_get("moneda")?,
+            comision_pasarela_cents: i64::from(fila.try_get::<i32, _>("comision_pasarela_cents")?),
+            impuesto_pasarela_cents: i64::from(fila.try_get::<i32, _>("impuesto_pasarela_cents")?),
+            retencion_cents: i64::from(fila.try_get::<i32, _>("retencion_cents")?),
+            monto_liquidado_cents: i64::from(fila.try_get::<i32, _>("monto_liquidado_cents")?),
+            moneda_liquidacion: fila.try_get("moneda_liquidacion")?,
             creado_en: timestamp(fila, "creado_en")?,
         })
     }
@@ -351,16 +381,17 @@ impl Comisiones {
         Ok(())
     }
 
-    /// Pago simulado del MVP (`payment.procesado`).
+    /// Pago confirmado por la pasarela (`payment.procesado`).
     pub async fn registrar_pago(
         &self,
         tx: &mut Transaction<'_, Postgres>,
-        order_id: &str,
-        monto_cents: i64,
+        datos: &DatosPago,
     ) -> Result<Pago, ApiError> {
-        let order_uuid = parsear_uuid(order_id)?;
+        let order_uuid = parsear_uuid(&datos.order_id)?;
         let existente = sqlx::query(
-            "SELECT id, order_id, monto_cents, estado, metodo, creado_en
+            "SELECT id, order_id, monto_cents, estado, metodo, proveedor, moneda,
+                    comision_pasarela_cents, impuesto_pasarela_cents, retencion_cents,
+                    monto_liquidado_cents, moneda_liquidacion, creado_en
              FROM commissions.pagos WHERE order_id = $1",
         )
         .bind(order_uuid)
@@ -370,13 +401,31 @@ impl Comisiones {
         if let Some(fila) = existente {
             return Pago::desde_fila(&fila).map_err(error_db);
         }
+        let metodo = if datos.metodo.trim().is_empty() {
+            "simulado"
+        } else {
+            datos.metodo.as_str()
+        };
         let fila = sqlx::query(
-            "INSERT INTO commissions.pagos (id, order_id, monto_cents, estado, metodo)
-             VALUES (gen_random_uuid(), $1, $2, 'procesado', 'simulado')
-             RETURNING id, order_id, monto_cents, estado, metodo, creado_en",
+            "INSERT INTO commissions.pagos
+               (id, order_id, monto_cents, estado, metodo, proveedor, moneda,
+                comision_pasarela_cents, impuesto_pasarela_cents, retencion_cents,
+                monto_liquidado_cents, moneda_liquidacion)
+             VALUES (gen_random_uuid(), $1, $2, 'procesado', $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING id, order_id, monto_cents, estado, metodo, proveedor, moneda,
+                       comision_pasarela_cents, impuesto_pasarela_cents, retencion_cents,
+                       monto_liquidado_cents, moneda_liquidacion, creado_en",
         )
         .bind(order_uuid)
-        .bind(centavos_i32(monto_cents)?)
+        .bind(centavos_i32(datos.monto_cents)?)
+        .bind(metodo)
+        .bind(&datos.proveedor)
+        .bind(&datos.moneda)
+        .bind(centavos_i32(datos.comision_pasarela_cents)?)
+        .bind(centavos_i32(datos.impuesto_pasarela_cents)?)
+        .bind(centavos_i32(datos.retencion_cents)?)
+        .bind(centavos_i32(datos.monto_liquidado_cents)?)
+        .bind(&datos.moneda_liquidacion)
         .fetch_optional(&mut **tx)
         .await
         .map_err(error_db)?;

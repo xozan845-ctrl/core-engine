@@ -9,6 +9,7 @@ pub mod clients;
 pub mod comisiones;
 pub mod config;
 pub mod db;
+pub mod dispersion;
 pub mod errors;
 pub mod http;
 pub mod lifecycle;

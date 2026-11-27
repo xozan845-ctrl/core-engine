@@ -79,6 +79,38 @@ pub fn build_router(state: AppState) -> Router {
             get(rutas::reportes_negocios),
         )
         .route(
+            "/api/v2/admin/dispersion/configuracion",
+            get(rutas::dispersion_configuracion).put(rutas::guardar_dispersion_configuracion),
+        )
+        .route(
+            "/api/v2/admin/dispersion/cuentas",
+            get(rutas::dispersion_cuentas).post(rutas::crear_dispersion_cuenta),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts",
+            get(rutas::dispersion_payouts),
+        )
+        .route(
+            "/api/v2/admin/dispersion/cerrar-dia",
+            post(rutas::cerrar_dia_dispersion),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts/{id}/enviar",
+            post(rutas::enviar_payout),
+        )
+        .route(
+            "/api/v2/admin/dispersion/payouts/{id}/confirmar",
+            post(rutas::confirmar_payout).patch(rutas::confirmar_payout),
+        )
+        .route(
+            "/api/v2/empresarios/me/dispersion",
+            get(rutas::payouts_empresa),
+        )
+        .route(
+            "/api/v2/vendedores/me/dispersion",
+            get(rutas::payouts_vendedor),
+        )
+        .route(
             "/internal/commissions/tenant/exportar",
             post(interno::exportar_tenant),
         )
@@ -599,5 +631,63 @@ mod tests {
         let valor: Value = serde_json::from_str(&cuerpo(response).await).expect("json");
         assert_eq!(valor["data"]["id"], "l-1");
         assert_eq!(valor["meta"]["statusCode"], 201);
+    }
+
+    async fn pedir_json(
+        app: axum::Router,
+        metodo: &str,
+        ruta: &str,
+        valores: Vec<(&'static str, String)>,
+    ) -> Response {
+        let mut constructor = HttpRequest::builder()
+            .method(metodo)
+            .uri(ruta)
+            .header("content-type", "application/json");
+        for (clave, valor) in valores {
+            constructor = constructor.header(clave, valor);
+        }
+        app.oneshot(constructor.body(Body::from("{}")).expect("request"))
+            .await
+            .expect("response")
+    }
+
+    #[tokio::test]
+    async fn debe_proteger_las_rutas_de_dispersion_sin_servicio() {
+        let app = build_router(estado_con(caps(true)));
+        for (metodo, ruta) in [
+            ("GET", "/api/v2/admin/dispersion/configuracion"),
+            ("GET", "/api/v2/admin/dispersion/cuentas"),
+            ("GET", "/api/v2/admin/dispersion/payouts"),
+            ("POST", "/api/v2/admin/dispersion/cerrar-dia"),
+            ("POST", "/api/v2/admin/dispersion/payouts/p-1/enviar"),
+            ("GET", "/api/v2/empresarios/me/dispersion"),
+            ("GET", "/api/v2/vendedores/me/dispersion"),
+        ] {
+            let rol = if ruta.contains("empresarios") {
+                "empresario"
+            } else if ruta.contains("vendedores") {
+                "vendedor"
+            } else {
+                "admin"
+            };
+            let response = pedir(app.clone(), metodo, ruta, headers(rol, Some("e-1"))).await;
+            assert_eq!(
+                response.status(),
+                StatusCode::SERVICE_UNAVAILABLE,
+                "{metodo} {ruta}"
+            );
+        }
+        for (metodo, ruta) in [
+            ("PUT", "/api/v2/admin/dispersion/configuracion"),
+            ("POST", "/api/v2/admin/dispersion/cuentas"),
+            ("POST", "/api/v2/admin/dispersion/payouts/p-1/confirmar"),
+        ] {
+            let response = pedir_json(app.clone(), metodo, ruta, headers("admin", None)).await;
+            assert_eq!(
+                response.status(),
+                StatusCode::SERVICE_UNAVAILABLE,
+                "{metodo} {ruta}"
+            );
+        }
     }
 }

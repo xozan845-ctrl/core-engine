@@ -118,6 +118,64 @@ adaptador devuelve `PROVEEDOR_NO_SOPORTA_REEMBOLSO`, no finge éxito.
 3. `PAGO_PROVEEDOR=simulado` en el entorno y redesplegar (solo desarrollo; el
    método `tarjeta` seguirá rechazando el simulado por seguridad).
 
+### 1.7 Cobro centralizado y dispersión diaria (ADR-0053)
+
+El método `tarjeta` usa **solo** la cuenta global de la plataforma
+(`PAGO_PROVEEDOR`), no la configuración de pasarela del tenant. El fee de la
+pasarela es costo de la plataforma y no se descuenta del negocio ni del
+vendedor.
+
+Configurar la dispersión (con token de `admin`/`super_admin`):
+
+```bash
+# Proveedor de dispersión y retención (0 hasta que fiscal defina la tasa)
+curl -fsS -X PUT "$BASE_URL/api/v2/admin/dispersion/configuracion" \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"proveedor_codigo":"tilopay","activo":true,"hora_local":"00:10","moneda":"NIO","retencion_bps":0}'
+
+# Cuenta/token de destino del beneficiario
+curl -fsS -X POST "$BASE_URL/api/v2/admin/dispersion/cuentas" \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"beneficiario_tipo":"empresa","beneficiario_id":"'"$EMPRESA_ID"'","proveedor":"tilopay","referencia_externa":"<token-o-cuenta>","moneda":"NIO"}'
+```
+
+Variables requeridas para que el adaptador envíe dinero:
+
+```dotenv
+TILOPAY_DISPERSION_URL=https://<host-oficial-de-dispersion>
+TILOPAY_DISPERSION_PATH=/payouts
+TILOPAY_DISPERSION_TOKEN=<token>
+# o
+PAGADITO_DISPERSION_URL=https://<host-oficial-de-dispersion>
+PAGADITO_DISPERSION_PATH=/payouts
+PAGADITO_DISPERSION_TOKEN=<token>
+```
+
+Sin URL, el adaptador falla cerrado y el payout queda `pendiente`/`fallido`.
+La ruta y el contrato exactos deben confirmarse con el proveedor en sandbox.
+
+Cierre y envío manual:
+
+```bash
+curl -fsS -X POST "$BASE_URL/api/v2/admin/dispersion/cerrar-dia?fecha=2026-11-24" \
+  -H "authorization: Bearer $TOKEN"
+curl -fsS "$BASE_URL/api/v2/admin/dispersion/payouts?fecha=2026-11-24" \
+  -H "authorization: Bearer $TOKEN"
+curl -fsS -X POST "$BASE_URL/api/v2/admin/dispersion/payouts/$PAYOUT_ID/enviar" \
+  -H "authorization: Bearer $TOKEN"
+curl -fsS -X POST "$BASE_URL/api/v2/admin/dispersion/payouts/$PAYOUT_ID/confirmar" \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"referencia_externa":"<id-de-la-transferencia>"}'
+```
+
+Solo un payout `confirmado` marca sus liquidaciones como `pagada`.
+
+**Pendientes de cierre:** la lista completa está en
+[`docs/pendientes-cobro-dispersion.md`](pendientes-cobro-dispersion.md).
+Resumen: credenciales y contrato real de dispersión, webhooks firmados,
+mapeo de fee/IVA/retención, conciliación contable, KYC/cuentas, retenciones por
+jurisdicción, clawback y prueba E2E en sandbox.
+
 ## 2. Operación de producción
 
 ### 2.1 Secretos de backup/MinIO
@@ -227,6 +285,8 @@ sembrar el tenant piloto.
 ## 4. Criterio de cierre
 
 - Pago sandbox confirmado por webhook **y** por conciliación (webhook perdido).
+- Cierre diario probado: payout a vendedor y a empresa, con retención y estado
+  `confirmado`; sin URL de dispersión nada se marca como pagado.
 - Reembolso parcial probado en Tilopay; limitación de Pagadito documentada.
 - Backup diario con secretos configurados y restore drill verde.
 - RLS activo con `core_engine_app` y rollback probado.

@@ -5134,7 +5134,24 @@
           },
           "proveedor": {
             "type": "string",
-            "description": "Pasarela que creó el cargo (simulado/http/manual)"
+            "description": "Pasarela que creó el cargo (simulado/http/manual/tilopay/pagadito)"
+          },
+          "comision_pasarela_cents": {
+            "type": "integer",
+            "description": "Fee de la pasarela. Es costo de la plataforma."
+          },
+          "impuesto_pasarela_cents": {
+            "type": "integer"
+          },
+          "retencion_cents": {
+            "type": "integer"
+          },
+          "monto_liquidado_cents": {
+            "type": "integer",
+            "description": "Neto que reportó la pasarela para conciliación"
+          },
+          "moneda_liquidacion": {
+            "type": "string"
           },
           "monto_reembolsado_cents": {
             "type": "integer"
@@ -5172,6 +5189,11 @@
           "moneda",
           "referencia",
           "proveedor",
+          "comision_pasarela_cents",
+          "impuesto_pasarela_cents",
+          "retencion_cents",
+          "monto_liquidado_cents",
+          "moneda_liquidacion",
           "monto_reembolsado_cents",
           "motivo_rechazo",
           "confirmado_por",

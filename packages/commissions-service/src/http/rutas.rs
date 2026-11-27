@@ -14,6 +14,7 @@ use crate::ventas::{EstadoCuenta, EstadoCuentaEmpresa};
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
+use chrono::NaiveDate;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -185,6 +186,163 @@ pub async fn reportes_negocios(
         )
         .await?;
     Ok(Json(Value::Array(filas)))
+}
+
+// ── Dispersión diaria (ADR-0053) ──────────────────────────────────────────
+
+pub async fn dispersion_configuracion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let config = state.dispersion()?.configuracion().await?;
+    Ok(Json(
+        serde_json::to_value(config).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn guardar_dispersion_configuracion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let config = state.dispersion()?.guardar_configuracion(&dto).await?;
+    Ok(Json(
+        serde_json::to_value(config).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn dispersion_cuentas(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let cuentas = state.dispersion()?.listar_cuentas().await?;
+    Ok(Json(
+        serde_json::to_value(cuentas).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn crear_dispersion_cuenta(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(dto): Json<Value>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let cuenta = state.dispersion()?.guardar_cuenta(&dto).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::to_value(cuenta).map_err(|_| ApiError::interno())?),
+    ))
+}
+
+pub async fn dispersion_payouts(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let fecha = params
+        .get("fecha")
+        .map(|valor| NaiveDate::parse_from_str(valor, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|_| {
+            ApiError::validacion(json!([{"campo": "fecha", "restricciones": ["isDate"]}]))
+        })?;
+    let estado = params
+        .get("estado")
+        .map(String::as_str)
+        .filter(|valor| !valor.is_empty());
+    let payouts = state
+        .dispersion()?
+        .listar_payouts(fecha, estado, None)
+        .await?;
+    Ok(Json(
+        serde_json::to_value(payouts).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn cerrar_dia_dispersion(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let fecha = match params.get("fecha").filter(|valor| !valor.is_empty()) {
+        Some(valor) => NaiveDate::parse_from_str(valor, "%Y-%m-%d").map_err(|_| {
+            ApiError::validacion(json!([{"campo": "fecha", "restricciones": ["isDate"]}]))
+        })?,
+        None => hoy_local().pred_opt().unwrap_or_else(hoy_local),
+    };
+    let resumen = state.dispersion()?.cerrar_dia(fecha).await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::to_value(resumen).map_err(|_| ApiError::interno())?),
+    ))
+}
+
+pub async fn enviar_payout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let payout = state.dispersion()?.enviar(&id).await?;
+    Ok(Json(
+        serde_json::to_value(payout).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn confirmar_payout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(dto): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    let _usuario = autorizar(&state, &headers, &ROLES_ADMIN).await?;
+    let referencia = dto
+        .get("referencia_externa")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty());
+    let payout = state.dispersion()?.confirmar(&id, referencia).await?;
+    Ok(Json(
+        serde_json::to_value(payout).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn payouts_empresa(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, &ROLES_EMPRESARIO).await?;
+    let Some(tenant) = usuario.tenant_id.as_deref() else {
+        return Err(ApiError::no_encontrado("Empresa", "activa"));
+    };
+    let negocio = negocio_de(&usuario, &params);
+    let payouts = state
+        .dispersion()?
+        .listar_payouts_empresa(tenant, negocio.as_deref())
+        .await?;
+    Ok(Json(
+        serde_json::to_value(payouts).map_err(|_| ApiError::interno())?,
+    ))
+}
+
+pub async fn payouts_vendedor(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let usuario = autorizar(&state, &headers, &ROLES_VENDEDOR).await?;
+    let payouts = state
+        .dispersion()?
+        .listar_payouts_vendedor(&usuario.user_id)
+        .await?;
+    Ok(Json(
+        serde_json::to_value(payouts).map_err(|_| ApiError::interno())?,
+    ))
 }
 
 fn fecha_reporte(valor: Option<&String>) -> Result<Option<String>, ApiError> {

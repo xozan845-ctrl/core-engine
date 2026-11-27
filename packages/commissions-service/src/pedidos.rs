@@ -9,7 +9,7 @@
 
 use crate::campos;
 use crate::clients::Ordenes;
-use crate::comisiones::{Comisiones, DatosLinea};
+use crate::comisiones::{Comisiones, DatosLinea, DatosPago};
 use crate::db::{error_db, parsear_uuid, Db};
 use crate::errors::ApiError;
 use crate::logs::{ejecutar_con_contexto, ContextoCorrelacion};
@@ -105,12 +105,20 @@ impl PedidosConsumer {
             return Ok(());
         }
         let data = datos(evento)?;
-        let order_id = campo(data, "order_id")?;
-        let monto_cents = entero(data, "monto_cents")?;
+        let datos_pago = DatosPago {
+            order_id: campo(data, "order_id")?.to_string(),
+            monto_cents: entero(data, "monto_cents")?,
+            metodo: texto_opcional(data, "metodo").unwrap_or_default(),
+            proveedor: texto_opcional(data, "proveedor").unwrap_or_default(),
+            moneda: texto_opcional(data, "moneda").unwrap_or_default(),
+            comision_pasarela_cents: entero_opcional(data, "comision_pasarela_cents"),
+            impuesto_pasarela_cents: entero_opcional(data, "impuesto_pasarela_cents"),
+            retencion_cents: entero_opcional(data, "retencion_cents"),
+            monto_liquidado_cents: entero_opcional(data, "monto_liquidado_cents"),
+            moneda_liquidacion: texto_opcional(data, "moneda_liquidacion").unwrap_or_default(),
+        };
         let mut tx = self.db.transaccion().await.map_err(error_db)?;
-        self.comisiones
-            .registrar_pago(&mut tx, order_id, monto_cents)
-            .await?;
+        self.comisiones.registrar_pago(&mut tx, &datos_pago).await?;
         self.marcar_procesado(&mut tx, event_id, EVENTO_PAYMENT_PROCESADO)
             .await?;
         tx.commit().await.map_err(error_db)?;
@@ -367,6 +375,19 @@ fn entero(objeto: &Value, clave: &str) -> Result<i64, ApiError> {
         .get(clave)
         .and_then(Value::as_i64)
         .ok_or_else(|| ApiError::interno_mensaje(format!("Campo invalido: {clave}.")))
+}
+
+fn texto_opcional(objeto: &Value, clave: &str) -> Option<String> {
+    objeto
+        .get(clave)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|valor| !valor.is_empty())
+        .map(ToString::to_string)
+}
+
+fn entero_opcional(objeto: &Value, clave: &str) -> i64 {
+    objeto.get(clave).and_then(Value::as_i64).unwrap_or(0)
 }
 
 #[cfg(test)]

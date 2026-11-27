@@ -161,9 +161,12 @@ pub fn destinos(config: &Config) -> Vec<Destino> {
             url: config.commissions_url.clone(),
             patrones: vec![
                 patron(r"^/api/v2/vendedores/me/(ventas|liquidaciones)", &["*"]),
+                patron(r"^/api/v2/vendedores/me/dispersion$", &["GET"]),
                 patron(r"^/api/v2/empresarios/me/(liquidaciones|ventas)", &["*"]),
+                patron(r"^/api/v2/empresarios/me/dispersion$", &["GET"]),
                 patron(r"^/api/v2/admin/reportes", &["*"]),
                 patron(r"^/api/v2/admin/liquidaciones", &["*"]),
+                patron(r"^/api/v2/admin/dispersion", &["*"]),
                 patron(r"^/api/v2/empresarios/me/reportes/negocios$", &["*"]),
             ],
         },
@@ -537,6 +540,16 @@ mod tests {
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/finanzas/resumen", "GET").map(|d| d.nombre),
             Some("finance")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/admin/dispersion/payouts", "GET")
+                .map(|d| d.nombre),
+            Some("commissions")
+        );
+        assert_eq!(
+            encontrar_destino(&destinos, "/api/v2/vendedores/me/dispersion", "GET")
+                .map(|d| d.nombre),
+            Some("commissions")
         );
         assert_eq!(
             encontrar_destino(&destinos, "/api/v2/admin/inventario", "GET").map(|d| d.nombre),
