@@ -290,6 +290,42 @@ CREATE POLICY empresas_miembros ON identity.empresas FOR SELECT TO authenticated
   USING (id::text = (auth.jwt() ->> 'tenant_id')
          OR (auth.rol() = 'empresario' AND creado_por = auth.uid()));
 
+-- 4d. Binding inicial del empresario con la empresa que acaba de crear.
+-- El onboarding actualiza `tenant_id` del usuario recién registrado; sin esta
+-- política el UPDATE afecta 0 filas en silencio y el token no lleva tenant.
+DROP POLICY IF EXISTS usuarios_onboarding_tenant ON identity.usuarios;
+CREATE POLICY usuarios_onboarding_tenant ON identity.usuarios FOR UPDATE TO authenticated
+  USING (auth.rol() = 'empresario'
+         AND id = auth.uid()
+         AND tenant_id IS NULL)
+  WITH CHECK (auth.rol() = 'empresario'
+              AND EXISTS (
+                    SELECT 1 FROM identity.empresas e
+                     WHERE e.id = tenant_id
+                       AND e.creado_por = auth.uid()
+                  ));
+
+-- 4e. Historial de precios de ofertas: lo escribe el vendedor dueño de la
+-- oferta (y el servicio/admin). Sin esto, publicar una oferta falla con RLS.
+DROP POLICY IF EXISTS historico_precios_oferta ON stores.historico_precios;
+CREATE POLICY historico_precios_oferta ON stores.historico_precios FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1
+      FROM stores.ofertas o
+      JOIN stores.tiendas t ON t.id = o.tienda_id
+     WHERE o.id = oferta_id
+       AND (auth.rol() IN ('super_admin', 'admin')
+            OR t.propietario_usuario_id = auth.uid()
+            OR t.empresa_id::text = (auth.jwt() ->> 'tenant_id'))))
+  WITH CHECK (EXISTS (
+    SELECT 1
+      FROM stores.ofertas o
+      JOIN stores.tiendas t ON t.id = o.tienda_id
+     WHERE o.id = oferta_id
+       AND (auth.rol() IN ('super_admin', 'admin')
+            OR t.propietario_usuario_id = auth.uid()
+            OR t.empresa_id::text = (auth.jwt() ->> 'tenant_id'))));
+
 -- 5. FORCE RLS: ni el owner omite las políticas.
 DO $$
 DECLARE r record;
