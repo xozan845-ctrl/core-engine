@@ -1,6 +1,6 @@
 {
   "name": "core-engine",
-  "version": "1.12.7",
+  "version": "1.12.8",
   "private": true,
   "description": "Core Engine - plataforma multi-vertical por capacidades sobre microservicios Rust + PostgreSQL/Supabase + Docker",
   "scripts": {
