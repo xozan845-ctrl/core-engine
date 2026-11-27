@@ -8,11 +8,21 @@
 # - Aplica en orden lexicográfico las pendientes y falla si una ya aplicada
 #   cambió de contenido (drift).
 #
+# Orden de aplicación:
+#   1. `init/*.sql`            — esquema y datos base.
+#   2. `supabase/99_rls.sql`   — políticas RLS canónicas.
+#   3. `supabase/99z_rls_hardening.sql` — endurecimiento y cobertura dinámica.
+#   4. `supabase/migrations/*.sql` — cambios incrementales de RLS, en orden.
+#
+# Regla: una migración aplicada NO se edita. Cualquier cambio posterior va en un
+# archivo nuevo de `supabase/migrations/AAAAAMMDD_NN_tema.sql`.
+#
 # Uso: PGHOST=postgres PGUSER=... PGPASSWORD=... PGDATABASE=... sh apply.sh
 set -eu
 
 DIR="${MIGRATIONS_DIR:-/migrations}"
 INIT_DIR="${DIR}/init"
+RLS_MIGRATIONS_DIR="${DIR}/supabase/migrations"
 PSQL="psql -v ON_ERROR_STOP=1 --no-psqlrc"
 
 : "${PGHOST:?PGHOST es obligatorio}"
@@ -50,6 +60,30 @@ if [ ! -d "$INIT_DIR" ]; then
   exit 1
 fi
 
+aplicadas=0
+
+# Aplica un archivo si no está en el ledger; si ya está, verifica el checksum.
+aplicar_con_ledger() {
+  _archivo="$1"
+  _nombre="$(basename "$_archivo")"
+  _checksum="$(sha256sum "$_archivo" | cut -d' ' -f1)"
+  _registrado="$($PSQL -At -c \
+    "SELECT checksum FROM public.schema_migrations WHERE nombre = '$_nombre'")"
+  if [ -n "$_registrado" ]; then
+    if [ "$_registrado" != "$_checksum" ]; then
+      echo "migraciones: $_nombre cambió después de aplicarse (drift)" >&2
+      exit 1
+    fi
+    return 0
+  fi
+  echo "migraciones: aplicando $_nombre"
+  $PSQL -q -c "SET request.jwt.claims = '{\"rol\":\"super_admin\"}'" -f "$_archivo"
+  $PSQL -q -c "
+    INSERT INTO public.schema_migrations (nombre, checksum)
+    VALUES ('$_nombre', '$_checksum');"
+  aplicadas=$((aplicadas + 1))
+}
+
 LEDGER_VACIO="$($PSQL -At -c 'SELECT COUNT(*) = 0 FROM public.schema_migrations')"
 BASE_EXISTENTE="$($PSQL -At -c "SELECT to_regclass('identity.empresas') IS NOT NULL")"
 
@@ -66,47 +100,23 @@ if [ "$LEDGER_VACIO" = "t" ] && [ "$BASE_EXISTENTE" = "t" ]; then
   done
 fi
 
-aplicadas=0
 for archivo in "$INIT_DIR"/*.sql; do
   [ -f "$archivo" ] || continue
-  nombre="$(basename "$archivo")"
-  checksum="$(sha256sum "$archivo" | cut -d' ' -f1)"
-  registrado="$($PSQL -At -c \
-    "SELECT checksum FROM public.schema_migrations WHERE nombre = '$nombre'")"
-  if [ -n "$registrado" ]; then
-    if [ "$registrado" != "$checksum" ]; then
-      echo "migraciones: $nombre cambió después de aplicarse (drift)" >&2
-      exit 1
-    fi
-    continue
-  fi
-  echo "migraciones: aplicando $nombre"
-  $PSQL -q -c "SET request.jwt.claims = '{\"rol\":\"super_admin\"}'" -f "$archivo"
-  $PSQL -q -c "
-    INSERT INTO public.schema_migrations (nombre, checksum)
-    VALUES ('$nombre', '$checksum');"
-  aplicadas=$((aplicadas + 1))
+  aplicar_con_ledger "$archivo"
 done
 
 # RLS es obligatorio. Se aplica al final, después de todas las tablas, y luego
 # un endurecimiento que elimina bypass, activa FORCE RLS y cubre tablas nuevas.
 for archivo in "${DIR}/supabase/99_rls.sql" "${DIR}/supabase/99z_rls_hardening.sql"; do
   [ -f "$archivo" ] || continue
-  nombre="$(basename "$archivo")"
-  checksum="$(sha256sum "$archivo" | cut -d' ' -f1)"
-  registrado="$($PSQL -At -c \
-    "SELECT checksum FROM public.schema_migrations WHERE nombre = '$nombre'")"
-  if [ -z "$registrado" ]; then
-    echo "migraciones: aplicando $nombre"
-    $PSQL -q -c "SET request.jwt.claims = '{\"rol\":\"super_admin\"}'" -f "$archivo"
-    $PSQL -q -c "
-      INSERT INTO public.schema_migrations (nombre, checksum)
-      VALUES ('$nombre', '$checksum');"
-    aplicadas=$((aplicadas + 1))
-  elif [ "$registrado" != "$checksum" ]; then
-    echo "migraciones: $nombre cambió después de aplicarse (drift)" >&2
-    exit 1
-  fi
+  aplicar_con_ledger "$archivo"
+done
+
+# Cambios incrementales de RLS posteriores al endurecimiento. Se aplican en
+# orden lexicográfico y quedan registrados igual que el resto.
+for archivo in "$RLS_MIGRATIONS_DIR"/*.sql; do
+  [ -f "$archivo" ] || continue
+  aplicar_con_ledger "$archivo"
 done
 
 echo "migraciones: OK ($aplicadas aplicadas)"

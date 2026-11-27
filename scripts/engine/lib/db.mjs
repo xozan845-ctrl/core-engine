@@ -1,9 +1,11 @@
 /**
  * Integridad de las migraciones SQL versionadas (R-DB-6).
  *
- * `infra/db/init/*.sql` se aplica al arrancar el contenedor y no tiene historial
- * de migraciones. Para que una migración ya aplicada no se edite en silencio,
- * `scripts/config/db-migrations.json` guarda el SHA-256 de cada archivo: la
+ * `infra/db/init/*.sql` se aplica al arrancar el contenedor y
+ * `infra/db/supabase/migrations/*.sql` contiene los cambios incrementales de
+ * RLS aplicados después del endurecimiento. Ninguno tiene historial por sí
+ * mismo: para que una migración ya aplicada no se edite en silencio,
+ * `scripts/config/db-migrations.json` guarda el SHA-256 de cada archivo y la
  * suite de reglas falla si un hash cambia, si falta un archivo o si aparece uno
  * nuevo sin registrar.
  */
@@ -13,28 +15,57 @@ import { join } from 'node:path';
 
 export const MIGRATIONS_DIR = 'infra/db/init';
 export const MIGRATION_PATTERN = /^\d{2}[a-z]?_.+\.sql$/;
+export const RLS_MIGRATIONS_DIR = 'infra/db/supabase/migrations';
+export const RLS_MIGRATION_PATTERN = /^\d{8}_\d{2}_[a-z0-9_]+\.sql$/;
 export const RLS_FILE = 'infra/db/supabase/99_rls.sql';
 
 export function migrationsDirectory(root) {
   return join(root, MIGRATIONS_DIR);
 }
 
-/** Lista todos los `.sql` del directorio, válidos o no. */
-export function listSqlFiles(root) {
-  const directory = migrationsDirectory(root);
-  if (!existsSync(directory)) {
-    throw new Error(`No existe ${directory}.`);
-  }
-
+function listSqlFilesIn(directory) {
+  if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
     .map((entry) => entry.name)
     .sort();
 }
 
-/** Lista solo las migraciones con el nombre canónico `NN[tema].sql`. */
+/** Lista todos los `.sql` del directorio de init, válidos o no. */
+export function listSqlFiles(root) {
+  const directory = migrationsDirectory(root);
+  if (!existsSync(directory)) {
+    throw new Error(`No existe ${directory}.`);
+  }
+  return listSqlFilesIn(directory);
+}
+
+/** Lista solo las migraciones init con el nombre canónico `NN[tema].sql`. */
 export function listMigrationFiles(root) {
   return listSqlFiles(root).filter((name) => MIGRATION_PATTERN.test(name));
+}
+
+/** Lista las migraciones incrementales de RLS. */
+export function listRlsMigrationFiles(root) {
+  return listSqlFilesIn(join(root, RLS_MIGRATIONS_DIR)).filter((name) =>
+    RLS_MIGRATION_PATTERN.test(name),
+  );
+}
+
+/** Directorios versionados con su patrón de nombre canónico. */
+function migrationSources(root) {
+  return [
+    {
+      dir: join(root, MIGRATIONS_DIR),
+      pattern: MIGRATION_PATTERN,
+      hint: 'NN_tema.sql',
+    },
+    {
+      dir: join(root, RLS_MIGRATIONS_DIR),
+      pattern: RLS_MIGRATION_PATTERN,
+      hint: 'AAAAMMDD_NN_tema.sql',
+    },
+  ];
 }
 
 export function sha256File(file) {
@@ -43,16 +74,18 @@ export function sha256File(file) {
 
 /** Manifiesto `archivo -> sha256` de todas las migraciones válidas. */
 export function buildMigrationManifest(root) {
-  return Object.fromEntries(
-    listMigrationFiles(root).map((name) => [
-      name,
-      sha256File(join(migrationsDirectory(root), name)),
-    ]),
-  );
+  const manifest = {};
+  for (const { dir, pattern } of migrationSources(root)) {
+    for (const name of listSqlFilesIn(dir)) {
+      if (!pattern.test(name)) continue;
+      manifest[name] = sha256File(join(dir, name));
+    }
+  }
+  return manifest;
 }
 
 /**
- * Compara el directorio real con el manifiesto versionado.
+ * Compara los directorios reales con el manifiesto versionado.
  *
  * @param {string} root
  * @param {Record<string, string>} manifest
@@ -60,34 +93,38 @@ export function buildMigrationManifest(root) {
  */
 export function checkMigrationManifest(root, manifest) {
   const problems = [];
-  const files = listSqlFiles(root);
-  const valid = files.filter((name) => MIGRATION_PATTERN.test(name));
+  const valid = new Set();
 
-  for (const name of files) {
-    if (!MIGRATION_PATTERN.test(name)) {
-      problems.push(`${name}: nombre inválido; usa NN_tema.sql (R-DB-6)`);
-    }
-  }
+  for (const { dir, pattern, hint } of migrationSources(root)) {
+    for (const name of listSqlFilesIn(dir)) {
+      if (!pattern.test(name)) {
+        problems.push(`${name}: nombre inválido; usa ${hint} (R-DB-6)`);
+        continue;
+      }
+      if (valid.has(name)) {
+        problems.push(`${name}: nombre duplicado entre directorios de migraciones`);
+        continue;
+      }
+      valid.add(name);
 
-  for (const name of valid) {
-    if (!(name in manifest)) {
-      problems.push(
-        `${name}: migración nueva sin registrar en scripts/config/db-migrations.json`,
-      );
-      continue;
-    }
+      if (!(name in manifest)) {
+        problems.push(
+          `${name}: migración nueva sin registrar en scripts/config/db-migrations.json`,
+        );
+        continue;
+      }
 
-    const actual = sha256File(join(migrationsDirectory(root), name));
-    if (actual !== manifest[name]) {
-      problems.push(
-        `${name}: hash distinto al registrado; una migración aplicada no se edita, crea una nueva`,
-      );
+      if (sha256File(join(dir, name)) !== manifest[name]) {
+        problems.push(
+          `${name}: hash distinto al registrado; una migración aplicada no se edita, crea una nueva`,
+        );
+      }
     }
   }
 
   for (const name of Object.keys(manifest)) {
-    if (!valid.includes(name)) {
-      problems.push(`${name}: registrada en el manifiesto pero ya no existe en ${MIGRATIONS_DIR}`);
+    if (!valid.has(name)) {
+      problems.push(`${name}: registrada en el manifiesto pero ya no existe en el repositorio`);
     }
   }
 
