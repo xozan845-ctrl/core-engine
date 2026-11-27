@@ -144,8 +144,15 @@ La suite comprueba que:
 ### 5.2 Migraciones y RLS
 
 - Migración aditiva en `infra/db/init/` + manifiesto de hash (R-DB-6).
-- Toda tabla nueva: RLS habilitado + política en `infra/db/supabase/99_rls.sql`
-  (R-SB-2).
+- Toda tabla nueva: RLS habilitado + política en `infra/db/supabase/99_rls.sql`,
+  `99z_rls_hardening.sql` o una migración nueva de
+  `infra/db/supabase/migrations/` (R-SB-2), con `FORCE RLS` y sin `USING (true)`.
+- Los archivos de `99_rls.sql` y `99z_rls_hardening.sql` son inmutables una vez
+  aplicados. Cualquier ajuste posterior va en
+  `infra/db/supabase/migrations/AAAAMMDD_NN_tema.sql`; el manifiesto de hashes
+  cubre ambos directorios y falla si se edita una migración aplicada.
+- Añadir la tabla al escenario A/B de `scripts/tools/rls-ab-test.mjs` si es
+  sensible o se relaciona indirectamente con un tenant.
 - Índices para FKs lógicas y filtros frecuentes (R-DB-4).
 - Soft delete en datos transaccionales (R-DB-5).
 

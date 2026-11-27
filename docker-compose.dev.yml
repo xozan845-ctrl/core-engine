@@ -87,7 +87,6 @@ services:
       PGUSER: ${POSTGRES_USER:-core_engine}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
       MIGRATIONS_DIR: /migrations
-      APPLY_RLS: "false"
     volumes:
       - ./infra/db:/migrations:ro
     command: ["sh", "/migrations/apply.sh"]

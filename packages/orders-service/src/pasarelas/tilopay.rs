@@ -5,7 +5,7 @@
 //! también es configurable y tiene un default oficial.
 
 use crate::errors::ApiError;
-use crate::pagos::{CargoExterno, EstadoExterno, ProveedorPagos};
+use crate::pagos::{liquidacion_de, CargoExterno, ConsultaExterna, EstadoExterno, ProveedorPagos};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
@@ -59,6 +59,8 @@ pub struct Tilopay {
     webhook_url: Option<String>,
     /// `test` exige que Tilopay reporte `environment=Test` en `consult`.
     ambiente: Option<String>,
+    /// Unidad de los montos de liquidación: `major` (3.50) o `cents` (350).
+    liquidacion_unidad: String,
 }
 
 impl Tilopay {
@@ -94,6 +96,12 @@ impl Tilopay {
                 .and_then(Value::as_str)
                 .map(|valor| valor.trim().to_ascii_lowercase())
                 .filter(|valor| !valor.is_empty()),
+            liquidacion_unidad: config
+                .get("liquidacion_unidad")
+                .and_then(Value::as_str)
+                .map(|valor| valor.trim().to_ascii_lowercase())
+                .filter(|valor| *valor == "cents")
+                .unwrap_or_else(|| "major".to_string()),
         })
     }
 
@@ -220,6 +228,7 @@ impl ProveedorPagos for Tilopay {
         Ok(CargoExterno {
             referencia: order_id.to_string(),
             url: Some(url),
+            liquidacion: liquidacion_de("tilopay", &valor, &self.liquidacion_unidad),
         })
     }
 
@@ -276,6 +285,14 @@ impl ProveedorPagos for Tilopay {
         referencia: &str,
         datos: Option<&Value>,
     ) -> Result<EstadoExterno, ApiError> {
+        Ok(self.consultar_detallado(referencia, datos).await?.estado)
+    }
+
+    async fn consultar_detallado(
+        &self,
+        referencia: &str,
+        datos: Option<&Value>,
+    ) -> Result<ConsultaExterna, ApiError> {
         let order_number = datos
             .and_then(|valor| valor.get("orderNumber"))
             .and_then(Value::as_str)
@@ -297,7 +314,10 @@ impl ProveedorPagos for Tilopay {
             ApiError::dominio("PROVEEDOR_PAGO_ERROR", "Respuesta inválida de Tilopay.")
         })?;
         if valor.get("type").and_then(Value::as_str) != Some("200") {
-            return Ok(EstadoExterno::Pendiente);
+            return Ok(ConsultaExterna {
+                estado: EstadoExterno::Pendiente,
+                liquidacion: None,
+            });
         }
         let fila = valor
             .get("response")
@@ -329,11 +349,17 @@ impl ProveedorPagos for Tilopay {
                     .unwrap_or_default()
             })
             .unwrap_or_default();
-        match codigo.as_str() {
-            "1" => Ok(EstadoExterno::Aprobado),
-            "" => Ok(EstadoExterno::Pendiente),
-            _ => Ok(EstadoExterno::Rechazado),
-        }
+        let estado = match codigo.as_str() {
+            "1" => EstadoExterno::Aprobado,
+            "" => EstadoExterno::Pendiente,
+            _ => EstadoExterno::Rechazado,
+        };
+        let liquidacion =
+            fila.and_then(|fila| liquidacion_de("tilopay", fila, &self.liquidacion_unidad));
+        Ok(ConsultaExterna {
+            estado,
+            liquidacion,
+        })
     }
 }
 

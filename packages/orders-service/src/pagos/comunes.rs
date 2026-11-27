@@ -37,6 +37,31 @@ pub(super) fn fila_pago(fila: &sqlx::postgres::PgRow) -> Result<Pago, ApiError> 
         proveedor: fila
             .try_get("proveedor")
             .map_err(crate::event_store::error_db)?,
+        comision_pasarela_cents: i64::from(
+            fila.try_get::<i32, _>("comision_pasarela_cents")
+                .map_err(crate::event_store::error_db)?,
+        ),
+        impuesto_pasarela_cents: i64::from(
+            fila.try_get::<i32, _>("impuesto_pasarela_cents")
+                .map_err(crate::event_store::error_db)?,
+        ),
+        retencion_cents: i64::from(
+            fila.try_get::<i32, _>("retencion_cents")
+                .map_err(crate::event_store::error_db)?,
+        ),
+        monto_liquidado_cents: i64::from(
+            fila.try_get::<i32, _>("monto_liquidado_cents")
+                .map_err(crate::event_store::error_db)?,
+        ),
+        moneda_liquidacion: fila
+            .try_get("moneda_liquidacion")
+            .map_err(crate::event_store::error_db)?,
+        proveedor_liquidacion: fila
+            .try_get("proveedor_liquidacion")
+            .map_err(crate::event_store::error_db)?,
+        detalle_pasarela: fila
+            .try_get("detalle_pasarela")
+            .map_err(crate::event_store::error_db)?,
         monto_reembolsado_cents: i64::from(
             fila.try_get::<i32, _>("monto_reembolsado_cents")
                 .map_err(crate::event_store::error_db)?,

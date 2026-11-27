@@ -182,6 +182,12 @@ expone los esquemas, `identity.usuarios` (con hashes) tampoco tiene RLS.
 políticas por tenant/negocio para el rol de app y `FORCE ROW LEVEL SECURITY`;
 aplicar RLS también en local/CI.
 
+> **Actualización 2026-11-25:** cerrado por
+> [ADR-0054](../adr/0054-rls-obligatorio.md). `apply.sh` aplica RLS siempre,
+> `99_rls.sql` es idempotente, `99z_rls_hardening.sql` cubre las tablas
+> restantes, `core_engine_app` es `NOBYPASSRLS`, no quedan `USING (true)` y
+> `npm run test:rls` valida A/B en CI.
+
 #### A2. Webhook de pagos sin HMAC, secreto global y comparación no constante
 
 - `/internal/pagos/webhook` no exige `x-internal-key` (a diferencia del resto de
@@ -302,6 +308,9 @@ MinIO + decisión documentada de RPO/RTO. PITR antes de superar ~50 tenants.
 - **Comisiones:** `commissions-service` **no se despliega en producción**
   (`docker-compose.yml` no lo incluye; ADR-37). Las rutas
   `/empresarios/me/ventas` y `/vendedores/me/*` devuelven 502 en prod por diseño.
+  > **Actualización 2026-11-25:** cerrado por
+  > [ADR-0053](../adr/0053-cobro-centralizado-dispersion-diaria.md). Ver
+  > [cierre de venta directa](./2026-11-25-cierre-venta-directa.md).
 - **Suscripción de plataforma:** cobro manual con confirmación de admin
   (`docs/backlog-plataforma.md:52`).
 

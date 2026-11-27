@@ -39,7 +39,7 @@ flowchart LR
   GW --> ORD["orders-service :3004<br/>CQRS + Event Sourcing"]
   GW --> LOG["logistics-service :3005"]
   GW --> SCH["scheduling-service :3011"]
-  GW --> COM["commissions-service :3006<br/>solo dev/stage"]
+  GW --> COM["commissions-service :3006<br/>comisiones + dispersión diaria"]
   GW --> FIN["finance-service :3007"]
   GW --> FIELD["field-service :3008"]
   GW --> MI["market-intelligence-service :3009"]

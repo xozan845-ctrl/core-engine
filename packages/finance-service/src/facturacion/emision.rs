@@ -2,6 +2,60 @@ use super::prelude::*;
 use super::*;
 
 impl Facturacion {
+    /// Verifica que el tenant no esté emitiendo un comprobante "electrónico"
+    /// con un simulador o un proveedor sin certificar. Se ejecuta antes de
+    /// consumir el secuencial y crear el comprobante.
+    async fn validar_electronica(
+        &self,
+        empresa_id: Option<&str>,
+        negocio_id: Option<&str>,
+    ) -> Result<(), ApiError> {
+        let Some(empresa_id) = empresa_id else {
+            return Ok(());
+        };
+        let fila = sqlx::query(
+            "SELECT facturacion_electronica, proveedor_electronico
+               FROM finance.configuracion_fiscal
+              WHERE empresa_id = $1::uuid
+                AND (negocio_id = $2::uuid OR negocio_id IS NULL)
+              ORDER BY (negocio_id IS NOT NULL) DESC LIMIT 1",
+        )
+        .bind(empresa_id)
+        .bind(negocio_id)
+        .fetch_optional(self.db.pool())
+        .await
+        .map_err(error_db)?;
+        let Some(fila) = fila else {
+            return Ok(());
+        };
+        let electronica: bool = fila.try_get("facturacion_electronica").unwrap_or(false);
+        if !electronica {
+            return Ok(());
+        }
+        let proveedor = fila
+            .try_get::<String, _>("proveedor_electronico")
+            .unwrap_or_else(|_| "simulado".to_string());
+        match proveedor.as_str() {
+            "simulado" if !self.permitir_sin_certificado => Err(ApiError::dominio(
+                "FACTURACION_NO_CERTIFICADA",
+                "El piloto no puede emitir comprobantes electronicos con el simulador. Configure un proveedor certificado o acepte FACTURACION_PERMITIR_SIN_CERTIFICADO=true.",
+            )),
+            "http" if self.http.is_none() => Err(ApiError::dominio(
+                "PROVEEDOR_NO_CONFIGURADO",
+                "No hay URL de facturacion electronica configurada.",
+            )),
+            "http" | "dgi" if !self.proveedor_certificado => Err(ApiError::dominio(
+                "FACTURACION_NO_CERTIFICADA",
+                "El proveedor electronico no esta certificado (FACTURACION_PROVEEDOR_CERTIFICADO=false).",
+            )),
+            "dgi" if self.dgi.is_none() => Err(ApiError::dominio(
+                "PROVEEDOR_NO_CONFIGURADO",
+                "No hay gateway DGI configurado.",
+            )),
+            _ => Ok(()),
+        }
+    }
+
     /// Emite (o reserva como BORRADOR) un comprobante de la venta.
     pub async fn emitir(&self, dto: EmitirComprobante) -> Result<Comprobante, ApiError> {
         if dto.tipo != "FACTURA" && dto.tipo != "NOTA_CREDITO" {
@@ -26,6 +80,8 @@ impl Facturacion {
             .map(uuid::Uuid::parse_str)
             .transpose()
             .map_err(|_| ApiError::interno())?;
+        self.validar_electronica(orden.empresa_id.as_deref(), orden.negocio_id.as_deref())
+            .await?;
         let region = match orden.empresa_id.as_deref() {
             Some(empresa_id) => sqlx::query_scalar::<_, Option<String>>(
                 "SELECT region_tributaria FROM identity.empresas WHERE id = $1::uuid",
@@ -431,6 +487,8 @@ impl Facturacion {
                 {"campo": "empresa_id", "restricciones": ["isUuid"]}
             ]))
         })?;
+        self.validar_electronica(Some(&dto.empresa_id), dto.negocio_id.as_deref())
+            .await?;
         let region = sqlx::query_scalar::<_, Option<String>>(
             "SELECT region_tributaria FROM identity.empresas WHERE id = $1::uuid",
         )

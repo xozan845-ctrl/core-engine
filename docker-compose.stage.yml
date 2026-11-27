@@ -11,8 +11,8 @@
 # Solo se publica el gateway (8080); Postgres y RabbitMQ quedan internos a la red
 # `core-engine`. La observabilidad es opcional:
 #   docker compose -f docker-compose.stage.yml -f docker-compose.observability.yml up -d
-# `commissions-service` SI se despliega en stage (portal de empresa, ADR-37),
-# pero sigue fuera de produccion. `market-intelligence-service` se despliega
+# `commissions-service` se despliega en stage y producción (ADR-0053).
+# `market-intelligence-service` se despliega
 # en stage y produccion desde la Fase 6 (analitica transversal).
 
 x-servicio-base: &servicio-base
@@ -98,7 +98,6 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerida}
       CORE_ENGINE_APP_PASSWORD: ${CORE_ENGINE_APP_PASSWORD:?CORE_ENGINE_APP_PASSWORD requerida}
       MIGRATIONS_DIR: /migrations
-      APPLY_RLS: "false"
     volumes:
       - ./infra/db:/migrations:ro
     command: ["sh", "/migrations/apply.sh"]
@@ -199,8 +198,7 @@ services:
       # Staging NO es publico: su acceso se cierra en el borde externo
       # (Cloudflare Access/VPN/allowlist) segun ADR-0005. El gateway ya no
       # implementa Basic Auth ni /api-proxy.
-      # Readiness de stage: incluye commissions (ADR-37). Produccion no lo fija
-      # y usa la lista sin commissions.
+      # Readiness de stage: desde ADR-0053 incluye commissions en stage y prod.
       ENTORNO: stage
     # Solo loopback: el proxy de borde (Traefik/Dockploy) alcanza el gateway por
     # el puerto publicado, pero el puerto NO queda expuesto a Internet en HTTP
@@ -284,7 +282,7 @@ services:
       PORT: 3005
       OUTBOX_TABLA: logistics.outbox
 
-  # Stage valida el portal de empresa (ADR-37); produccion sigue sin el.
+  # Stage valida el portal de empresa y la dispersión diaria (ADR-0053).
   commissions-service:
     <<: *servicio-base
     image: ghcr.io/xozan845-ctrl/core-engine-commissions-service:stage
@@ -293,6 +291,7 @@ services:
       SERVICIO: commissions-service
       PORT: 3006
       OUTBOX_TABLA: commissions.outbox
+      COMMISSION_RATE: 0.12
 
   market-intelligence-service:
     <<: *servicio-base
