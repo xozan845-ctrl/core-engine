@@ -187,6 +187,20 @@ async function main() {
     );
     assert.equal(actualizados.rowCount, 0, 'A no debe modificar objetos de B');
 
+    // Catálogos fiscales: un tenant debe poder leerlos para crear su empresa.
+    const catalogos = await conClaims(
+      { sub: ids.userA, rol: 'empresario', tenant_id: ids.tenantA },
+      () =>
+        app.query(`SELECT
+          (SELECT COUNT(*) FROM finance.jurisdicciones WHERE activa) AS regiones,
+          (SELECT COUNT(*) FROM identity.pack_regiones WHERE activo) AS pack_regiones`),
+    );
+    assert.ok(Number(catalogos.rows[0].regiones) > 0, 'el tenant debe ver regiones activas');
+    assert.ok(
+      Number(catalogos.rows[0].pack_regiones) > 0,
+      'el tenant debe ver regiones de pack',
+    );
+
     // Admin global: ve ambos tenants.
     const admin = await conClaims({ sub: randomUUID(), rol: 'super_admin' }, () =>
       app.query('SELECT tenant_id FROM identity.usuarios WHERE id = ANY($1::uuid[])', [
