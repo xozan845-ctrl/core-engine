@@ -198,7 +198,7 @@ fn token_aleatorio() -> String {
 }
 
 fn hash_token(token: &str) -> String {
-    format!("{:x}", Sha256::digest(token.as_bytes()))
+    data_encoding::HEXLOWER.encode(&Sha256::digest(token.as_bytes()))
 }
 
 fn interno(error: sqlx::Error) -> ApiError {

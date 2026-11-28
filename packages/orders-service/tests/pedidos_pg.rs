@@ -3243,12 +3243,12 @@ async fn debe_reembolsar_conciliar_y_contracargar_por_http() {
 async fn debe_procesar_un_webhook_de_pago_con_firma_hmac() {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     use sha2::Sha256;
     use tower::ServiceExt;
 
     fn firma(secreto: &str, timestamp: &str, cuerpo: &[u8]) -> String {
-        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes()).expect("hmac");
+        let mut mac = Hmac::<Sha256>::new_from_slice(secreto.as_bytes()).expect("hmac");
         mac.update(timestamp.as_bytes());
         mac.update(b".");
         mac.update(cuerpo);
