@@ -10,7 +10,7 @@ use crate::errors::ApiError;
 use axum::http::StatusCode;
 use base64::Engine;
 use chrono::{DateTime, Duration, Utc};
-use rand::RngCore;
+use rand::Rng;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
