@@ -33,13 +33,11 @@ pub struct TokenPayload {
 pub fn verificar_token(token: &str, secreto: &str) -> Result<TokenPayload, ApiError> {
     let mut validacion = Validation::new(Algorithm::HS256);
     validacion.validate_exp = true;
-    decode::<TokenPayload>(
-        token,
-        &DecodingKey::from_secret(secreto.as_bytes()),
-        &validacion,
-    )
-    .map(|datos| datos.claims)
-    .map_err(|_| ApiError::no_autorizado("Token invalido o expirado."))
+    let clave = DecodingKey::from_secret(secreto.as_bytes())
+        .map_err(|_| ApiError::no_autorizado("Token invalido o expirado."))?;
+    decode::<TokenPayload>(token, &clave, &validacion)
+        .map(|datos| datos.claims)
+        .map_err(|_| ApiError::no_autorizado("Token invalido o expirado."))
 }
 
 /// Aplica autenticación y roles. Devuelve las cabeceras de identidad que el
@@ -131,7 +129,7 @@ mod tests {
         encode(
             &Header::new(Algorithm::HS256),
             &payload,
-            &EncodingKey::from_secret(secret.as_bytes()),
+            &EncodingKey::from_secret(secret.as_bytes()).expect("secret key"),
         )
         .expect("token")
     }
