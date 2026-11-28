@@ -939,10 +939,7 @@ fn es_violacion_unicidad(error: &sqlx::Error) -> bool {
 }
 
 fn hash_codigo(codigo: &str) -> String {
-    format!(
-        "{:x}",
-        Sha256::digest(codigo.trim().to_uppercase().as_bytes())
-    )
+    data_encoding::HEXLOWER.encode(&Sha256::digest(codigo.trim().to_uppercase().as_bytes()))
 }
 
 fn credenciales_invalidas() -> ApiError {
