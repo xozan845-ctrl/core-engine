@@ -23,7 +23,7 @@ mod prelude {
     pub(crate) use axum::http::StatusCode;
     pub(crate) use base64::Engine;
     pub(crate) use chrono::{DateTime, Duration, Utc};
-    pub(crate) use rand::RngCore;
+    pub(crate) use rand::Rng;
     pub(crate) use serde_json::{json, Map, Value};
     pub(crate) use sha2::{Digest, Sha256};
     pub(crate) use sqlx::{Postgres, Row, Transaction};

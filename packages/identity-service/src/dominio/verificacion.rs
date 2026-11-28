@@ -11,7 +11,7 @@ use crate::errors::ApiError;
 use axum::http::StatusCode;
 use base64::Engine;
 use chrono::{DateTime, Utc};
-use rand::RngCore;
+use rand::Rng;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
 use std::sync::Arc;
@@ -184,7 +184,7 @@ fn token_aleatorio() -> String {
 }
 
 fn hash_token(token: &str) -> String {
-    format!("{:x}", Sha256::digest(token.as_bytes()))
+    data_encoding::HEXLOWER.encode(&Sha256::digest(token.as_bytes()))
 }
 
 fn interno(error: sqlx::Error) -> ApiError {

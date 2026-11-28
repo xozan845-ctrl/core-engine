@@ -10,7 +10,7 @@ use crate::db::Db;
 use crate::errors::ErrorNotificacion;
 use crate::logs::{self, ContextoCorrelacion};
 use crate::rabbit::Handler;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use sqlx::Row;

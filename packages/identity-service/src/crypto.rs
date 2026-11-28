@@ -5,7 +5,7 @@
 
 use crate::errors::ApiError;
 use base64::Engine;
-use rand::RngCore;
+use rand::Rng;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM, NONCE_LEN};
 use ring::digest::{digest, SHA256};
 use ring::hmac;

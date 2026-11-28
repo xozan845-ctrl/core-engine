@@ -10,7 +10,7 @@ use crate::errors::ApiError;
 use axum::http::StatusCode;
 use base64::Engine;
 use chrono::{DateTime, Duration, Utc};
-use rand::RngCore;
+use rand::Rng;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
@@ -298,7 +298,7 @@ fn secreto_aleatorio() -> String {
 }
 
 pub fn hash_de(clave: &str) -> String {
-    format!("{:x}", Sha256::digest(clave.as_bytes()))
+    data_encoding::HEXLOWER.encode(&Sha256::digest(clave.as_bytes()))
 }
 
 pub fn rol_api_key_valido(rol: &str) -> bool {

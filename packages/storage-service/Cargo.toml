@@ -13,7 +13,7 @@ path = "src/main.rs"
 [dependencies]
 aws-sdk-s3 = { version = "1", default-features = false, features = ["rustls", "rt-tokio"] }
 axum = "0.8"
-base64 = "0.22"
+base64 = "0.23"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
@@ -21,7 +21,7 @@ aws-smithy-runtime-api = "1"
 aws-smithy-types = { version = "1", features = ["rt-tokio"] }
 futures-util = "0.3"
 http-body-util = "0.1"
-lapin = "2"
+lapin = "4.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "chrono", "json", "uuid"] }
