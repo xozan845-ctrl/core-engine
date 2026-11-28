@@ -72,7 +72,7 @@ impl Rabbit {
         for exchange in [EXCHANGE_EVENTS, EXCHANGE_DLQ] {
             canal
                 .exchange_declare(
-                    exchange,
+                    exchange.into(),
                     ExchangeKind::Topic,
                     ExchangeDeclareOptions {
                         durable: true,
@@ -136,8 +136,8 @@ impl Rabbit {
         }
         match canal
             .basic_publish(
-                EXCHANGE_EVENTS,
-                tipo,
+                EXCHANGE_EVENTS.into(),
+                tipo.into(),
                 BasicPublishOptions::default(),
                 evento.to_string().as_bytes(),
                 props,
@@ -245,7 +245,7 @@ impl Rabbit {
             );
             canal
                 .queue_declare(
-                    &cola.nombre,
+                    cola.nombre.as_str().into(),
                     QueueDeclareOptions {
                         durable: true,
                         ..Default::default()
@@ -255,7 +255,7 @@ impl Rabbit {
                 .await?;
             canal
                 .queue_declare(
-                    &dlq,
+                    dlq.as_str().into(),
                     QueueDeclareOptions {
                         durable: true,
                         ..Default::default()
@@ -266,9 +266,9 @@ impl Rabbit {
             for routing in &cola.routing_keys {
                 canal
                     .queue_bind(
-                        &cola.nombre,
-                        EXCHANGE_EVENTS,
-                        routing,
+                        cola.nombre.as_str().into(),
+                        EXCHANGE_EVENTS.into(),
+                        routing.as_str().into(),
                         QueueBindOptions::default(),
                         FieldTable::default(),
                     )
@@ -276,9 +276,9 @@ impl Rabbit {
             }
             canal
                 .queue_bind(
-                    &dlq,
-                    EXCHANGE_DLQ,
-                    &cola.nombre,
+                    dlq.as_str().into(),
+                    EXCHANGE_DLQ.into(),
+                    cola.nombre.as_str().into(),
                     QueueBindOptions::default(),
                     FieldTable::default(),
                 )
@@ -309,8 +309,8 @@ impl Rabbit {
             }
             let mut consumidor = match canal
                 .basic_consume(
-                    &cola,
-                    &format!("item-service-{cola}"),
+                    cola.as_str().into(),
+                    format!("item-service-{cola}").into(),
                     BasicConsumeOptions::default(),
                     FieldTable::default(),
                 )
@@ -382,7 +382,7 @@ impl Rabbit {
         let mut reprocesados = 0;
         loop {
             let mensaje = match canal
-                .basic_get(&dlq, BasicGetOptions { no_ack: false })
+                .basic_get(dlq.as_str().into(), BasicGetOptions { no_ack: false })
                 .await
             {
                 Ok(mensaje) => mensaje,
@@ -409,8 +409,8 @@ impl Rabbit {
                 .with_headers(headers);
             match canal
                 .basic_publish(
-                    EXCHANGE_EVENTS,
-                    &routing,
+                    EXCHANGE_EVENTS.into(),
+                    routing.as_str().into(),
                     BasicPublishOptions::default(),
                     &entrega.data,
                     props,
@@ -476,8 +476,8 @@ async fn dead_letter(
         .with_headers(headers);
     let publicado = canal
         .basic_publish(
-            EXCHANGE_DLQ,
-            cola,
+            EXCHANGE_DLQ.into(),
+            cola.into(),
             BasicPublishOptions::default(),
             &entrega.data,
             props,
