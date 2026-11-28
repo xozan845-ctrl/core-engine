@@ -18,7 +18,7 @@ chrono-tz = "0.10"
 futures-util = "0.3"
 http-body-util = "0.1"
 jsonschema = "0.63"
-lapin = "2"
+lapin = "4"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
