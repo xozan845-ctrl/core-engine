@@ -314,7 +314,7 @@ fn hash_solicitud(metodo: &str, ruta: &str, cuerpo: &[u8]) -> String {
     hasher.update(ruta.as_bytes());
     hasher.update(b"\n");
     hasher.update(cuerpo);
-    format!("{:x}", hasher.finalize())
+    hex::encode(hasher.finalize())
 }
 
 #[cfg(test)]
