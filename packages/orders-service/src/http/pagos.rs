@@ -11,7 +11,7 @@ use axum::http::HeaderMap;
 use axum::response::Response;
 use axum::routing::{get, patch, post};
 use axum::Router;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::collections::HashMap;
@@ -402,7 +402,7 @@ pub async fn webhook_pago_publico(
 }
 
 fn firma_webhook(secreto: &str, timestamp: &str, cuerpo: &[u8]) -> String {
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes())
+    let mut mac = Hmac::<Sha256>::new_from_slice(secreto.as_bytes())
         .expect("HMAC acepta cualquier longitud de clave");
     mac.update(timestamp.as_bytes());
     mac.update(b".");
@@ -414,7 +414,7 @@ fn firma_valida(secreto: &str, timestamp: &str, cuerpo: &[u8], firma: &str) -> b
     let Ok(firma) = hex::decode(firma.trim()) else {
         return false;
     };
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secreto.as_bytes())
+    let mut mac = Hmac::<Sha256>::new_from_slice(secreto.as_bytes())
         .expect("HMAC acepta cualquier longitud de clave");
     mac.update(timestamp.as_bytes());
     mac.update(b".");
